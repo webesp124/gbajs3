@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Zelda II - The Adventure of Link (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Zelda II - The Adventure of Link (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "0B6CA48A",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "98E093"
+}

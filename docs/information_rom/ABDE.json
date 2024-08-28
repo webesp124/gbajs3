@@ -1,0 +1,10 @@
+{
+    "fullName": "Boulder Dash EX (USA)",
+    "coverImage": "/covers/Boulder Dash EX (USA).png",
+    "publisher": "Kemco",
+    "releaseDate": "2003",
+    "crc": "B355365A",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "261DF54"
+}

@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 17 - Takahashi Meijin no Bouken-jima (Japan)",
+    "coverImage": "/covers/Famicom Mini 17 - Takahashi Meijin no Bouken-jima (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "53286F51",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F2E663"
+}

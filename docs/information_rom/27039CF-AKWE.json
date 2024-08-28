@@ -1,0 +1,10 @@
+{
+    "fullName": "Konami Krazy Racers (USA)",
+    "coverImage": "/covers/Konami Krazy Racers (USA).png",
+    "publisher": "Konami",
+    "releaseDate": "2001",
+    "crc": "C80D4F5C",
+    "cartSize": 4194304,
+    "saveType": "SRAM_V111",
+    "checksum1000": "27039CF"
+}

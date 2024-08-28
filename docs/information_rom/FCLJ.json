@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 12 - Clu Clu Land (Japan)",
+    "coverImage": "/covers/Famicom Mini 12 - Clu Clu Land (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "8B3219FE",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FC55C7"
+}

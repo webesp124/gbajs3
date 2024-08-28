@@ -1,0 +1,10 @@
+{
+    "fullName": "Virtua Tennis (USA)",
+    "coverImage": "/covers/Virtua Tennis (USA).png",
+    "publisher": "SEGA",
+    "releaseDate": "2002",
+    "crc": "E0BD3B75",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V121",
+    "checksum1000": "56FB8D2"
+}

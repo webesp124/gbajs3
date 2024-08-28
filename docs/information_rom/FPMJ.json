@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 06 - Pac-Man (Japan) (En)",
+    "coverImage": "/covers/Famicom Mini 06 - Pac-Man (Japan) (En).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "91ACF642",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "1E01CF1"
+}

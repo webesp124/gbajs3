@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - The Legend of Zelda (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - The Legend of Zelda (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "6D49CABF",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F8DA5C"
+}

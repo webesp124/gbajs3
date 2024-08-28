@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Excitebike (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Excitebike (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "67D9A2A6",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FB7C6D"
+}

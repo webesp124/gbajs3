@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Mario Ball (Japan)",
+    "coverImage": "/covers/Super Mario Ball (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "7EB4A336",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "54B5A53"
+}

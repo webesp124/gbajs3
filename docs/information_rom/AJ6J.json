@@ -1,0 +1,10 @@
+{
+    "fullName": "Aladdin (Japan)",
+    "coverImage": "/covers/Aladdin (Japan).png",
+    "publisher": "Capcom",
+    "releaseDate": "2003",
+    "crc": "587F1AEF",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "3239645"
+}

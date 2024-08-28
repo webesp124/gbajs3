@@ -1,0 +1,10 @@
+{
+    "fullName": "Mega Man Zero 4 (USA)",
+    "coverImage": "/covers/Mega Man Zero 4 (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2005",
+    "crc": "7EE24793",
+    "cartSize": 16777216,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "D0A6CB1"
+}

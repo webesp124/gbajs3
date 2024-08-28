@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Xevious (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Xevious (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "9CD2D5DD",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F44354"
+}

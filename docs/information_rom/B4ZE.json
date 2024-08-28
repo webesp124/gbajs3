@@ -1,0 +1,10 @@
+{
+    "fullName": "Mega Man Zero 4 (USA) (Virtual Console)",
+    "coverImage": "/covers/Mega Man Zero 4 (USA) (Virtual Console).png",
+    "publisher": "Capcom",
+    "releaseDate": "2005",
+    "crc": "C4838CFA",
+    "cartSize": 16777216,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "D0A6CB1"
+}

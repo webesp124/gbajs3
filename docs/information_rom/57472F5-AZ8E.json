@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Puzzle Fighter II (USA)",
+    "coverImage": "/covers/Super Puzzle Fighter II (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2003",
+    "crc": "1201243A",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "57472F5"
+}

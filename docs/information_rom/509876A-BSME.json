@@ -1,0 +1,10 @@
+{
+    "fullName": "Metal Slug Advance (USA)",
+    "coverImage": "/covers/Metal Slug Advance (USA).png",
+    "publisher": "Ignition Entertainment",
+    "releaseDate": "2004",
+    "crc": "09980880",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "509876A"
+}

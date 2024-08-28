@@ -1,0 +1,10 @@
+{
+    "fullName": "Mario Party Advance (USA)",
+    "coverImage": "/covers/Mario Party Advance (USA).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2005",
+    "crc": "F094A4CB",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "62EDAD7"
+}
