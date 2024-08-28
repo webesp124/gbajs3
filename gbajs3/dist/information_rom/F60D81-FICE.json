@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Ice Climber (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Ice Climber (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "B265538D",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F60D81"
+}

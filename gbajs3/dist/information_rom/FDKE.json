@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Donkey Kong (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Donkey Kong (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "F53D8B56",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FCE84C"
+}

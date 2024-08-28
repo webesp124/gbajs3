@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 24 - Hikari Shinwa - Palthena no Kagami (Japan)",
+    "coverImage": "/covers/Famicom Mini 24 - Hikari Shinwa - Palthena no Kagami (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "F311EDAC",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "403A0EC"
+}

@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 15 - Dr. Mario (Japan)",
+    "coverImage": "/covers/Famicom Mini 15 - Dr. Mario (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "C836F2E2",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F899A5"
+}

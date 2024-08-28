@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 11 - Mario Bros. (Japan)",
+    "coverImage": "/covers/Famicom Mini 11 - Mario Bros. (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "42A027AB",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FFFB6D"
+}

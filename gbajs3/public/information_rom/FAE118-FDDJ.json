@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 16 - Dig Dug (Japan)",
+    "coverImage": "/covers/Famicom Mini 16 - Dig Dug (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "EE4C3504",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FAE118"
+}

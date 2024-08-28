@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Monkey Ball Jr. (USA)",
+    "coverImage": "/covers/Super Monkey Ball Jr. (USA).png",
+    "publisher": "SEGA",
+    "releaseDate": "2002",
+    "crc": "0A8031F0",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "364025A"
+}

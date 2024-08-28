@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 23 - Metroid (Japan)",
+    "coverImage": "/covers/Famicom Mini 23 - Metroid (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "ABECCDAB",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "41833EE"
+}

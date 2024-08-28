@@ -1,0 +1,10 @@
+{
+    "fullName": "Donkey Kong Country (USA)",
+    "coverImage": "/covers/Donkey Kong Country (USA).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2003",
+    "crc": "12F7A968",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "5E67D4E"
+}

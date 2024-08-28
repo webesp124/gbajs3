@@ -1,0 +1,10 @@
+{
+    "fullName": "Battle Network Rockman EXE 3 (Japan)",
+    "coverImage": "/covers/Battle Network Rockman EXE 3 (Japan).png",
+    "publisher": "Capcom",
+    "releaseDate": "2002",
+    "crc": "1C57724E",
+    "cartSize": 8388608,
+    "saveType": "SRAM_V112",
+    "checksum1000": "61A2AD7"
+}

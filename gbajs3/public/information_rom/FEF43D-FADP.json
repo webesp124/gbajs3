@@ -1,0 +1,10 @@
+{
+    "fullName": "NES Classics - Castlevania (Europe)",
+    "coverImage": "/covers/NES Classics - Castlevania (Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2005",
+    "crc": "497E3279",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FEF43D"
+}

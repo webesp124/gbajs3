@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Mario Advance (USA, Europe) (Virtual Console)",
+    "coverImage": "/covers/Super Mario Advance (USA, Europe) (Virtual Console).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2001",
+    "crc": "5251F2BF",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "35FF6A7"
+}

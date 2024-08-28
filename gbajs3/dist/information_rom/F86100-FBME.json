@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Bomberman (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Bomberman (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "C9EBC17D",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F86100"
+}

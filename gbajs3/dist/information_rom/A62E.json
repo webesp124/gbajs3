@@ -1,0 +1,10 @@
+{
+    "fullName": "Mega Man Zero 2 (USA) (Virtual Console)",
+    "coverImage": "/covers/Mega Man Zero 2 (USA) (Virtual Console).png",
+    "publisher": "Capcom",
+    "releaseDate": "2003",
+    "crc": "30D051FE",
+    "cartSize": 8388608,
+    "saveType": "SRAM_V113",
+    "checksum1000": "562841D"
+}

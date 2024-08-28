@@ -1,0 +1,10 @@
+{
+    "fullName": "Mega Man Zero 3 (USA)",
+    "coverImage": "/covers/Mega Man Zero 3 (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2004",
+    "crc": "2784F3F2",
+    "cartSize": 8388608,
+    "saveType": "SRAM_V113",
+    "checksum1000": "58B6C68"
+}

@@ -1,5 +1,5 @@
 import { useMediaQuery } from '@mui/material';
-import { useId, useState } from 'react';
+import { useId, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   BiInfoCircle,
@@ -14,11 +14,6 @@ import {
   BiBookmarks,
   BiEdit,
   BiJoystick,
-  BiUserCheck,
-  BiLogInCircle,
-  BiLogOutCircle,
-  BiCheckShield,
-  BiConversation,
   BiMenu,
   BiFileFind
 } from 'react-icons/bi';
@@ -29,29 +24,23 @@ import { NavComponent } from './nav-component.tsx';
 import { NavLeaf } from './nav-leaf.tsx';
 import {
   useEmulatorContext,
-  useAuthContext,
   useModalContext,
   useRunningContext
 } from '../../hooks/context.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
-import { useLogout } from '../../hooks/use-logout.tsx';
 import { AboutModal } from '../modals/about.tsx';
 import { CheatsModal } from '../modals/cheats.tsx';
 import { ControlsModal } from '../modals/controls.tsx';
 import { DownloadSaveModal } from '../modals/download-save.tsx';
 import { FileSystemModal } from '../modals/file-system.tsx';
-import { LegalModal } from '../modals/legal.tsx';
 import { LoadLocalRomModal } from '../modals/load-local-rom.tsx';
-import { LoadRomModal } from '../modals/load-rom.tsx';
-import { LoadSaveModal } from '../modals/load-save.tsx';
-import { LoginModal } from '../modals/login.tsx';
 import { SaveStatesModal } from '../modals/save-states.tsx';
 import { UploadCheatsModal } from '../modals/upload-cheats.tsx';
-import { UploadRomToServerModal } from '../modals/upload-rom-to-server.tsx';
 import { UploadRomModal } from '../modals/upload-rom.tsx';
-import { UploadSaveToServerModal } from '../modals/upload-save-to-server.tsx';
 import { UploadSavesModal } from '../modals/upload-saves.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
+
+import { MyRomStartPage, getSaveTypeCodeFromString } from '../modals/my-rom-start-page.tsx';
 
 type ExpandableComponentProps = {
   $isExpanded?: boolean;
@@ -145,18 +134,26 @@ const NavigationMenuClearDismiss = styled.button`
 export const NavigationMenu = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const { setModalContent, setIsModalOpen } = useModalContext();
-  const { isAuthenticated } = useAuthContext();
   const { canvas, emulator } = useEmulatorContext();
   const { isRunning } = useRunningContext();
-  const { execute: executeLogout } = useLogout();
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   const menuHeaderId = useId();
   const quickReload = useQuickReload();
-
-  const isMenuItemDisabledByAuth = !isAuthenticated();
-  const hasApiLocation = !!import.meta.env.VITE_GBA_SERVER_LOCATION;
-
+  
+  const [additionalData, setAdditionalData] = useState<any>(null);
+  const [gameData, setGameData] = useState(null);
+  
+  const defaultIP = '192.168.4.1';
+  const [esp32IP, setEsp32IP] = useState(defaultIP);
+  
+  useEffect(() => {
+    console.log("run0");
+    // Set the modal content and open the modal when the component mounts
+    setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>);
+    setIsModalOpen(true);
+  }, [additionalData, gameData, esp32IP]);
+  
   return (
     <>
       <HamburgerButton
@@ -174,6 +171,16 @@ export const NavigationMenu = () => {
       >
         <StyledMenuHeader id={menuHeaderId}>Menu</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
+          <NavLeaf
+            title="My Cartridge"
+            icon={<BiJoystick />}
+            $withPadding
+            onClick={() => {
+              setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>);
+              setIsModalOpen(true);
+            }}
+          />
+          
           <NavLeaf
             title="About"
             icon={<BiInfoCircle />}
@@ -234,6 +241,58 @@ export const NavigationMenu = () => {
             $isExpanded={isRunning}
             icon={<BiGame />}
           >
+        
+           <NavLeaf
+              title="Save to Cartridge"
+              $disabled={!isRunning}
+              icon={<BiScreenshot />}
+              onClick={() => {
+            const save = emulator?.getCurrentSave();
+            const saveName = emulator?.getCurrentSaveName();
+
+            if (save && saveName) {
+              const xhr = new XMLHttpRequest();
+              
+              if(!additionalData){
+                 console.log("No save type information.");
+                 return;
+              }
+              
+              var saveType = getSaveTypeCodeFromString(additionalData.saveType);
+              if (saveType == -1) {
+                 console.log("Invalid Save Type");
+                 return;
+              }
+              console.log(saveType);
+              
+              const uploadPromise = new Promise((resolve, reject) => {
+                 xhr.open('POST', `http://${esp32IP}/upload_save_file?saveType=${saveType}`, true);
+
+                 xhr.onload = () => {
+                   if (xhr.status >= 200 && xhr.status < 300) {
+                     resolve('Uploaded save to cartridge'); // Resolves the promise when successful
+                   } else {
+                     reject('Failed to upload save to cartridge'); // Rejects the promise on failure
+                   }
+                 };
+
+                 xhr.onerror = () => reject('Failed to upload save to cartridge'); // Handles network errors
+
+                 xhr.send(save);
+               });
+
+               // Display the toast with the promise
+               toast.promise(uploadPromise, {
+                 loading: 'Uploading save to cartridge...',
+                 success: (msg) => `${msg}`,
+                 error: (err) => `${err}`,
+               });
+            } else {
+              toast.error('Current save not available');
+            }
+          }}
+            />
+            
             <NavLeaf
               title="Screenshot"
               $disabled={!isRunning}
@@ -309,79 +368,6 @@ export const NavigationMenu = () => {
             }}
           />
 
-          <NavComponent
-            title="Profile"
-            icon={<BiUserCheck />}
-            $disabled={!hasApiLocation}
-          >
-            <NavLeaf
-              title="Login"
-              icon={<BiLogInCircle />}
-              onClick={() => {
-                setModalContent(<LoginModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Logout"
-              $disabled={isMenuItemDisabledByAuth}
-              icon={<BiLogOutCircle />}
-              onClick={executeLogout}
-            />
-            <NavLeaf
-              title="Load Save (Server)"
-              $disabled={isMenuItemDisabledByAuth}
-              icon={<BiCloudDownload />}
-              onClick={() => {
-                setModalContent(<LoadSaveModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Load Rom (Server)"
-              $disabled={isMenuItemDisabledByAuth}
-              icon={<BiCloudDownload />}
-              onClick={() => {
-                setModalContent(<LoadRomModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Send Save to Server"
-              $disabled={isMenuItemDisabledByAuth || !isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                setModalContent(<UploadSaveToServerModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Send Rom to Server"
-              $disabled={isMenuItemDisabledByAuth || !isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                setModalContent(<UploadRomToServerModal />);
-                setIsModalOpen(true);
-              }}
-            />
-          </NavComponent>
-
-          <NavLeaf
-            title="Legal"
-            icon={<BiCheckShield />}
-            onClick={() => {
-              setModalContent(<LegalModal />);
-              setIsModalOpen(true);
-            }}
-            $withPadding
-          />
-
-          <NavLeaf
-            title="Contact"
-            icon={<BiConversation />}
-            $link="https://github.com/thenick775/gbajs3"
-            $withPadding
-          />
         </MenuItemWrapper>
       </NavigationMenuWrapper>
       {isExpanded && !isLargerThanPhone && (

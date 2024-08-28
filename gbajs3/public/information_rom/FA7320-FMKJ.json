@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 18 - Makaimura (Japan)",
+    "coverImage": "/covers/Famicom Mini 18 - Makaimura (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "8A7964CA",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FA7320"
+}

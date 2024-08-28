@@ -1,0 +1,10 @@
+{
+    "fullName": "Gradius Galaxies (USA)",
+    "coverImage": "/covers/Gradius Galaxies (USA).png",
+    "publisher": "Konami",
+    "releaseDate": "2001",
+    "crc": "8103428D",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "2ACFADD"
+}

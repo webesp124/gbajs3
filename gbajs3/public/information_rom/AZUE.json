@@ -1,0 +1,10 @@
+{
+    "fullName": "Street Fighter Alpha 3 (USA)",
+    "coverImage": "/covers/Street Fighter Alpha 3 (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2002",
+    "crc": "80B707C2",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "7296739"
+}

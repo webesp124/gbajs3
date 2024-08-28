@@ -1,0 +1,10 @@
+{
+    "fullName": "Breath of Fire (USA)",
+    "coverImage": "/covers/Breath of Fire (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2001",
+    "crc": "F06422A8",
+    "cartSize": 4194304,
+    "saveType": "SRAM_V112",
+    "checksum1000": "24D3807"
+}

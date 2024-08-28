@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Donkey Kong (Japan)",
+    "coverImage": "/covers/Super Donkey Kong (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2003",
+    "crc": "2206B04D",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V122",
+    "checksum1000": "5D4E942"
+}

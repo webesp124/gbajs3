@@ -1,0 +1,10 @@
+{
+    "fullName": "Rockman Zero 4 (Japan)",
+    "coverImage": "/covers/Rockman Zero 4 (Japan).png",
+    "publisher": "Capcom",
+    "releaseDate": "2005",
+    "crc": "ECE42D0E",
+    "cartSize": 16777216,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "D1274F5"
+}

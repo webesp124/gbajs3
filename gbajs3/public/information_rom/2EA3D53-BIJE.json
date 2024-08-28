@@ -1,0 +1,10 @@
+{
+    "fullName": "Sonic The Hedgehog - Genesis (USA)",
+    "coverImage": "/covers/Sonic The Hedgehog - Genesis (USA).png",
+    "publisher": "SEGA",
+    "releaseDate": "2006",
+    "crc": "027BC70D",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "2EA3D53"
+}

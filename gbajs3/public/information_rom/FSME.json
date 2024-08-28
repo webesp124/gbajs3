@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Super Mario Bros. (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Super Mario Bros. (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "F7129225",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F67D79"
+}

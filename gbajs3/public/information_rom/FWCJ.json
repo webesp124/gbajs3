@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 14 - Wrecking Crew (Japan)",
+    "coverImage": "/covers/Famicom Mini 14 - Wrecking Crew (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "ADAC99BD",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "10264FD"
+}

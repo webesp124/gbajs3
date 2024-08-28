@@ -1,0 +1,10 @@
+{
+    "fullName": "Space Invaders (France)",
+    "coverImage": "/covers/Space Invaders (France).png",
+    "publisher": "Activision",
+    "releaseDate": "Unknown Date",
+    "crc": "59372656",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "34A18D8"
+}

@@ -1,0 +1,10 @@
+{
+    "fullName": "Mega Man Battle Chip Challenge (USA)",
+    "coverImage": "/covers/Mega Man Battle Chip Challenge (USA).png",
+    "publisher": "Capcom",
+    "releaseDate": "2004",
+    "crc": "26BE44FD",
+    "cartSize": 8388608,
+    "saveType": "SRAM_V113",
+    "checksum1000": "5DD921A"
+}

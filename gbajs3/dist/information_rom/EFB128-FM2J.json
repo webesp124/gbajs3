@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 21 - Super Mario Bros. 2 (Japan)",
+    "coverImage": "/covers/Famicom Mini 21 - Super Mario Bros. 2 (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "EF18F7B2",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "EFB128"
+}

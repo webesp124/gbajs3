@@ -1,0 +1,10 @@
+{
+    "fullName": "Pac-Man World (USA)",
+    "coverImage": "/covers/Pac-Man World (USA).png",
+    "publisher": "Zoo Digital Publishing",
+    "releaseDate": "2004",
+    "crc": "B2A4FC78",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "4934143"
+}

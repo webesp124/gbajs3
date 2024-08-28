@@ -1,0 +1,10 @@
+{
+    "fullName": "International Superstar Soccer (Europe)",
+    "coverImage": "/covers/International Superstar Soccer (Europe).png",
+    "publisher": "Konami",
+    "releaseDate": "Unknown Date",
+    "crc": "9989CE55",
+    "cartSize": 8388608,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "6BCD419"
+}

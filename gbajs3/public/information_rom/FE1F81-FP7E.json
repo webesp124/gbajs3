@@ -1,0 +1,10 @@
+{
+    "fullName": "Classic NES Series - Pac-Man (USA, Europe)",
+    "coverImage": "/covers/Classic NES Series - Pac-Man (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2007",
+    "crc": "C28DF82F",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "FE1F81"
+}

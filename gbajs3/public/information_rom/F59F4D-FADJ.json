@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 29 - Akumajou Dracula (Japan)",
+    "coverImage": "/covers/Famicom Mini 29 - Akumajou Dracula (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "11419D8B",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "F59F4D"
+}

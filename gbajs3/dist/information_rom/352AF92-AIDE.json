@@ -1,0 +1,10 @@
+{
+    "fullName": "Space Invaders (USA, Europe)",
+    "coverImage": "/covers/Space Invaders (USA, Europe).png",
+    "publisher": "Activision",
+    "releaseDate": "Unknown Date",
+    "crc": "5EA3F3B5",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "352AF92"
+}

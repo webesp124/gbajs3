@@ -1,0 +1,10 @@
+{
+    "fullName": "Rockman Zero (Japan)",
+    "coverImage": "/covers/Rockman Zero (Japan).png",
+    "publisher": "Capcom",
+    "releaseDate": "2002",
+    "crc": "FF2A67B1",
+    "cartSize": 8388608,
+    "saveType": "SRAM_V112",
+    "checksum1000": "621E9B3"
+}

@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 01 - Super Mario Bros. (Japan) (En) (Rev 1)",
+    "coverImage": "/covers/Famicom Mini 01 - Super Mario Bros. (Japan) (En) (Rev 1).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "CD2604DD",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "1D90F5E"
+}

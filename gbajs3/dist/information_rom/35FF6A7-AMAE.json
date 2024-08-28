@@ -1,0 +1,10 @@
+{
+    "fullName": "Super Mario Advance (USA, Europe)",
+    "coverImage": "/covers/Super Mario Advance (USA, Europe).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "1E4C6D6A",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "35FF6A7"
+}

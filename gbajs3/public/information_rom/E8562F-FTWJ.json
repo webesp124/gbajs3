@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 19 - Twin Bee (Japan)",
+    "coverImage": "/covers/Famicom Mini 19 - Twin Bee (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "Unknown Date",
+    "crc": "2F390212",
+    "cartSize": 1048576,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "E8562F"
+}

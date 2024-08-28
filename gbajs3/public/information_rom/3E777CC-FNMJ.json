@@ -1,0 +1,10 @@
+{
+    "fullName": "Famicom Mini 22 - Nazo no Murasame Jou (Japan)",
+    "coverImage": "/covers/Famicom Mini 22 - Nazo no Murasame Jou (Japan).png",
+    "publisher": "Nintendo",
+    "releaseDate": "2004",
+    "crc": "8233349C",
+    "cartSize": 4194304,
+    "saveType": "EEPROM_V124",
+    "checksum1000": "3E777CC"
+}

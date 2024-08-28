@@ -1,0 +1,10 @@
+{
+    "fullName": "Doom II (USA)",
+    "coverImage": "/covers/Doom II (USA).png",
+    "publisher": "Activision",
+    "releaseDate": "2002",
+    "crc": "C885D9E9",
+    "cartSize": 16777216,
+    "saveType": "EEPROM_V120",
+    "checksum1000": "C433523"
+}

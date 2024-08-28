@@ -86,6 +86,7 @@ const steps: Step[] = [
 ];
 
 export const ProductTourIntro = () => {
+  return true;
   const [hasCompletedProductTourSteps, setHasCompletedProductTourSteps] =
     useLocalStorage<CompletedProductTourSteps>(productTourLocalStorageKey, {
       hasCompletedProductTourIntro: false
