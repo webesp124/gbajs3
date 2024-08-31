@@ -40,7 +40,8 @@ import { UploadRomModal } from '../modals/upload-rom.tsx';
 import { UploadSavesModal } from '../modals/upload-saves.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
-import { MyRomStartPage, getSaveTypeCodeFromString } from '../modals/my-rom-start-page.tsx';
+import { MyRomStartPage } from '../modals/my-rom-start-page.tsx';
+import { getSaveTypeCodeFromString } from '../modals/util-rom.tsx';
 
 type ExpandableComponentProps = {
   $isExpanded?: boolean;
