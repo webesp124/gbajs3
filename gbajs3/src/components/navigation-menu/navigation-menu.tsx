@@ -144,14 +144,18 @@ export const NavigationMenu = () => {
   const [additionalData, setAdditionalData] = useState<any>(null);
   const [gameData, setGameData] = useState(null);
   
-  const defaultIP = '192.168.4.1';
+  const defaultIP = 'https://192.168.1.3';
   const [esp32IP, setEsp32IP] = useState(defaultIP);
   
   useEffect(() => {
-    console.log("run0");
-    // Set the modal content and open the modal when the component mounts
-    setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>);
-    setIsModalOpen(true);
+    const timer = setTimeout(() => {
+      console.log("run12");
+
+      setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>);
+      setIsModalOpen(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [additionalData, gameData, esp32IP]);
   
   return (
@@ -266,7 +270,7 @@ export const NavigationMenu = () => {
               console.log(saveType);
               
               const uploadPromise = new Promise((resolve, reject) => {
-                 xhr.open('POST', `http://${esp32IP}/upload_save_file?saveType=${saveType}`, true);
+                 xhr.open('POST', `${esp32IP}/upload_save_file?saveType=${saveType}`, true);
 
                  xhr.onload = () => {
                    if (xhr.status >= 200 && xhr.status < 300) {

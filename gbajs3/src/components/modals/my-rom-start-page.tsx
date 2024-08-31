@@ -1,10 +1,11 @@
-import { Button, Divider } from '@mui/material';
+import { Button, Divider, TextField } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
 import { styled, useTheme } from 'styled-components';
 import { BiPlay } from 'react-icons/bi';
 import { IoRocketSharp } from "react-icons/io5";
+import { HiRefresh } from "react-icons/hi";
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
@@ -31,6 +32,17 @@ type MyRomStartPageProps = {
   esp32IP: string;
   setEsp32IP: (data: string) => void;
 };
+
+const StyledForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100dvw;
+  max-width: fill-available;
+  max-width: stretch;
+  max-width: -webkit-fill-available;
+  max-width: -moz-available;
+`;
 
 export function getSaveTypeCodeFromString(saveTypeString: string[]){
       console.log(saveTypeString);
@@ -129,6 +141,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const { setIsModalOpen } = useModalContext();
   const { emulator } = useEmulatorContext();
   //const [currentRomURL, setCurrentRomURL] = useState<string | null>(null);
+
   const {
     data: externalRomFile,
     isLoading: isExternalRomLoading,
@@ -248,7 +261,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     let startedGameWithLocalFile = await startGameLocally(romName);
     if (!startedGameWithLocalFile){
        let cartSizeBytes = additionalData.cartSize;
-       let romURL = `http://${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
+       let romURL = `${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
        //setCurrentRomURL(romURL);
        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
@@ -261,10 +274,9 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       setIsExternalRomInfoLoading(true);
 
       // Fetch the basic game info
-      const response = await fetch(`http://${esp32IP}/get_game_info`, {
+      const response = await fetch(`${esp32IP}/get_game_info`, {
         method: 'GET',
         headers: {
-          'Origin': window.location.origin,
           'Access-Control-Request-Private-Network': 'true',
         }
       });
@@ -273,7 +285,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       setGameData(gameData);
 
       // Fetch additional information using the cartID
-      const additionalResponse = await fetch(`/information_rom/${gameData.cartID}.json`);
+      const additionalResponse = await fetch(`./information_rom/${gameData.cartID}.json`);
       let additionalData = await additionalResponse.json();
       
       console.log(32332);
@@ -284,7 +296,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         console.log("Checksums do not match. Trying to get a different one...");
         
         try {
-          const additionalResponseAdd = await fetch(`/information_rom/${checksum1000}-${gameData.cartID}.json`);
+          const additionalResponseAdd = await fetch(`./information_rom/${checksum1000}-${gameData.cartID}.json`);
 
           // Check if the response is successful
           if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
@@ -325,7 +337,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       }
       console.log(saveType);
       
-      var saveURL = `http://${esp32IP}/get_current_save?saveType=${saveType}`;
+      var saveURL = `${esp32IP}/get_current_save?saveType=${saveType}`;
       await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
 
     } catch (error) {
@@ -356,17 +368,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           }
           progress={externalRomLoadingProgress}
         >
-          <form
-            id="upload-rom-form"
-            aria-label="Upload Rom Form"
-          >
+
             {!!externalRomLoadError && (
               <ErrorWithIcon
                 icon={<BiError style={{ color: theme.errorRed }} />}
                 text="Loading rom from URL has failed"
               />
             )}
-          </form>
 
           {gameData && additionalData && (
           <div
@@ -450,21 +458,36 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         </div>
         
         )}
-        
-        {gameData && additionalData && (
+
+{gameData && additionalData && (
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
         )}
         
-          <div>
-            <label htmlFor="esp32-ip">ESP32 IP Address:</label>
-            <input
-              type="text"
-              id="esp32-ip"
-              value={esp32IP}
-              onChange={(e) => setEsp32IP(e.target.value)}
-              placeholder="Enter ESP32 IP address"
+        <StyledForm
+            aria-label="Login Form"
+          >
+            <TextField
+              label="ESP32 IP Address"
+              autoComplete="esp32IPInputField"
+              variant="filled"
+              style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '5px' }}
+              defaultValue={esp32IP}
+              onChange={(event) => {
+                setEsp32IP(event.target.value);
+                console.log(event.target.value);
+              }}
             />
-          </div>
+            <Button
+              variant="outlined"
+              style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '8px' }}
+              onClick={() => {fetchGameInfo()}}
+            >
+              <HiRefresh style={{ fontSize: '18px' }} /> {/* Icon for "Start Game" */}
+              Refresh
+            </Button>
+          </StyledForm>
+        
+        
           
          
         </RomLoadingIndicator>
