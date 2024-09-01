@@ -17,6 +17,7 @@ import {
   BiMenu,
   BiFileFind
 } from 'react-icons/bi';
+import { MdOutlineUploadFile } from "react-icons/md";
 import { styled, useTheme } from 'styled-components';
 
 import { NavigationMenuWidth } from './consts.tsx';
@@ -149,6 +150,12 @@ export const NavigationMenu = () => {
   const [esp32IP, setEsp32IP] = useState(defaultIP);
   
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ip = params.get('esp32_ip');
+    if (ip) {
+      setEsp32IP(ip);
+    }
+
     const timer = setTimeout(() => {
       console.log("run12");
 
@@ -240,7 +247,7 @@ export const NavigationMenu = () => {
            <NavLeaf
               title="Save to Cartridge"
               $disabled={!isRunning}
-              icon={<BiScreenshot />}
+              icon={<MdOutlineUploadFile />}
               onClick={() => {
             const save = emulator?.getCurrentSave();
             const saveName = emulator?.getCurrentSaveName();
