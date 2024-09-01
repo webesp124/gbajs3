@@ -19,6 +19,7 @@ import { getSaveTypeCodeFromString, timeout, fetchGameInfo } from './util-rom.ts
 
 type RomLoadingIndicatorProps = {
   isLoading: boolean;
+  isExternalRomLoading: boolean;
   children: ReactNode;
   indicator: ReactNode;
   progress: number;
@@ -123,15 +124,23 @@ const ProgressBar = styled.div<ProgressBarProps>`
 
 const RomLoadingIndicator = ({
   isLoading,
+  isExternalRomLoading,
   children,
   indicator,
   progress
 }: RomLoadingIndicatorProps) => {
   return isLoading ? (
     <RomLoadingContainer>
+      {isExternalRomLoading && (
       <URLDisplay>
         Dumping Rom from cartridge...
       </URLDisplay>
+      )}
+      {!isExternalRomLoading && (
+      <URLDisplay>
+        Dumping Save from cartridge...
+      </URLDisplay>
+      )}
       {indicator}
       <ProgressBar progress={progress}>
           <span style={{ position: 'relative', width: '100%', textAlign: 'center', zIndex: 600 }}>
@@ -170,6 +179,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   } = useLoadExternalSave();
   const runGame = useRunGame();
   const [isExternalRomInfoLoading, setIsExternalRomInfoLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const shouldUploadExternalRom =
     !isExternalRomLoading && !!externalRomFile;
@@ -234,11 +244,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   };
 
   const startGameWithSave = async () => {
+    setIsLoading(true);
     let saveName = buildRomName() + ".sav";
     await fetchMySave(additionalData.saveType, saveName);
     await timeout(300);
     console.log("save loaded");
     await startGameWithoutSave();
+    setIsLoading(false);
   };
   
   // Function to try to start a locally existing rom file
@@ -249,6 +261,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       console.log("rom exists locally");
       runGame(emulator?.filePaths().gamePath + '/' + romName);
       setIsModalOpen(false);
+      setIsLoading(false);
       return true;
     }
     return false;
@@ -256,6 +269,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
   // Function to start game without save
   const startGameWithoutSave = async () => {
+    setIsLoading(true);
     let romName = buildRomName() + ".gba";
     let startedGameWithLocalFile = await startGameLocally(romName);
     if (!startedGameWithLocalFile){
@@ -264,6 +278,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
     }
+    setIsLoading(false);
   };
   
   // Function to fetch the save
@@ -299,7 +314,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       )}
       <ModalBody>
         <RomLoadingIndicator
-          isLoading={isExternalRomLoading}
+          isLoading={isLoading}
+          isExternalRomLoading={isExternalRomLoading}
           indicator={
             <PacmanLoader
               color={theme.gbaThemeBlue}
@@ -409,6 +425,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       </ModalBody>
       
       <ModalFooter>
+      {!isLoading && (
         <ModalFooterButtonArea>
           <Button
             variant="contained"
@@ -436,6 +453,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             Close
           </Button>
         </ModalFooterButtonArea>
+      )}
       </ModalFooter>
     </>
   );

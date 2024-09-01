@@ -185,16 +185,6 @@ export const NavigationMenu = () => {
               setIsModalOpen(true);
             }}
           />
-          
-          <NavLeaf
-            title="About"
-            icon={<BiInfoCircle />}
-            $withPadding
-            onClick={() => {
-              setModalContent(<AboutModal />);
-              setIsModalOpen(true);
-            }}
-          />
 
           <NavComponent
             title="Pre Game Actions"
@@ -369,6 +359,16 @@ export const NavigationMenu = () => {
             $withPadding
             onClick={() => {
               setModalContent(<FileSystemModal />);
+              setIsModalOpen(true);
+            }}
+          />
+
+          <NavLeaf
+            title="About"
+            icon={<BiInfoCircle />}
+            $withPadding
+            onClick={() => {
+              setModalContent(<AboutModal />);
               setIsModalOpen(true);
             }}
           />
