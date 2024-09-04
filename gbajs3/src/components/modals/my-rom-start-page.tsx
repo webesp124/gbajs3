@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
 import { styled, useTheme } from 'styled-components';
-import { BiPlay } from 'react-icons/bi';
 import { IoRocketSharp } from "react-icons/io5";
 import { HiRefresh } from "react-icons/hi";
 
@@ -16,6 +15,8 @@ import { useLoadExternalRom } from '../../hooks/use-load-my-external-rom.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { useLoadExternalSave } from '../../hooks/use-load-my-save.tsx';
 import { getSaveTypeCodeFromString, timeout, fetchGameInfo } from './util-rom.tsx';
+import { SaveSelectionTable } from './save-selection-table.tsx';
+import { GameSelectionTable } from './game-selection-table.tsx';
 
 type RomLoadingIndicatorProps = {
   isLoading: boolean;
@@ -90,6 +91,7 @@ const ModalFooterButtonArea = styled.div`
 display: flex;
 gap: 10px;
 width: 100%;
+flex-direction: column;
 `;
 
 const URLDisplay = styled.p`
@@ -185,6 +187,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     !isExternalRomLoading && !!externalRomFile;
     
   const [checksum1000String, setChecksum1000String] = useState<string | null>(null);
+  const [selectedSave, setSelectedSave] = useState("Cartridge Save");
+  const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
@@ -244,9 +248,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   };
 
   const startGameWithSave = async () => {
+    console.log("Using save: " + selectedSave);
     setIsLoading(true);
     let saveName = buildRomName() + ".sav";
-    await fetchMySave(additionalData.saveType, saveName);
+    if (selectedSave == "Cartridge Save")
+      await fetchMySave(additionalData.saveType, saveName);
+    //else
+    //  emulator?.uploadSaveOrSaveState(emulator?.getFile("/data/saves/" + selectedSave));
     await timeout(300);
     console.log("save loaded");
     await startGameWithoutSave();
@@ -270,9 +278,14 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   // Function to start game without save
   const startGameWithoutSave = async () => {
     setIsLoading(true);
-    let romName = buildRomName() + ".gba";
-    let startedGameWithLocalFile = await startGameLocally(romName);
-    if (!startedGameWithLocalFile){
+    if (selectedGame != "Cartridge Rom"){
+       let startedGameWithLocalFile = await startGameLocally(selectedGame);
+       if (!startedGameWithLocalFile) {
+         console.log("Unable to load local rom");
+       }
+    }
+    else{
+       let romName = buildRomName() + ".gba";
        let cartSizeBytes = additionalData.cartSize;
        let romURL = `${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
@@ -333,6 +346,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             )}
 
           {gameData && additionalData && (
+            <>
           <GameInfoContainer id="game-info">
           <GameInfoImage
             id="cover-image"
@@ -384,7 +398,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           
           <GameInfoLabel><GameInfoLabelName>Cart ID:</GameInfoLabelName> {gameData.cartID}</GameInfoLabel>
           <GameInfoLabel><GameInfoLabelName>ROM Version:</GameInfoLabelName> {gameData.romVersion}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>Checksum:</GameInfoLabelName> {gameData.checksumStr}</GameInfoLabel>
+          <GameInfoLabel><GameInfoLabelName>Checksum:</GameInfoLabelName> 0x{checksum1000String}</GameInfoLabel>
           <GameInfoLabel><GameInfoLabelName>Publisher:</GameInfoLabelName> {additionalData.publisher}</GameInfoLabel>
           <GameInfoLabel><GameInfoLabelName>Release Date:</GameInfoLabelName> {additionalData.releaseDate}</GameInfoLabel>
           {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
@@ -393,10 +407,17 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           
         </GameInfoContainer>
         
-        )}
-
-{gameData && additionalData && (
+        {emulator && (
+          <>
+        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
+            <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
+        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>
+            <GameSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedGame={selectedGame} setSelectedGame={setSelectedGame} romName={buildRomName() + ".gba"} />
+            </>
+          )}
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
+
+        </>
         )}
         
         <StyledForm
@@ -434,15 +455,6 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             onClick={() => startGameWithSave()}
           >
             <IoRocketSharp style={{ fontSize: '30px', marginRight: '10px' }} /> {/* Icon for "Start Game With Save" */}
-            Start Game<br/>With Save
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            style={{ padding: '10px 20px 10px 10px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '5px' }}
-            onClick={() => startGameWithoutSave()}
-          >
-            <BiPlay style={{ fontSize: '40px' }} /> {/* Icon for "Start Game" */}
             Start Game
           </Button>
           <Button

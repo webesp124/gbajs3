@@ -43,7 +43,8 @@ const timeout = (delay: number) => {
 
 // Function to fetch and display game information
 const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => {
-  let gameData, additionalData, checksum1000;
+  let gameData, additionalData;
+  let checksum1000 = "";
   try {
     // Fetch the basic game info
     const response = await fetch(`${esp32IP}/get_game_info`, {
@@ -90,7 +91,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
   } catch (error) {
     console.error('Error fetching game information:', error);
   } finally {
-    return [gameData, additionalData, ""];
+    return [gameData, additionalData, checksum1000];
   }
 };
 

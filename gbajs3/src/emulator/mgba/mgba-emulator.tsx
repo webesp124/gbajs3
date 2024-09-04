@@ -46,6 +46,9 @@ export type GBAEmulator = {
   isFastForwardEnabled: () => boolean;
   listAllFiles: () => FileNode;
   listRoms: () => string[];
+  listSaves: () => string[];
+  getStatSaves: (name: string) => any;
+  getStatRoms: (name: string) => any;
   listSaveStates: () => string[];
   loadSaveState: (slot: number) => boolean;
   parseCheatsString: (cheatsStr: string) => ParsedCheats[];
@@ -211,6 +214,9 @@ export const mGBAEmulator = (mGBA: mGBAEmulatorTypeDef): GBAEmulator => {
     loadSaveState: mGBA.loadState,
     listSaveStates: () => mGBA.FS.readdir(paths.saveStatePath),
     listRoms: () => mGBA.FS.readdir(paths.gamePath),
+    listSaves: () => mGBA.FS.readdir(paths.savePath),
+    getStatSaves: (name) => mGBA.FS.stat("/data/saves/" + name),
+    getStatRoms: (name) => mGBA.FS.stat("/data/games/" + name),
     setVolume: async (volumePercent) => {
       if (
         mGBA.SDL2.audioContext.state === 'suspended' ||

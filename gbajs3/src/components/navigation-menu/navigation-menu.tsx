@@ -15,9 +15,12 @@ import {
   BiEdit,
   BiJoystick,
   BiMenu,
-  BiFileFind
+  BiFileFind,
+  BiGitCompare
 } from 'react-icons/bi';
 import { MdOutlineUploadFile } from "react-icons/md";
+import { IoHardwareChipOutline } from "react-icons/io5";
+
 import { styled, useTheme } from 'styled-components';
 
 import { NavigationMenuWidth } from './consts.tsx';
@@ -238,10 +241,10 @@ export const NavigationMenu = () => {
           </NavComponent>
 
           <NavComponent
-            title="In Game Actions"
+            title="Cartridge Actions"
             $disabled={!isRunning}
             $isExpanded={isRunning}
-            icon={<BiGame />}
+            icon={<IoHardwareChipOutline />}
           >
         
            <NavLeaf
@@ -272,9 +275,22 @@ export const NavigationMenu = () => {
 
                  xhr.onload = () => {
                    if (xhr.status >= 200 && xhr.status < 300) {
-                     resolve('Uploaded save to cartridge'); // Resolves the promise when successful
+                      const xhrVerify = new XMLHttpRequest();
+                      xhrVerify.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
+  
+                      xhrVerify.onload = () => {
+                        if (xhrVerify.status >= 200 && xhrVerify.status < 300) {
+                          resolve('Uploaded  and verified save on cartridge'); // Resolves the promise when successful
+                        } else {
+                          reject('Save on cartridge has errors'); // Rejects the promise on failure
+                        }
+                      };
+  
+                      xhrVerify.onerror = () => reject('Failed to upload save for verification'); // Handles network errors
+  
+                      xhrVerify.send(save);
                    } else {
-                     reject('Failed to upload save to cartridge'); // Rejects the promise on failure
+                      reject('Failed to upload save to cartridge'); // Rejects the promise on failure
                    }
                  };
 
@@ -294,7 +310,65 @@ export const NavigationMenu = () => {
             }
           }}
             />
-            
+
+            <NavLeaf
+              title="Verify Cartridge Save"
+              $disabled={!isRunning}
+              icon={<BiGitCompare />}
+              onClick={() => {
+                const save = emulator?.getCurrentSave();
+                const saveName = emulator?.getCurrentSaveName();
+
+                if (save && saveName) {
+                  const xhr = new XMLHttpRequest();
+                  
+                  if(!additionalData){
+                    console.log("No save type information.");
+                    return;
+                  }
+                  
+                  var saveType = getSaveTypeCodeFromString(additionalData.saveType);
+                  if (saveType == -1) {
+                    console.log("Invalid Save Type");
+                    return;
+                  }
+                  
+                  const uploadPromise = new Promise((resolve, reject) => {
+                    xhr.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
+
+                    xhr.onload = () => {
+                      if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve('Verified save on cartridge'); // Resolves the promise when successful
+                      } else {
+                        reject('Save on cartridge is not the same.'); // Rejects the promise on failure
+                      }
+                    };
+
+                    xhr.onerror = () => reject('Failed to upload save'); // Handles network errors
+
+                    xhr.send(save);
+                  });
+
+                  // Display the toast with the promise
+                  toast.promise(uploadPromise, {
+                    loading: 'Verifying save on cartridge...',
+                    success: (msg) => `${msg}`,
+                    error: (err) => `${err}`,
+                  });
+                } else {
+                  toast.error('Current save not available');
+                }
+              }}
+            />
+        </NavComponent>
+        
+
+        <NavComponent
+            title="In Game Actions"
+            $disabled={!isRunning}
+            $isExpanded={isRunning}
+            icon={<BiGame />}
+          >
             <NavLeaf
               title="Screenshot"
               $disabled={!isRunning}
