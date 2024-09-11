@@ -6,7 +6,7 @@ import * as bps from 'bps';
 type LoadExternalRomProps = {
   url: URL;
   fullName: string;
-  patchFile: string;
+  patchFile: string | null;
 };
 
 export const useLoadExternalRom = () => {

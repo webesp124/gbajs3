@@ -1,4 +1,4 @@
-import { Button, Divider, TextField } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
@@ -14,7 +14,7 @@ import { useRunGame } from '../../hooks/emulator/use-run-game.tsx';
 import { useLoadExternalRom } from '../../hooks/use-load-my-external-rom.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { useLoadExternalSave } from '../../hooks/use-load-my-save.tsx';
-import { getSaveTypeCodeFromString, timeout, fetchGameInfo } from './util-rom.tsx';
+import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes } from './util-rom.tsx';
 import { SaveSelectionTable } from './save-selection-table.tsx';
 import { GameSelectionTable } from './game-selection-table.tsx';
 
@@ -75,16 +75,6 @@ const GameInfoImage = styled.img`
   margin-bottom: 15px;
   border-radius: 12px;
   border: 1px solid black;
-`;
-
-const GameInfoContainer = styled.div`
-display: flex;
-flex-direction: column;
-align-items: center;
-text-align: center;
-margin: 0px auto;
-padding: 0px;
-max-width: 600px;
 `;
 
 const ModalFooterButtonArea = styled.div`
@@ -244,19 +234,24 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   }, []);
   
   const buildRomName = () => {
-     return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+     if (additionalData)
+       return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+     else
+       return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
   };
 
   const startGameWithSave = async () => {
-    console.log("Using save: " + selectedSave);
     setIsLoading(true);
-    let saveName = buildRomName() + ".sav";
-    if (selectedSave == "Cartridge Save")
-      await fetchMySave(additionalData.saveType, saveName);
-    //else
-    //  emulator?.uploadSaveOrSaveState(emulator?.getFile("/data/saves/" + selectedSave));
-    await timeout(300);
-    console.log("save loaded");
+    if (gameData["is_gba"]){
+      console.log("Using save: " + selectedSave);
+      let saveName = buildRomName() + ".sav";
+      if (selectedSave == "Cartridge Save")
+        await fetchMySave(additionalData.saveType, saveName);
+      //else
+      //  emulator?.uploadSaveOrSaveState(emulator?.getFile("/data/saves/" + selectedSave));
+      await timeout(300);
+      console.log("save loaded");
+    }
     await startGameWithoutSave();
     setIsLoading(false);
   };
@@ -285,11 +280,19 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
        }
     }
     else{
-       let romName = buildRomName() + ".gba";
-       let cartSizeBytes = additionalData.cartSize;
-       let romURL = `${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
+       if (gameData["is_gba"]){
+        let romName = buildRomName() + ".gba";
+        let cartSizeBytes = additionalData.cartSize;
+        let romURL = `${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
-       await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
+        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
+       }
+       else {
+        let romName = buildRomName() + ".gb";
+        let romURL = `${esp32IP}/get_current_game.gb`;
+
+        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: null });
+       }
     }
     setIsLoading(false);
   };
@@ -344,68 +347,66 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                 text="Loading rom from URL has failed"
               />
             )}
-
+          {gameData && gameData.is_gba && (
+            <>
           {gameData && additionalData && (
             <>
-          <GameInfoContainer id="game-info">
-          <GameInfoImage
-            id="cover-image"
-            src={additionalData.coverImage.startsWith('/') ? `.${additionalData.coverImage}` : additionalData.coverImage}
-            alt={`${additionalData.fullName} Cover`}
-          />
-          <GameInfoLabel><GameInfoLabelName>Full Name:</GameInfoLabelName> {additionalData.fullName}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>ROM Name:</GameInfoLabelName> {gameData.romName}</GameInfoLabel>
+          <RomLoadingContainer>
+            <GameInfoImage
+              id="cover-image"
+              src={additionalData.coverImage.startsWith('/') ? `.${additionalData.coverImage}` : additionalData.coverImage}
+              alt={`${additionalData.fullName} Cover`}
+            />
+          </RomLoadingContainer>
+          <TableContainer id="game-info"><Table><TableBody>
+            <TableRow><TableCell>Full Name:</TableCell><TableCell>{additionalData.fullName}</TableCell></TableRow>
+            <TableRow><TableCell>ROM Name:</TableCell><TableCell>{gameData.romName}</TableCell></TableRow>
+            
+            <TableRow>
+              <TableCell>Cart Size:</TableCell>
+              <TableCell><Select
+                name="cartSize"
+                value={additionalData.cartSize}
+                onChange={handleAdditionalDataChange}
+              >
+                <MenuItem value={additionalData.cartSize} key={(additionalData.cartSize / 1024 / 1024).toFixed(2)}>
+                {(additionalData.cartSize / 1024 / 1024).toFixed(2)}MB
+                </MenuItem>
+        
+                {[1, 2, 4, 8, 16, 32, 64].map((size) => (
+                  <MenuItem key={size} value={size * 1024 * 1024}>
+                    {size}MB
+                  </MenuItem>
+                ))}
+              </Select></TableCell>
+            </TableRow>
+            
+            <TableRow>
+              <TableCell>Save Type:</TableCell>
+              <TableCell><Select
+                name="saveType"
+                value={additionalData.saveType}
+                onChange={handleAdditionalDataChange}
+              >
+                {saveTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </Select></TableCell>
+            </TableRow>
+            
+            {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
+              <TableRow><TableCell>BPS Patch File:</TableCell> <TableCell>{additionalData.patchFile}</TableCell></TableRow>
+            )}
+
+            <TableRow><TableCell>Cart ID:</TableCell> <TableCell>{gameData.cartID}</TableCell></TableRow>
+            <TableRow><TableCell>ROM Version:</TableCell> <TableCell>{gameData.romVersion}</TableCell></TableRow>
+            <TableRow><TableCell>Checksum:</TableCell> <TableCell>0x{checksum1000String}</TableCell></TableRow>
+            <TableRow><TableCell>Publisher:</TableCell> <TableCell>{additionalData.publisher}</TableCell></TableRow>
+            <TableRow><TableCell style={{border:"none"}}>Release Date:</TableCell> <TableCell style={{border:"none"}}>{additionalData.releaseDate}</TableCell></TableRow>
           
-          <GameInfoLabel>
-            <GameInfoLabelName>Cart Size (MB):</GameInfoLabelName>
-            <GameInfoLabelSelect
-              name="cartSize"
-              value={additionalData.cartSize / 1024 / 1024}
-              onChange={handleAdditionalDataChange}
-            >
-              <GameInfoLabelOption value={additionalData.cartSize} key={(additionalData.cartSize / 1024 / 1024).toFixed(2)}>
-              {(additionalData.cartSize / 1024 / 1024).toFixed(2)}MB
-              </GameInfoLabelOption>
-      
-              {[1, 2, 4, 8, 16, 32, 64].map((size) => (
-                <GameInfoLabelOption key={size} value={size * 1024 * 1024}>
-                  {size}MB
-                </GameInfoLabelOption>
-              ))}
-            </GameInfoLabelSelect>
-          </GameInfoLabel>
-          
-          <GameInfoLabel>
-            <GameInfoLabelName>Save Type:</GameInfoLabelName>
-            <GameInfoLabelSelect
-              name="saveType"
-              value={additionalData.saveType}
-              onChange={handleAdditionalDataChange}
-            >
-              <GameInfoLabelOption value="FLASH1M_V102">FLASH1M_V102</GameInfoLabelOption>
-              <GameInfoLabelOption value="FLASH1M_V103">FLASH1M_V103</GameInfoLabelOption>
-              <GameInfoLabelOption value="FLASH_V124">FLASH_V124</GameInfoLabelOption>
-              <GameInfoLabelOption value="FLASH_V126">FLASH_V126</GameInfoLabelOption>
-              <GameInfoLabelOption value="FLASH_ECLA">FLASH_ECLA</GameInfoLabelOption>
-              <GameInfoLabelOption value="EEPROM_V122">EEPROM_V122</GameInfoLabelOption>
-              <GameInfoLabelOption value="EEPROM_V124">EEPROM_V124</GameInfoLabelOption>
-              <GameInfoLabelOption value="SRAM_V112">SRAM_V112</GameInfoLabelOption>
-              <GameInfoLabelOption value="SRAM_V113">SRAM_V113</GameInfoLabelOption>
-              <GameInfoLabelOption value="REPRO_FLASH1M">REPRO_FLASH1M</GameInfoLabelOption>
-              <GameInfoLabelOption value="NONE">NONE</GameInfoLabelOption>
-            </GameInfoLabelSelect>
-          </GameInfoLabel>
-          
-          <GameInfoLabel><GameInfoLabelName>Cart ID:</GameInfoLabelName> {gameData.cartID}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>ROM Version:</GameInfoLabelName> {gameData.romVersion}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>Checksum:</GameInfoLabelName> 0x{checksum1000String}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>Publisher:</GameInfoLabelName> {additionalData.publisher}</GameInfoLabel>
-          <GameInfoLabel><GameInfoLabelName>Release Date:</GameInfoLabelName> {additionalData.releaseDate}</GameInfoLabel>
-          {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
-            <GameInfoLabel><GameInfoLabelName>BPS Patch File:</GameInfoLabelName> {additionalData.patchFile}</GameInfoLabel>
-          )}
-          
-        </GameInfoContainer>
+          </TableBody></Table></TableContainer>
         
         {emulator && (
           <>
@@ -418,6 +419,52 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
 
         </>
+        )}
+        </>
+        )}
+
+
+
+        {gameData && !gameData.is_gba && (
+          <>
+          {gameData && (
+            <>
+            <GameInfoLabel><GameInfoLabelName>ROM Name:</GameInfoLabelName> {gameData.romName}</GameInfoLabel>
+            <GameInfoLabel>
+            <GameInfoLabelName>Cart Size (KB):</GameInfoLabelName>
+            <GameInfoLabelSelect
+              name="cartSize"
+              value={gameData.romSizeBytes_gb / 1024}
+              onChange={handleAdditionalDataChange}
+            >
+              <GameInfoLabelOption value={gameData.romSizeBytes_gb} key={(gameData.romSizeBytes_gb / 1024).toFixed(2)}>
+              {(gameData.romSizeBytes_gb / 1024).toFixed(2)}MB
+              </GameInfoLabelOption>
+      
+              {[32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((size) => (
+                <GameInfoLabelOption key={size} value={size * 1024}>
+                  {size}KB
+                </GameInfoLabelOption>
+              ))}
+            </GameInfoLabelSelect>
+            </GameInfoLabel>
+            <GameInfoLabel><GameInfoLabelName>Rom Banks:</GameInfoLabelName> {gameData.romBanks}</GameInfoLabel>
+            <GameInfoLabel><GameInfoLabelName>Checksum:</GameInfoLabelName> 0x{gameData.checksum_gb}</GameInfoLabel>
+            <GameInfoLabel><GameInfoLabelName>SRAM Size:</GameInfoLabelName> {gameData.sramSize}</GameInfoLabel>
+            <GameInfoLabel><GameInfoLabelName>Audio WE used:</GameInfoLabelName> {gameData.audioWE ? "true" : "false"}</GameInfoLabel>
+
+            {emulator && (
+              <>
+            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
+                <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
+            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>
+                <GameSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedGame={selectedGame} setSelectedGame={setSelectedGame} romName={buildRomName() + ".gba"} />
+                </>
+              )}
+            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
+            </>
+          )}
+          </>
         )}
         
         <StyledForm

@@ -46,6 +46,7 @@ import { ButtonBase } from '../shared/custom-button-base.tsx';
 
 import { MyRomStartPage } from '../modals/my-rom-start-page.tsx';
 import { getSaveTypeCodeFromString } from '../modals/util-rom.tsx';
+import { CreatePatchFileModal } from '../modals/create-patch-file.tsx';
 
 type ExpandableComponentProps = {
   $isExpanded?: boolean;
@@ -186,6 +187,7 @@ export const NavigationMenu = () => {
       >
         <StyledMenuHeader id={menuHeaderId}>Menu</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
+        
           <NavLeaf
             title="My Cartridge"
             icon={<BiJoystick />}
@@ -443,7 +445,19 @@ export const NavigationMenu = () => {
               setIsModalOpen(true);
             }}
           />
-
+        <NavComponent
+          title="Other"
+          icon={<BiFolderPlus />}
+        >
+          <NavLeaf
+            title="Create Patch File"
+            icon={<BiJoystick />}
+            $withPadding
+            onClick={() => {
+              setModalContent(<CreatePatchFileModal />);
+              setIsModalOpen(true);
+            }}
+          />
           <NavLeaf
             title="About"
             icon={<BiInfoCircle />}
@@ -453,6 +467,7 @@ export const NavigationMenu = () => {
               setIsModalOpen(true);
             }}
           />
+        </NavComponent>
 
         </MenuItemWrapper>
       </NavigationMenuWrapper>

@@ -1,0 +1,12 @@
+{
+  "fullName": "Pokemon - Smaragd-Edition (Germany) (Flash1M Repro)",
+  "coverImage": "/covers/Pokemon - Smaragd-Edition (Germany).png",
+  "publisher": "Nintendo",
+  "releaseDate": "Unknown Date",
+  "crc": "55C2E1AD",
+  "cartSize": 16777216,
+  "saveType": "REPRO_FLASH1M",
+  "checksum1000": "DDEB1E9",
+  "patchFile": "./patches/Pokemon - Smaragd-Edition (Germany) (Flash1M Repro).bps",
+  "console": ".gba"
+}

@@ -35,7 +35,8 @@
     "react-spinners": "^0.14.1",
     "styled-components": "^6.1.1",
     "usehooks-ts": "^3.0.1",
-    "bps": "^2.0.1"
+    "bps": "^2.0.1",
+    "crc-32": "^1.2.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.6",

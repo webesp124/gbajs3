@@ -7,7 +7,7 @@ interface GameData {
 }
 
 interface GameSelectionTableProps {
-    gameData: GameData;
+    gameData: GameData | null;
     checksum1000String: string | null;
     selectedGame: string;
     setSelectedGame: (save: string) => void;
@@ -20,8 +20,13 @@ export const GameSelectionTable: React.FC<GameSelectionTableProps> = ({ gameData
     const handleCheckboxChange = (game: string) => {
         setSelectedGame(game);
     };
-
-    const localGames = emulator?.listRoms?.().filter(game => game.includes(gameData.cartID + "_" + checksum1000String)) || [];
+    
+    let localGames;
+    if (gameData == null)
+    localGames = emulator?.listRoms?.()
+    .filter(game => game !== '.' && game !== '..') || [];
+    else
+      localGames = emulator?.listRoms?.().filter(game => game.includes(gameData.cartID + "_" + checksum1000String)) || [];
 
     useEffect(() => {
         for (const entry of localGames) {

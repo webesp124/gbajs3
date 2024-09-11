@@ -1,3 +1,17 @@
+export const saveTypes = [
+  "FLASH1M_V102",
+  "FLASH1M_V103",
+  "FLASH_V124",
+  "FLASH_V126",
+  "FLASH_ECLA",
+  "EEPROM_V122",
+  "EEPROM_V124",
+  "SRAM_V112",
+  "SRAM_V113",
+  "REPRO_FLASH1M",
+  "NONE",
+];
+
 const getSaveTypeCodeFromString = (saveTypeString: string[]) => {
     console.log("Save Type: " + saveTypeString);
     
@@ -56,37 +70,38 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
 
     gameData = await response.json();
 
-    // Fetch additional information using the cartID
-    const additionalResponse = await fetch(`./information_rom/${gameData.cartID}.json`);
-    additionalData = await additionalResponse.json();
-    
-    checksum1000 = getChecksum1000(gameData, additionalData);
-    
-    if(checksum1000 != additionalData.checksum1000){
-      console.log("Checksums do not match. Trying to get a different one...");
+    if (gameData["is_gba"]) {
+      // Fetch additional information using the cartID
+      const additionalResponse = await fetch(`./information_rom/${gameData.cartID}.json`);
+      additionalData = await additionalResponse.json();
       
-      try {
-        const additionalResponseAdd = await fetch(`./information_rom/${checksum1000}-${gameData.cartID}.json`);
+      checksum1000 = getChecksum1000(gameData, additionalData);
+      
+      if(checksum1000 != additionalData.checksum1000){
+        console.log("Checksums do not match. Trying to get a different one...");
+        
+        try {
+          const additionalResponseAdd = await fetch(`./information_rom/${checksum1000}-${gameData.cartID}.json`);
 
-        // Check if the response is successful
-        if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
-            throw new Error(`HTTP error! Status: ${additionalResponseAdd.status}`);
+          // Check if the response is successful
+          if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
+              throw new Error(`HTTP error! Status: ${additionalResponseAdd.status}`);
+          }
+
+          let additionalDataAdd = await additionalResponseAdd.json();
+
+          // Check if additionalDataAdd is not empty or undefined
+          if (additionalDataAdd && Object.keys(additionalDataAdd).length > 0) {
+              console.log("Additional Data exists");
+              additionalData = additionalDataAdd;
+          } else {
+              console.log("Additional Data does not exist or is empty");
+          }
+        } catch (error) {
+          console.error("An error occurred while fetching additional data: ", error);
         }
-
-        let additionalDataAdd = await additionalResponseAdd.json();
-
-        // Check if additionalDataAdd is not empty or undefined
-        if (additionalDataAdd && Object.keys(additionalDataAdd).length > 0) {
-            console.log("Additional Data exists");
-            additionalData = additionalDataAdd;
-        } else {
-            console.log("Additional Data does not exist or is empty");
-        }
-      } catch (error) {
-        console.error("An error occurred while fetching additional data: ", error);
       }
     }
-    
     return [gameData, additionalData, checksum1000];
   } catch (error) {
     console.error('Error fetching game information:', error);
