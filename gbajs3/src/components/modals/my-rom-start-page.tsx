@@ -354,7 +354,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           <RomLoadingContainer>
             <GameInfoImage
               id="cover-image"
-              src={additionalData.coverImage.startsWith('/') ? `.${additionalData.coverImage}` : additionalData.coverImage}
+              src={additionalData.coverImage ? additionalData.coverImage.startsWith('/') ? `.${additionalData.coverImage}` : additionalData.coverImage : ""}
               alt={`${additionalData.fullName} Cover`}
             />
           </RomLoadingContainer>

@@ -74,6 +74,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
       // Fetch additional information using the cartID
       const additionalResponse = await fetch(`./information_rom/${gameData.cartID}.json`);
       additionalData = await additionalResponse.json();
+      console.log(additionalData);
       
       checksum1000 = getChecksum1000(gameData, additionalData);
       

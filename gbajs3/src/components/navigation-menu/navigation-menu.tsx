@@ -41,6 +41,7 @@ import { LoadLocalRomModal } from '../modals/load-local-rom.tsx';
 import { SaveStatesModal } from '../modals/save-states.tsx';
 import { UploadCheatsModal } from '../modals/upload-cheats.tsx';
 import { UploadRomModal } from '../modals/upload-rom.tsx';
+import { UploadRomReflashModal } from '../modals/upload-rom-reflash.tsx';
 import { UploadSavesModal } from '../modals/upload-saves.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
@@ -244,7 +245,7 @@ export const NavigationMenu = () => {
 
           <NavComponent
             title="Cartridge Actions"
-            $disabled={!isRunning}
+            //$disabled={!isRunning}
             $isExpanded={isRunning}
             icon={<IoHardwareChipOutline />}
           >
@@ -360,6 +361,15 @@ export const NavigationMenu = () => {
                 } else {
                   toast.error('Current save not available');
                 }
+              }}
+            />
+
+            <NavLeaf
+              title="Reflash Cartridge Rom"
+              icon={<BiUpload />}
+              onClick={() => {
+                setModalContent(<UploadRomReflashModal esp32IP={esp32IP} />);
+                setIsModalOpen(true);
               }}
             />
         </NavComponent>
