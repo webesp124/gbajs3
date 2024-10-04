@@ -1,3 +1,5 @@
+export const linkCartridgeInformation = "https://raw.githubusercontent.com/webesp124/gb_data/refs/heads/main";
+
 export const saveTypes = [
   "FLASH1M_V102",
   "FLASH1M_V103",
@@ -58,6 +60,7 @@ const timeout = (delay: number) => {
 // Function to fetch and display game information
 const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => {
   let gameData, additionalData;
+  additionalData = null;
   let checksum1000 = "";
   try {
     // Fetch the basic game info
@@ -70,9 +73,12 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
 
     gameData = await response.json();
 
+    if(gameData.romName == ""){
+      throw new Error(`Error Reading Cartridge, ROM name empty`);
+    }
     if (gameData["is_gba"]) {
       // Fetch additional information using the cartID
-      const additionalResponse = await fetch(`./information_rom/${gameData.cartID}.json`);
+      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json`);
       additionalData = await additionalResponse.json();
       console.log(additionalData);
       
@@ -82,7 +88,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
         console.log("Checksums do not match. Trying to get a different one...");
         
         try {
-          const additionalResponseAdd = await fetch(`./information_rom/${checksum1000}-${gameData.cartID}.json`);
+          const additionalResponseAdd = await fetch(linkCartridgeInformation + `/information_rom_gba/${checksum1000}-${gameData.cartID}.json`);
 
           // Check if the response is successful
           if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
@@ -102,6 +108,14 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
           console.error("An error occurred while fetching additional data: ", error);
         }
       }
+    } else {
+      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gb/${gameData.romName}.json`);
+      additionalData = await additionalResponse.json();
+      console.log(additionalData);
+      
+      if(gameData.checksumStr != additionalData.global_checksum){
+        console.log("Checksums do not match. Trying to get a different one...");
+      }
     }
     return [gameData, additionalData, checksum1000];
   } catch (error) {
@@ -111,4 +125,31 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
   }
 };
 
-export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo}
+const getCoverImage = (gameData: { is_gba: boolean; }, additionalData: { coverImage: string; }) => {
+  let coverImage = additionalData.coverImage;
+
+  if (coverImage) {
+      // If the cover image starts with '/', adjust the path based on gameData.is_gba
+      if (coverImage.startsWith('/')) {
+          if (gameData.is_gba) {
+              return linkCartridgeInformation + coverImage.replace('/covers/', '/covers_gba/');
+          } else {
+              return linkCartridgeInformation + coverImage.replace('/covers/', '/covers_gb/');
+          }
+      } else if (coverImage.startsWith('.')) {
+          if (gameData.is_gba) {
+              return linkCartridgeInformation + coverImage.substring(1).replace('/covers/', '/covers_gba/');
+          } else {
+              return linkCartridgeInformation + coverImage.substring(1).replace('/covers/', '/covers_gb/');
+          }
+      } else {
+          // If coverImage doesn't start with '/', return it as is
+          return coverImage;
+      }
+  }
+
+  // Return an empty string if no coverImage is provided
+  return "";
+};
+
+export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo, getCoverImage}

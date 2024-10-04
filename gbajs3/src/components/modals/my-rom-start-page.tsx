@@ -14,7 +14,7 @@ import { useRunGame } from '../../hooks/emulator/use-run-game.tsx';
 import { useLoadExternalRom } from '../../hooks/use-load-my-external-rom.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { useLoadExternalSave } from '../../hooks/use-load-my-save.tsx';
-import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes } from './util-rom.tsx';
+import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes, getCoverImage } from './util-rom.tsx';
 import { SaveSelectionTable } from './save-selection-table.tsx';
 import { GameSelectionTable } from './game-selection-table.tsx';
 
@@ -234,24 +234,38 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   }, []);
   
   const buildRomName = () => {
-     if (additionalData)
-       return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
-     else
-       return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
+    if (gameData["is_gba"]) {
+      if (additionalData)
+        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+      else
+        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
+    }
+    else {
+      if (additionalData)
+        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
+      else
+        return gameData.romName + "_" + gameData.checksumStr;
+    }
   };
 
   const startGameWithSave = async () => {
     setIsLoading(true);
-    if (gameData["is_gba"]){
-      console.log("Using save: " + selectedSave);
-      let saveName = buildRomName() + ".sav";
-      if (selectedSave == "Cartridge Save")
-        await fetchMySave(additionalData.saveType, saveName);
-      //else
-      //  emulator?.uploadSaveOrSaveState(emulator?.getFile("/data/saves/" + selectedSave));
-      await timeout(300);
-      console.log("save loaded");
+    console.log("Using save: " + selectedSave);
+
+    console.log("Using save: " + selectedSave);
+    let saveName = buildRomName() + ".sav";
+    if (selectedSave == "Cartridge Save"){
+      if (gameData["is_gba"])
+        await fetchMySave_gba(additionalData.saveType, saveName);
+      else
+        if (gameData["sramSize"])
+          await fetchMySave_gb(saveName);
     }
+    //else
+    //  emulator?.uploadSaveOrSaveState(emulator?.getFile("/data/saves/" + selectedSave));
+    await timeout(300);
+    console.log("save loaded");
+
     await startGameWithoutSave();
     setIsLoading(false);
   };
@@ -298,7 +312,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   };
   
   // Function to fetch the save
-  const fetchMySave = async (saveTypeString: string[], fullName: string) => {
+  const fetchMySave_gba = async (saveTypeString: string[], fullName: string) => {
     try {
       console.log(saveTypeString);
       var saveType = getSaveTypeCodeFromString(saveTypeString);
@@ -317,12 +331,23 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     }
   };
 
+  const fetchMySave_gb = async (fullName: string) => {
+    try {
+      var saveURL = `${esp32IP}/get_current_save`;
+      await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
+
+    } catch (error) {
+      console.error('Error fetching save:', error);
+    } finally {
+    }
+  };
+
   return (
     <>
       {gameData && additionalData ? (
       <ModalHeader title={additionalData.fullName} />
       ) : gameData && !additionalData ? (
-      <ModalHeader title={gameData.romName} />
+      <ModalHeader title={gameData.romName == "" ? "Error Reading Cartridge": gameData.romName} />
       ) : !gameData && additionalData ? (
       <ModalHeader title={additionalData.fullName} />
       ) : (
@@ -347,14 +372,14 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                 text="Loading rom from URL has failed"
               />
             )}
-          {gameData && gameData.is_gba && (
+          
             <>
           {gameData && additionalData && (
             <>
           <RomLoadingContainer>
             <GameInfoImage
               id="cover-image"
-              src={additionalData.coverImage ? additionalData.coverImage.startsWith('/') ? `.${additionalData.coverImage}` : additionalData.coverImage : ""}
+              src={getCoverImage(gameData, additionalData)}
               alt={`${additionalData.fullName} Cover`}
             />
           </RomLoadingContainer>
@@ -381,6 +406,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               </Select></TableCell>
             </TableRow>
             
+            {gameData && gameData.is_gba && (
             <TableRow>
               <TableCell>Save Type:</TableCell>
               <TableCell><Select
@@ -395,14 +421,25 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                 ))}
               </Select></TableCell>
             </TableRow>
-            
+            )}
+
             {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
               <TableRow><TableCell>BPS Patch File:</TableCell> <TableCell>{additionalData.patchFile}</TableCell></TableRow>
             )}
 
+            {gameData && gameData.is_gba && (
             <TableRow><TableCell>Cart ID:</TableCell> <TableCell>{gameData.cartID}</TableCell></TableRow>
+            )}
             <TableRow><TableCell>ROM Version:</TableCell> <TableCell>{gameData.romVersion}</TableCell></TableRow>
+            {gameData && gameData.is_gba && (
             <TableRow><TableCell>Checksum:</TableCell> <TableCell>0x{checksum1000String}</TableCell></TableRow>
+            )}
+            {gameData && !gameData.is_gba && (
+            <TableRow><TableCell>Checksum:</TableCell> <TableCell>0x{gameData.checksum_gb}</TableCell></TableRow>
+            )}
+            {gameData && !gameData.is_gba && (
+            <TableRow><TableCell>Global Checksum:</TableCell> <TableCell>0x{gameData.checksumStr}</TableCell></TableRow>
+            )}
             <TableRow><TableCell>Publisher:</TableCell> <TableCell>{additionalData.publisher}</TableCell></TableRow>
             <TableRow><TableCell style={{border:"none"}}>Release Date:</TableCell> <TableCell style={{border:"none"}}>{additionalData.releaseDate}</TableCell></TableRow>
           
@@ -410,22 +447,35 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         
         {emulator && (
           <>
-        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
+            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
+
+            {gameData && gameData.is_gba && (
             <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
-        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>
+            )}
+            {gameData && !gameData.is_gba && (
+            <SaveSelectionTable gameData={gameData} checksum1000String={gameData.checksum_gb} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
+            )}
+
+            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>
+
+            {gameData && gameData.is_gba && (
             <GameSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedGame={selectedGame} setSelectedGame={setSelectedGame} romName={buildRomName() + ".gba"} />
-            </>
-          )}
+            )}
+            {gameData && !gameData.is_gba && (
+            <GameSelectionTable gameData={gameData} checksum1000String={gameData.checksum_gb} selectedGame={selectedGame} setSelectedGame={setSelectedGame} romName={buildRomName() + ".gb"} />
+            )}
+          </>
+        )}
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
 
         </>
         )}
         </>
-        )}
+        
 
 
 
-        {gameData && !gameData.is_gba && (
+        {gameData && !gameData.is_gba && false && (
           <>
           {gameData && (
             <>

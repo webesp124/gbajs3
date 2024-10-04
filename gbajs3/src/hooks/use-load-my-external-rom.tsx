@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useAsyncData } from './use-async-data.tsx';
 import * as bps from 'bps';
+import { linkCartridgeInformation } from '../components/modals/util-rom.tsx';
 
 type LoadExternalRomProps = {
   url: URL;
@@ -50,6 +51,9 @@ export const useLoadExternalRom = () => {
           
           if (fetchProps.patchFile != null && fetchProps.patchFile != ""){
             console.log("applying bps patch to file: " + fetchProps.patchFile);
+            if (fetchProps.patchFile.startsWith('.')) {
+              fetchProps.patchFile = linkCartridgeInformation + fetchProps.patchFile.substring(1);
+            }
             
             const ajaxPatch = new XMLHttpRequest();
             ajaxPatch.open("GET", fetchProps.patchFile, true);

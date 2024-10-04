@@ -158,7 +158,7 @@ export const NavigationMenu = () => {
     const params = new URLSearchParams(window.location.search);
     const ip = params.get('esp32_ip');
     if (ip) {
-      setEsp32IP(ip);
+      setEsp32IP("https://" + ip);
     }
 
     const timer = setTimeout(() => {
@@ -319,10 +319,15 @@ export const NavigationMenu = () => {
               $disabled={!isRunning}
               icon={<BiGitCompare />}
               onClick={() => {
-                const save = emulator?.getCurrentSave();
+                let save = emulator?.getCurrentSave();
                 const saveName = emulator?.getCurrentSaveName();
 
                 if (save && saveName) {
+                  if (save.length > 131072) {
+                    // Truncate the byte array to a maximum length of 137072
+                    save = save.slice(0, 131072);
+                  }
+
                   const xhr = new XMLHttpRequest();
                   
                   if(!additionalData){
@@ -338,6 +343,15 @@ export const NavigationMenu = () => {
                   
                   const uploadPromise = new Promise((resolve, reject) => {
                     xhr.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
+
+                    xhr.upload.onprogress = function(event) {
+                      if (event.lengthComputable) {
+                        const percentComplete = 67 + ((event.loaded / event.total) * 33);
+                        console.log(percentComplete + "( " + event.loaded + " )");
+                      } else{
+                        console.log("event.lengthComputable is false")
+                      }
+                    };
 
                     xhr.onload = () => {
                       if (xhr.status >= 200 && xhr.status < 300) {
