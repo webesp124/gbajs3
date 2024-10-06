@@ -11,7 +11,7 @@ export const PwaPrompt = () => {
   >(productTourLocalStorageKey);
 
   // don't render if product tour intro is not complete
-  if (!hasCompletedProductTourSteps?.hasCompletedProductTourIntro) return null;
+  if (!hasCompletedProductTourSteps?.hasCompletedProductTourIntro && false) return null;
 
   return <IOSPwaPrompt />;
 };
