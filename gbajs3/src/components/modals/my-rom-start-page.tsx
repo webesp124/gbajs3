@@ -55,20 +55,6 @@ const RomLoadingContainer = styled.div`
   margin-bottom: 15px;
 `;
 
-const GameInfoLabel = styled.p`
-  margin: 0;
-  font-size: 16px;
-`;
-
-const GameInfoLabelName = styled.strong`
-`;
-
-const GameInfoLabelOption = styled.option`
-`;
-
-const GameInfoLabelSelect = styled.select`
-`;
-
 const GameInfoImage = styled.img`
   max-width: 75%;
   height: auto;
@@ -347,11 +333,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       {gameData && additionalData ? (
       <ModalHeader title={additionalData.fullName} />
       ) : gameData && !additionalData ? (
-      <ModalHeader title={gameData.romName == "" ? "Error Reading Cartridge": gameData.romName} />
+      <ModalHeader title={gameData.romName == "" || gameData.romName == "Error" ? "Error Reading Cartridge": gameData.romName} />
       ) : !gameData && additionalData ? (
       <ModalHeader title={additionalData.fullName} />
       ) : (
-      <ModalHeader title="No Response from Cart Reader" />
+      <ModalHeader title="Connecting to cartridge reader..." />
       )}
       <ModalBody>
         <RomLoadingIndicator
@@ -470,52 +456,23 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
         </>
         )}
-        </>
-        
-
-
-
-        {gameData && !gameData.is_gba && false && (
-          <>
-          {gameData && (
-            <>
-            <GameInfoLabel><GameInfoLabelName>ROM Name:</GameInfoLabelName> {gameData.romName}</GameInfoLabel>
-            <GameInfoLabel>
-            <GameInfoLabelName>Cart Size (KB):</GameInfoLabelName>
-            <GameInfoLabelSelect
-              name="cartSize"
-              value={gameData.romSizeBytes_gb / 1024}
-              onChange={handleAdditionalDataChange}
-            >
-              <GameInfoLabelOption value={gameData.romSizeBytes_gb} key={(gameData.romSizeBytes_gb / 1024).toFixed(2)}>
-              {(gameData.romSizeBytes_gb / 1024).toFixed(2)}MB
-              </GameInfoLabelOption>
-      
-              {[32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((size) => (
-                <GameInfoLabelOption key={size} value={size * 1024}>
-                  {size}KB
-                </GameInfoLabelOption>
-              ))}
-            </GameInfoLabelSelect>
-            </GameInfoLabel>
-            <GameInfoLabel><GameInfoLabelName>Rom Banks:</GameInfoLabelName> {gameData.romBanks}</GameInfoLabel>
-            <GameInfoLabel><GameInfoLabelName>Checksum:</GameInfoLabelName> 0x{gameData.checksum_gb}</GameInfoLabel>
-            <GameInfoLabel><GameInfoLabelName>SRAM Size:</GameInfoLabelName> {gameData.sramSize}</GameInfoLabel>
-            <GameInfoLabel><GameInfoLabelName>Audio WE used:</GameInfoLabelName> {gameData.audioWE ? "true" : "false"}</GameInfoLabel>
-
-            {emulator && (
-              <>
-            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
-                <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
-            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>
-                <GameSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedGame={selectedGame} setSelectedGame={setSelectedGame} romName={buildRomName() + ".gba"} />
-                </>
-              )}
-            <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Cart Reader</Divider>
-            </>
-          )}
-          </>
+        {!gameData && !additionalData && (
+          <RomLoadingContainer>
+            <GameInfoImage
+              src="./img/connect.jpeg"
+              alt="waiting for cartridge reader response illustration"
+            />
+          </RomLoadingContainer>
         )}
+        {gameData && !additionalData && (gameData.romName == "" || gameData.romName == "Error") && (
+          <RomLoadingContainer>
+            <GameInfoImage
+              src="./img/error_cart.jpeg"
+              alt="can not correctly read cartridge illustration"
+            />
+          </RomLoadingContainer>
+        )}
+        </>
         
         <StyledForm
             aria-label="Login Form"
@@ -545,6 +502,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       <ModalFooter>
       {!isLoading && (
         <ModalFooterButtonArea>
+          {gameData && additionalData && (
           <Button
             variant="contained"
             color="primary"
@@ -554,6 +512,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             <IoRocketSharp style={{ fontSize: '30px', marginRight: '10px' }} /> {/* Icon for "Start Game With Save" */}
             Start Game
           </Button>
+          )}
           <Button
             variant="outlined"
             style={{ padding: '10px 20px 10px 20px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '5px' }}

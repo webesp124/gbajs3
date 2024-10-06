@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import {
   BiInfoCircle,
   BiFolderPlus,
-  BiCloudUpload,
   BiUpload,
   BiGame,
   BiScreenshot,
@@ -18,8 +17,10 @@ import {
   BiFileFind,
   BiGitCompare
 } from 'react-icons/bi';
+import { GrWifi } from "react-icons/gr";
 import { MdOutlineUploadFile } from "react-icons/md";
-import { IoHardwareChipOutline } from "react-icons/io5";
+import { IoHardwareChipOutline, IoCogSharp, IoBatteryFull } from "react-icons/io5";
+import { IoIosGlobe } from "react-icons/io";
 
 import { styled, useTheme } from 'styled-components';
 
@@ -37,12 +38,8 @@ import { CheatsModal } from '../modals/cheats.tsx';
 import { ControlsModal } from '../modals/controls.tsx';
 import { DownloadSaveModal } from '../modals/download-save.tsx';
 import { FileSystemModal } from '../modals/file-system.tsx';
-import { LoadLocalRomModal } from '../modals/load-local-rom.tsx';
 import { SaveStatesModal } from '../modals/save-states.tsx';
-import { UploadCheatsModal } from '../modals/upload-cheats.tsx';
-import { UploadRomModal } from '../modals/upload-rom.tsx';
 import { UploadRomReflashModal } from '../modals/upload-rom-reflash.tsx';
-import { UploadSavesModal } from '../modals/upload-saves.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
 import { MyRomStartPage } from '../modals/my-rom-start-page.tsx';
@@ -66,6 +63,7 @@ const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
   left: 0;
   top: 0;
   touch-action: none;
+  border-right: 1px solid ${({ theme }) => theme.borderBlue};
 
   ${({ $isExpanded = false }) =>
     !$isExpanded &&
@@ -85,6 +83,7 @@ const StyledMenuHeader = styled.h2`
   line-height: 1.2;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
+  border-bottom: 1px solid ${({ theme }) => theme.borderBlue};
 
   &:hover {
     background-color: ${({ theme }) => theme.menuHighlight};
@@ -106,20 +105,20 @@ const HamburgerButton = styled(ButtonBase)<ExpandableComponentProps>`
   color: ${({ theme }) => theme.pureWhite};
   z-index: 200;
   position: fixed;
-  left: ${NavigationMenuWidth - 6}px;
+  left: ${NavigationMenuWidth - 50}px;
   top: 12px;
   transition: 0.4s ease-in-out;
   -webkit-transition: 0.4s ease-in-out;
   cursor: pointer;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.25rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.35rem;
   border: none;
   min-height: 36px;
-  min-width: 40px;
+  min-width: 36px;
 
   ${({ $isExpanded = false }) =>
     !$isExpanded &&
-    `left: -8px;
+    `left: 5px;
     `}
 
   &:focus {
@@ -179,14 +178,14 @@ export const NavigationMenu = () => {
         onClick={() => setIsExpanded((prevState) => !prevState)}
         aria-label="Menu Toggle"
       >
-        <BiMenu />
+        <BiMenu style={{ height: "1.8em", width: "1.8em", verticalAlign: "middle" }} />
       </HamburgerButton>
       <NavigationMenuWrapper
         data-testid="menu-wrapper"
         id="menu-wrapper"
         $isExpanded={isExpanded}
       >
-        <StyledMenuHeader id={menuHeaderId}>Menu</StyledMenuHeader>
+        <StyledMenuHeader id={menuHeaderId}>WifiBOY</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
         
           <NavLeaf
@@ -200,53 +199,9 @@ export const NavigationMenu = () => {
           />
 
           <NavComponent
-            title="Pre Game Actions"
-            $disabled={isRunning}
-            $isExpanded={!isRunning}
-            icon={<BiFolderPlus />}
-          >
-            <NavLeaf
-              title="Upload Saves"
-              $disabled={isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                setModalContent(<UploadSavesModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Upload Cheats"
-              $disabled={isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                setModalContent(<UploadCheatsModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Upload Rom"
-              $disabled={isRunning}
-              icon={<BiUpload />}
-              onClick={() => {
-                setModalContent(<UploadRomModal />);
-                setIsModalOpen(true);
-              }}
-            />
-            <NavLeaf
-              title="Load Local Rom"
-              $disabled={isRunning}
-              icon={<BiUpload />}
-              onClick={() => {
-                setModalContent(<LoadLocalRomModal />);
-                setIsModalOpen(true);
-              }}
-            />
-          </NavComponent>
-
-          <NavComponent
             title="Cartridge Actions"
             //$disabled={!isRunning}
-            $isExpanded={isRunning}
+            $isExpanded={true}
             icon={<IoHardwareChipOutline />}
           >
         
@@ -494,6 +449,11 @@ export const NavigationMenu = () => {
         </NavComponent>
 
         </MenuItemWrapper>
+        <GrWifi style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "15px" }}/>
+        <IoIosGlobe style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "45px" }}/>
+        <IoBatteryFull style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "75px" }}/>
+        <IoCogSharp style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "105px" }}/>
+        
       </NavigationMenuWrapper>
       {isExpanded && !isLargerThanPhone && (
         <NavigationMenuClearDismiss

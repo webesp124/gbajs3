@@ -27,7 +27,7 @@ type NavLeafButtonProps = {
 
 const NavLeafWrapper = styled.li<LeafWrapperProps>`
   cursor: pointer;
-  color: ${({ theme }) => theme.gbaThemeBlue};
+  color: ${({ theme }) => theme.pureWhite};
   list-style-type: none;
   padding: 0 2px;
 

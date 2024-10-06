@@ -14,14 +14,14 @@ export const GbaDarkTheme: DefaultTheme = {
   aliceBlue2: '#edf2f7',
   arcticAirBlue: '#cad8e5',
   blackRussian: '#1a202c',
-  blueCharcoal: '#212529',
+  blueCharcoal: 'rgb(15 23 42)',
   checkMarkGreen: '#7ac142',
   darkCharcoal: '#333',
   darkGrayBlue: '#495057',
   disabledGray: '#6c757d',
   errorRed: '#d32f2f',
   gbaThemeBlue: '#0d6efd',
-  mediumBlack: '#100901',
+  mediumBlack: 'rgb(2 6 23)',
   menuHighlight: '#ffffff26',
   menuHover: '#0a58ca',
   pattensBlue: '#dee2e6',
@@ -29,5 +29,6 @@ export const GbaDarkTheme: DefaultTheme = {
   pureWhite: '#fff',
   darkGray: '#111',
   panelControlGray: '#a9a9a9',
-  panelBlueGray: '#4f555a'
+  panelBlueGray: 'rgb(30 41 59)',
+  borderBlue: 'rgb(15 23 42)'
 };

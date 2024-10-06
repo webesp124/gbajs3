@@ -31,6 +31,6 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100dvh;
-  background-color: #212529;
+  background-color: rgb(12 17 33);
   font-family: 'Calibri', 'Verdana', sans-serif;
 }

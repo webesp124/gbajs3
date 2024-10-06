@@ -17,7 +17,7 @@ type ComponentWrapperProps = {
 };
 
 const NavComponentWrapper = styled.li<ComponentWrapperProps>`
-  color: ${({ theme }) => theme.gbaThemeBlue};
+  color: ${({ theme }) => theme.pureWhite};
   padding: 0 2px;
 
   ${({ $disabled = false, theme }) =>
