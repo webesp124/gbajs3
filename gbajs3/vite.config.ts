@@ -13,12 +13,17 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['/img/favicon.ico'],
       manifest: {
-        name: 'Gbajs3',
-        short_name: 'GJ3',
+        name: 'WifiBOY',
+        short_name: 'WifiBOY',
         description: 'GBA emulator online in the Browser',
         theme_color: '#979597',
         background_color: '#212529',
         icons: [
+          {
+            src: '/img/icon-144x144.png',
+            sizes: '144x144',
+            type: 'image/png'
+          },
           {
             src: '/img/icon-192x192.png',
             sizes: '192x192',
@@ -38,6 +43,12 @@ export default defineConfig({
             src: '/img/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: '/img/maskable-icon-144x144.png',
+            sizes: '144x144',
+            type: 'image/png',
+            purpose: 'maskable'
           },
           {
             src: '/img/maskable-icon-192x192.png',
