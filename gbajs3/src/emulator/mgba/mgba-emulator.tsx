@@ -2,7 +2,7 @@ import type {
   coreCallbacks,
   filePaths,
   mGBAEmulator as mGBAEmulatorTypeDef
-} from './wasm/mgba.js';
+} from '@thenick775/mgba-wasm';
 
 interface FsNode extends FS.FSNode {
   mode: number;
@@ -47,6 +47,7 @@ export type GBAEmulator = {
   getVolume: () => number;
   isFastForwardEnabled: () => boolean;
   listAllFiles: () => FileNode;
+  listRoms2: () => string[];
   listRoms: () => string[];
   listSaves: () => string[];
   getStatSaves: (name: string) => any;
@@ -216,10 +217,11 @@ export const mGBAEmulator = (mGBA: mGBAEmulatorTypeDef): GBAEmulator => {
     ],
     loadSaveState: mGBA.loadState,
     listSaveStates: () => mGBA.FS.readdir(paths.saveStatePath),
-    listRoms: () => mGBA.FS.readdir(paths.gamePath),
+    listRoms2: () => mGBA.FS.readdir(paths.gamePath),
     listSaves: () => mGBA.FS.readdir(paths.savePath),
     getStatSaves: (name) => mGBA.FS.stat("/data/saves/" + name),
     getStatRoms: (name) => mGBA.FS.stat("/data/games/" + name),
+    listRoms: mGBA.listRoms,
     setVolume: async (volumePercent) => {
       if (
         mGBA.SDL2.audioContext.state === 'suspended' ||

@@ -80,22 +80,22 @@ export const VirtualControlsForm = ({
         {...register('OpadAndButtons')}
       />
       <ManagedCheckbox
-        label="Save State"
+        label="Display 'Save State' button"
         watcher={watch('SaveState')}
         {...register('SaveState')}
       />
       <ManagedCheckbox
-        label="Load State"
+        label="Display 'Load State' button"
         watcher={watch('LoadState')}
         {...register('LoadState')}
       />
       <ManagedCheckbox
-        label="Quick Reload"
+        label="Display 'Quick Reload' button"
         watcher={watch('QuickReload')}
         {...register('QuickReload')}
       />
       <ManagedCheckbox
-        label="Send save to server"
+        label="Display 'Save to Cartridge' button"
         watcher={watch('SendSaveToServer')}
         {...register('SendSaveToServer')}
       />

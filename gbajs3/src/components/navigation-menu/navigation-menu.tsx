@@ -33,6 +33,7 @@ import {
   useRunningContext
 } from '../../hooks/context.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
+import { useShowLoadPublicRoms } from '../../hooks/use-show-load-public-roms.tsx';
 import { AboutModal } from '../modals/about.tsx';
 import { CheatsModal } from '../modals/cheats.tsx';
 import { ControlsModal } from '../modals/controls.tsx';
@@ -51,6 +52,8 @@ type ExpandableComponentProps = {
 };
 
 const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
+  display: flex;
+  flex-direction: column;
   width: ${NavigationMenuWidth}px;
   height: 100dvh;
   position: fixed;
@@ -58,7 +61,6 @@ const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
   transition: 0.4s ease-in-out;
   -webkit-transition: 0.4s ease-in-out;
   z-index: 150;
-  overflow-y: auto;
   text-align: left;
   left: 0;
   top: 0;
@@ -68,11 +70,7 @@ const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
   ${({ $isExpanded = false }) =>
     !$isExpanded &&
     `left: -${NavigationMenuWidth + 5}px;
-    `}
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  `};
 `;
 
 const StyledMenuHeader = styled.h2`
@@ -91,13 +89,17 @@ const StyledMenuHeader = styled.h2`
 `;
 
 const MenuItemWrapper = styled.ul`
-  display: flex;
-  flex-direction: column;
-  padding-left: 0;
   margin-bottom: 0;
   margin-top: 0;
   list-style: none;
   padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  touch-action: pan-y;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const HamburgerButton = styled(ButtonBase)<ExpandableComponentProps>`
@@ -170,6 +172,8 @@ export const NavigationMenu = () => {
     return () => clearTimeout(timer);
   }, [additionalData, gameData, esp32IP]);
   
+  useShowLoadPublicRoms();
+
   return (
     <>
       <HamburgerButton
