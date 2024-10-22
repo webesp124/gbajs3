@@ -1,9 +1,9 @@
 import { useLocalStorage } from '@uidotdev/usehooks';
 import { useCallback } from 'react';
-import toast from 'react-hot-toast';
 
 import { emulatorCoreCallbacksLocalStorageKey } from '../../context/emulator/consts.ts';
 import { useRunningContext, useEmulatorContext } from '../context.tsx';
+import { uploadSaveToCartridge } from '../../components/modals/util-rom.tsx';
 
 export type CoreCallbackOptions = {
   saveFileSystemOnInGameSave: boolean;
@@ -28,9 +28,8 @@ export const useAddCallbacks = () => {
         saveDataUpdatedCallback: optionalFunc(
           options.saveFileSystemOnInGameSave,
           () => {
-            emulator.fsSync();
-            if (options.notificationsEnabled)
-              toast.success('Saved File System ');
+            if(window.additionalData && window.esp32IP)
+              uploadSaveToCartridge(window.additionalData, emulator, window.esp32IP);
           }
         )
       }),

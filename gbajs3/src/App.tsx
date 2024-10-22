@@ -15,8 +15,15 @@ import { EmulatorContextProvider } from './context/emulator/emulator-context-pro
 import { LayoutProvider } from './context/layout/layout.tsx';
 import { ModalProvider } from './context/modal/modal.tsx';
 import { GbaDarkTheme } from './context/theme/theme.tsx';
+import { useState } from 'react';
 
 export const App = () => {
+  const [additionalData, setAdditionalData] = useState<any>({});
+  const [gameData, setGameData] = useState(null);
+  
+  const defaultIP = 'https://192.168.1.3';
+  const [esp32IP, setEsp32IP] = useState(defaultIP);
+
   return (
     <ThemeProvider theme={GbaDarkTheme}>
       <AppErrorBoundary>
@@ -27,10 +34,10 @@ export const App = () => {
             <LayoutProvider>
               <ModalProvider>
                 <PwaPrompt />
-                <NavigationMenu />
+                <NavigationMenu  additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>
                 <Screen />
                 <ControlPanel />
-                <VirtualControls />
+                <VirtualControls  additionalData={additionalData} esp32IP={esp32IP}/>
                 <ModalContainer />
               </ModalProvider>
             </LayoutProvider>

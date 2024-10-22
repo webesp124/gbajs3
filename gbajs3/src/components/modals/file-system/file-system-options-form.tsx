@@ -79,7 +79,7 @@ export const FileSystemOptionsForm = ({ id }: FileSystemOptionsFormProps) => {
           onSubmit={handleSubmit(addCallbacksAndSaveSettings)}
         >
           <ManagedCheckbox
-            label="Save file system on in-game save"
+            label="Save to cartridge on in-game save"
             watcher={watch('saveFileSystemOnInGameSave')}
             {...register('saveFileSystemOnInGameSave')}
           />

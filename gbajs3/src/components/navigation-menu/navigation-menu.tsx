@@ -44,7 +44,7 @@ import { UploadRomReflashModal } from '../modals/upload-rom-reflash.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
 import { MyRomStartPage } from '../modals/my-rom-start-page.tsx';
-import { getSaveTypeCodeFromString } from '../modals/util-rom.tsx';
+import { getSaveTypeCodeFromString, uploadSaveToCartridge } from '../modals/util-rom.tsx';
 import { CreatePatchFileModal } from '../modals/create-patch-file.tsx';
 
 type ExpandableComponentProps = {
@@ -139,7 +139,23 @@ const NavigationMenuClearDismiss = styled.button`
   border: none;
 `;
 
-export const NavigationMenu = () => {
+interface NavigationMenuProps {
+  additionalData: any;
+  setAdditionalData: any;
+  gameData: any;
+  setGameData: any;
+  esp32IP: any;
+  setEsp32IP: any;
+}
+
+export const NavigationMenu = ({
+  additionalData,
+  setAdditionalData,
+  gameData,
+  setGameData,
+  esp32IP,
+  setEsp32IP,
+  }: NavigationMenuProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const { setModalContent, setIsModalOpen } = useModalContext();
   const { canvas, emulator } = useEmulatorContext();
@@ -149,11 +165,11 @@ export const NavigationMenu = () => {
   const menuHeaderId = useId();
   const quickReload = useQuickReload();
   
-  const [additionalData, setAdditionalData] = useState<any>(null);
-  const [gameData, setGameData] = useState(null);
+  //const [additionalData, setAdditionalData] = useState<any>(null);
+  //const [gameData, setGameData] = useState(null);
   
-  const defaultIP = 'https://192.168.1.3';
-  const [esp32IP, setEsp32IP] = useState(defaultIP);
+  //const defaultIP = 'https://192.168.1.3';
+  //const [esp32IP, setEsp32IP] = useState(defaultIP);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -163,12 +179,14 @@ export const NavigationMenu = () => {
     }
 
     const timer = setTimeout(() => {
-      console.log("run12");
-
       setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP}/>);
       setIsModalOpen(true);
     }, 500);
 
+    window.additionalData = additionalData;
+    window.gameData = gameData;
+    window.esp32IP = esp32IP;
+    
     return () => clearTimeout(timer);
   }, [additionalData, gameData, esp32IP]);
   
@@ -214,63 +232,8 @@ export const NavigationMenu = () => {
               $disabled={!isRunning}
               icon={<MdOutlineUploadFile />}
               onClick={() => {
-            const save = emulator?.getCurrentSave();
-            const saveName = emulator?.getCurrentSaveName();
-
-            if (save && saveName) {
-              const xhr = new XMLHttpRequest();
-              
-              if(!additionalData){
-                 console.log("No save type information.");
-                 return;
-              }
-              
-              var saveType = getSaveTypeCodeFromString(additionalData.saveType);
-              if (saveType == -1) {
-                 console.log("Invalid Save Type");
-                 return;
-              }
-              console.log(saveType);
-              
-              const uploadPromise = new Promise((resolve, reject) => {
-                 xhr.open('POST', `${esp32IP}/upload_save_file?saveType=${saveType}`, true);
-
-                 xhr.onload = () => {
-                   if (xhr.status >= 200 && xhr.status < 300) {
-                      const xhrVerify = new XMLHttpRequest();
-                      xhrVerify.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
-  
-                      xhrVerify.onload = () => {
-                        if (xhrVerify.status >= 200 && xhrVerify.status < 300) {
-                          resolve('Uploaded  and verified save on cartridge'); // Resolves the promise when successful
-                        } else {
-                          reject('Save on cartridge has errors'); // Rejects the promise on failure
-                        }
-                      };
-  
-                      xhrVerify.onerror = () => reject('Failed to upload save for verification'); // Handles network errors
-  
-                      xhrVerify.send(save);
-                   } else {
-                      reject('Failed to upload save to cartridge'); // Rejects the promise on failure
-                   }
-                 };
-
-                 xhr.onerror = () => reject('Failed to upload save to cartridge'); // Handles network errors
-
-                 xhr.send(save);
-               });
-
-               // Display the toast with the promise
-               toast.promise(uploadPromise, {
-                 loading: 'Uploading save to cartridge...',
-                 success: (msg) => `${msg}`,
-                 error: (err) => `${err}`,
-               });
-            } else {
-              toast.error('Current save not available');
-            }
-          }}
+                uploadSaveToCartridge(additionalData, emulator, esp32IP);
+              }}
             />
 
             <NavLeaf

@@ -20,12 +20,12 @@ import { VirtualButton } from './virtual-button.tsx';
 import {
   useEmulatorContext,
   useLayoutContext,
-  useAuthContext,
-  useModalContext,
-  useRunningContext
+//  useAuthContext,
+//  useModalContext,
+//  useRunningContext
 } from '../../hooks/context.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
-import { UploadSaveToServerModal } from '../modals/upload-save-to-server.tsx';
+import { uploadSaveToCartridge } from '../modals/util-rom.tsx';
 
 import type { AreVirtualControlsEnabledProps } from '../modals/controls/virtual-controls-form.tsx';
 
@@ -51,14 +51,22 @@ const keyToAriaLabel = (key: string) =>
       (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
     );
 
-export const VirtualControls = () => {
+interface VirtualControlsProps {
+  additionalData: any;
+  esp32IP: any;
+}    
+
+export const VirtualControls = ({
+  additionalData,
+  esp32IP,
+  }: VirtualControlsProps) => {
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   const isMobileWithUrlBar = useMediaQuery(theme.isMobileWithUrlBar);
   const { emulator } = useEmulatorContext();
-  const { isRunning } = useRunningContext();
-  const { isAuthenticated } = useAuthContext();
-  const { setModalContent, setIsModalOpen } = useModalContext();
+  //const { isRunning } = useRunningContext();
+  //const { isAuthenticated } = useAuthContext();
+  //const { setModalContent, setIsModalOpen } = useModalContext();
   const { layouts } = useLayoutContext();
   const virtualControlToastId = useId();
   const quickReload = useQuickReload();
@@ -334,14 +342,7 @@ export const VirtualControls = () => {
     {
       children: <BiSolidCloudUpload />,
       onClick: () => {
-        if (isAuthenticated() && isRunning) {
-          setModalContent(<UploadSaveToServerModal />);
-          setIsModalOpen(true);
-        } else if (areNotificationsEnabled) {
-          toast.error('Please log in and load a game', {
-            id: virtualControlToastId
-          });
-        }
+        uploadSaveToCartridge(additionalData, emulator, esp32IP);
       },
       width: 40,
       initialPosition: initialPositionForKey('uploadsave-button'),

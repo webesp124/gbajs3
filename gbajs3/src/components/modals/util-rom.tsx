@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+
 export const linkCartridgeInformation = "https://raw.githubusercontent.com/webesp124/gb_data/refs/heads/main";
 
 export const saveTypes = [
@@ -14,7 +16,7 @@ export const saveTypes = [
   "NONE",
 ];
 
-const getSaveTypeCodeFromString = (saveTypeString: string[]) => {
+const getSaveTypeCodeFromString = (saveTypeString: string) => {
     console.log("Save Type: " + saveTypeString);
     
     if (saveTypeString[0] == 'N') {
@@ -152,4 +154,63 @@ const getCoverImage = (gameData: { is_gba: boolean; }, additionalData: { coverIm
   return "";
 };
 
-export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo, getCoverImage}
+const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: string }, emulator: any, esp32IP: string) => {
+  const save = emulator?.getCurrentSave();
+  const saveName = emulator?.getCurrentSaveName();
+
+  if (save && saveName) {
+    const xhr = new XMLHttpRequest();
+    
+    if(!additionalData){
+        console.log("No save type information.");
+        return;
+    }
+    
+    var saveType = getSaveTypeCodeFromString(additionalData.saveType);
+    if (saveType == -1) {
+        console.log("Invalid Save Type");
+        return;
+    }
+    console.log(saveType);
+    
+    const uploadPromise = new Promise((resolve, reject) => {
+        xhr.open('POST', `${esp32IP}/upload_save_file?saveType=${saveType}`, true);
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const xhrVerify = new XMLHttpRequest();
+            xhrVerify.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
+
+            xhrVerify.onload = () => {
+              if (xhrVerify.status >= 200 && xhrVerify.status < 300) {
+                resolve('Uploaded  and verified save on cartridge'); // Resolves the promise when successful
+              } else {
+                reject('Save on cartridge has errors'); // Rejects the promise on failure
+              }
+            };
+
+            xhrVerify.onerror = () => reject('Failed to upload save for verification'); // Handles network errors
+
+            xhrVerify.send(save);
+          } else {
+            reject('Failed to upload save to cartridge'); // Rejects the promise on failure
+          }
+        };
+
+        xhr.onerror = () => reject('Failed to upload save to cartridge'); // Handles network errors
+
+        xhr.send(save);
+      });
+
+      // Display the toast with the promise
+      toast.promise(uploadPromise, {
+        loading: 'Uploading save to cartridge...',
+        success: (msg) => `${msg}`,
+        error: (err) => `${err}`,
+      });
+  } else {
+    toast.error('Current save not available');
+  }
+}
+
+export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo, getCoverImage, uploadSaveToCartridge}

@@ -13,6 +13,11 @@ import { UploadSaveToServerModal } from '../modals/upload-save-to-server.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
+const mockProps = {
+  additionalData: {},
+  esp32IP: '192.168.1.1',
+};
+
 describe('<VirtualControls />', () => {
   beforeEach(async () => {
     const { useLayoutContext: original } = await vi.importActual<
@@ -29,7 +34,7 @@ describe('<VirtualControls />', () => {
   });
 
   it('renders opad and default virtual controls on mobile', () => {
-    renderWithContext(<VirtualControls />);
+    renderWithContext(<VirtualControls {...mockProps} />);
 
     expect(screen.getByLabelText('A Button')).toBeVisible();
     expect(screen.getByLabelText('B Button')).toBeVisible();
@@ -52,7 +57,7 @@ describe('<VirtualControls />', () => {
       dispatchEvent: () => true
     }));
 
-    renderWithContext(<VirtualControls />);
+    renderWithContext(<VirtualControls {...mockProps} />);
 
     expect(screen.queryByLabelText('A Button')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('B Button')).not.toBeInTheDocument();
@@ -76,7 +81,7 @@ describe('<VirtualControls />', () => {
         dispatchEvent: () => true
       }));
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       expect(
         screen.queryByLabelText('Quickreload Button')
@@ -111,7 +116,7 @@ describe('<VirtualControls />', () => {
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Quickreload Button'));
 
@@ -138,7 +143,7 @@ describe('<VirtualControls />', () => {
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Quickreload Button'));
 
@@ -174,7 +179,7 @@ describe('<VirtualControls />', () => {
         setIsModalOpen: setIsModalOpenSpy
       }));
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Uploadsave Button'));
 
@@ -200,7 +205,7 @@ describe('<VirtualControls />', () => {
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Uploadsave Button'));
 
@@ -229,7 +234,7 @@ describe('<VirtualControls />', () => {
 
       localStorage.setItem(saveStateSlotLocalStorageKey, '2');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Loadstate Button'));
 
@@ -257,7 +262,7 @@ describe('<VirtualControls />', () => {
 
       localStorage.setItem(saveStateSlotLocalStorageKey, '2');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Loadstate Button'));
 
@@ -285,7 +290,7 @@ describe('<VirtualControls />', () => {
 
       localStorage.setItem(saveStateSlotLocalStorageKey, '2');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Savestate Button'));
 
@@ -313,7 +318,7 @@ describe('<VirtualControls />', () => {
 
       localStorage.setItem(saveStateSlotLocalStorageKey, '2');
 
-      renderWithContext(<VirtualControls />);
+      renderWithContext(<VirtualControls {...mockProps} />);
 
       await userEvent.click(screen.getByLabelText('Savestate Button'));
 

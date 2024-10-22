@@ -28,9 +28,18 @@ import { UploadSavesModal } from '../modals/upload-saves.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
+const mockProps = {
+  additionalData: {},
+  setAdditionalData: () => {},
+  gameData: {},
+  setGameData: () => {},
+  esp32IP: '192.168.1.1',
+  setEsp32IP: () => {},
+};
+
 describe('<NavigationMenu />', () => {
   it('renders menu and dismiss buttons', () => {
-    renderWithContext(<NavigationMenu />);
+    renderWithContext(<NavigationMenu {...mockProps} />);
 
     expect(screen.getByRole('list', { name: 'Menu' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
@@ -38,7 +47,7 @@ describe('<NavigationMenu />', () => {
   });
 
   it('toggles menu with button', async () => {
-    renderWithContext(<NavigationMenu />);
+    renderWithContext(<NavigationMenu {...mockProps} />);
 
     expect(screen.getByTestId('menu-wrapper')).toHaveStyle(`left: 0`);
     expect(screen.getByLabelText('Menu Toggle')).toHaveStyle(
@@ -64,7 +73,7 @@ describe('<NavigationMenu />', () => {
   });
 
   it('dismisses menu with overlay', async () => {
-    renderWithContext(<NavigationMenu />);
+    renderWithContext(<NavigationMenu {...mockProps} />);
 
     expect(screen.getByTestId('menu-wrapper')).toHaveStyle(`left: 0`);
     expect(screen.getByLabelText('Menu Toggle')).toHaveStyle(
@@ -105,7 +114,7 @@ describe('<NavigationMenu />', () => {
         setIsModalOpen: setIsModalOpenSpy
       }));
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText(title);
 
@@ -144,7 +153,7 @@ describe('<NavigationMenu />', () => {
           isRunning: true
         }));
 
-        renderWithContext(<NavigationMenu />);
+        renderWithContext(<NavigationMenu {...mockProps} />);
 
         const menuNode = screen.getByText(title);
 
@@ -172,7 +181,7 @@ describe('<NavigationMenu />', () => {
         quickReloadSpy
       );
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Quick Reload');
 
@@ -206,7 +215,7 @@ describe('<NavigationMenu />', () => {
 
       const toastSuccessSpy = vi.spyOn(toast.default, 'success');
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Screenshot');
 
@@ -242,7 +251,7 @@ describe('<NavigationMenu />', () => {
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Screenshot');
 
@@ -274,7 +283,7 @@ describe('<NavigationMenu />', () => {
         isRunning: true
       }));
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Full Screen');
 
@@ -308,7 +317,7 @@ describe('<NavigationMenu />', () => {
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Full Screen');
 
@@ -338,7 +347,7 @@ describe('<NavigationMenu />', () => {
         execute: executeLogoutSpy
       });
 
-      renderWithContext(<NavigationMenu />);
+      renderWithContext(<NavigationMenu {...mockProps} />);
 
       const menuNode = screen.getByText('Logout');
 
@@ -371,7 +380,7 @@ describe('<NavigationMenu />', () => {
           isAuthenticated: () => true
         }));
 
-        renderWithContext(<NavigationMenu />);
+        renderWithContext(<NavigationMenu {...mockProps} />);
 
         const menuNode = screen.getByText(title);
 
@@ -416,7 +425,7 @@ describe('<NavigationMenu />', () => {
           isRunning: true
         }));
 
-        renderWithContext(<NavigationMenu />);
+        renderWithContext(<NavigationMenu {...mockProps} />);
 
         const menuNode = screen.getByText(title);
 

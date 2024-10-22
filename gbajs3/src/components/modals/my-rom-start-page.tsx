@@ -298,7 +298,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   };
   
   // Function to fetch the save
-  const fetchMySave_gba = async (saveTypeString: string[], fullName: string) => {
+  const fetchMySave_gba = async (saveTypeString: string, fullName: string) => {
     try {
       console.log(saveTypeString);
       var saveType = getSaveTypeCodeFromString(saveTypeString);
@@ -410,24 +410,24 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             )}
 
             {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
-              <TableRow><TableCell>BPS Patch File:</TableCell> <TableCell>{additionalData.patchFile}</TableCell></TableRow>
+              <TableRow><TableCell>BPS Patch File:</TableCell><TableCell>{additionalData.patchFile}</TableCell></TableRow>
             )}
 
             {gameData && gameData.is_gba && (
-            <TableRow><TableCell>Cart ID:</TableCell> <TableCell>{gameData.cartID}</TableCell></TableRow>
+            <TableRow><TableCell>Cart ID:</TableCell><TableCell>{gameData.cartID}</TableCell></TableRow>
             )}
-            <TableRow><TableCell>ROM Version:</TableCell> <TableCell>{gameData.romVersion}</TableCell></TableRow>
+            <TableRow><TableCell>ROM Version:</TableCell><TableCell>{gameData.romVersion}</TableCell></TableRow>
             {gameData && gameData.is_gba && (
-            <TableRow><TableCell>Checksum:</TableCell> <TableCell>0x{checksum1000String}</TableCell></TableRow>
+            <TableRow><TableCell>Checksum:</TableCell><TableCell>0x{checksum1000String}</TableCell></TableRow>
             )}
             {gameData && !gameData.is_gba && (
-            <TableRow><TableCell>Checksum:</TableCell> <TableCell>0x{gameData.checksum_gb}</TableCell></TableRow>
+            <TableRow><TableCell>Checksum:</TableCell><TableCell>0x{gameData.checksum_gb}</TableCell></TableRow>
             )}
             {gameData && !gameData.is_gba && (
-            <TableRow><TableCell>Global Checksum:</TableCell> <TableCell>0x{gameData.checksumStr}</TableCell></TableRow>
+            <TableRow><TableCell>Global Checksum:</TableCell><TableCell>0x{gameData.checksumStr}</TableCell></TableRow>
             )}
-            <TableRow><TableCell>Publisher:</TableCell> <TableCell>{additionalData.publisher}</TableCell></TableRow>
-            <TableRow><TableCell style={{border:"none"}}>Release Date:</TableCell> <TableCell style={{border:"none"}}>{additionalData.releaseDate}</TableCell></TableRow>
+            <TableRow><TableCell>Publisher:</TableCell><TableCell>{additionalData.publisher}</TableCell></TableRow>
+            <TableRow><TableCell style={{border:"none"}}>Release Date:</TableCell><TableCell style={{border:"none"}}>{additionalData.releaseDate}</TableCell></TableRow>
           
           </TableBody></Table></TableContainer>
         

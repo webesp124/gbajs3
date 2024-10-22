@@ -15,6 +15,7 @@ import type { CoreCallbackOptions } from './use-add-callbacks.tsx';
 import type { KeyBinding } from '../../emulator/mgba/mgba-emulator.tsx';
 
 export const useRunGame = () => {
+
   const { emulator } = useEmulatorContext();
   const { setIsRunning } = useRunningContext();
   const [, setStoredGameName] = useLocalStorage<string | undefined>(
