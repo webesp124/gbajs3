@@ -15,7 +15,8 @@ import {
   BiJoystick,
   BiMenu,
   BiFileFind,
-  BiGitCompare
+  BiGitCompare,
+  BiDownload
 } from 'react-icons/bi';
 import { GrWifi } from "react-icons/gr";
 import { MdOutlineUploadFile } from "react-icons/md";
@@ -139,6 +140,17 @@ const NavigationMenuClearDismiss = styled.button`
   border: none;
 `;
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => void;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+declare global {
+  interface WindowEventMap {
+    'beforeinstallprompt': BeforeInstallPromptEvent;
+  }
+}
+
 interface NavigationMenuProps {
   additionalData: any;
   setAdditionalData: any;
@@ -164,6 +176,38 @@ export const NavigationMenu = ({
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   const menuHeaderId = useId();
   const quickReload = useQuickReload();
+  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: BeforeInstallPromptEvent) => {
+      console.log(67547);
+      event.preventDefault(); // Prevent the automatic prompt
+      setInstallPromptEvent(event); // Save the event for later use
+      console.log(event);
+    };
+
+    // Listen for the beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Clean up the event listener on unmount
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (installPromptEvent) {
+      installPromptEvent.prompt(); // Show the install prompt
+      installPromptEvent.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        setInstallPromptEvent(null); // Clear the event after use
+      });
+    }
+  };
   
   //const [additionalData, setAdditionalData] = useState<any>(null);
   //const [gameData, setGameData] = useState(null);
@@ -414,6 +458,15 @@ export const NavigationMenu = ({
             }}
           />
         </NavComponent>
+
+        {installPromptEvent && (
+        <NavLeaf
+          title="Install App"
+          icon={<BiDownload />}
+          $withPadding
+          onClick={handleInstallClick}
+        />
+      )}
 
         </MenuItemWrapper>
         <GrWifi style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "15px" }}/>
