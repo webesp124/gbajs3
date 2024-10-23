@@ -18,7 +18,7 @@ import { GbaDarkTheme } from './context/theme/theme.tsx';
 import { useState } from 'react';
 
 export const App = () => {
-  const [additionalData, setAdditionalData] = useState<any>({});
+  const [additionalData, setAdditionalData] = useState<any>(null);
   const [gameData, setGameData] = useState(null);
   
   const defaultIP = 'https://192.168.1.3';

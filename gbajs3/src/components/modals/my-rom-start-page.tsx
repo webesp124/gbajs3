@@ -17,6 +17,7 @@ import { useLoadExternalSave } from '../../hooks/use-load-my-save.tsx';
 import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes, getCoverImage } from './util-rom.tsx';
 import { SaveSelectionTable } from './save-selection-table.tsx';
 import { GameSelectionTable } from './game-selection-table.tsx';
+import { useMediaQuery } from '@mui/material';
 
 type RomLoadingIndicatorProps = {
   isLoading: boolean;
@@ -33,6 +34,7 @@ type MyRomStartPageProps = {
   setGameData: (data: any) => void;
   esp32IP: string;
   setEsp32IP: (data: string) => void;
+  setIsSideMenuExpanded: (data: boolean) => void;
 };
 
 const StyledForm = styled.form`
@@ -138,6 +140,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   setGameData,
   esp32IP,
   setEsp32IP,
+  setIsSideMenuExpanded,
   }) => {
   
   const theme = useTheme();
@@ -158,6 +161,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const runGame = useRunGame();
   const [isExternalRomInfoLoading, setIsExternalRomInfoLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionFailed, setConnectionFailed] = useState(false);
 
   const shouldUploadExternalRom =
     !isExternalRomLoading && !!externalRomFile;
@@ -165,6 +169,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [checksum1000String, setChecksum1000String] = useState<string | null>(null);
   const [selectedSave, setSelectedSave] = useState("Cartridge Save");
   const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
+  const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
@@ -182,6 +187,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         );
         if (hasSucceeded) {
           setIsModalOpen(false);
+          if(!isLargerThanPhone)
+            setIsSideMenuExpanded(false);
         }
       };
       emulator?.uploadRom(externalRomFile, runCallback);
@@ -196,8 +203,10 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
   const fetchData = async () => {
     try {
+        setConnectionFailed(false);
         setIsExternalRomInfoLoading(true);
-        const [gameData, additionalData, checksum1000String] = await fetchGameInfo([esp32IP]);
+        const [gameData, additionalData, checksum1000String, success] = await fetchGameInfo([esp32IP]);
+        setConnectionFailed(!success);
         setGameData(gameData), setAdditionalData(additionalData), setChecksum1000String(checksum1000String);
         setIsExternalRomInfoLoading(false);
     } catch (error) {
@@ -218,6 +227,17 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       fetchData();
     }
   }, []);
+
+  useEffect(() => {
+    if (connectionFailed && !isExternalRomInfoLoading) {
+      const reconnectInterval = setInterval(() => {
+        if (connectionFailed && !isExternalRomInfoLoading)
+          fetchData();
+      }, 5000);
+
+      return () => clearInterval(reconnectInterval);
+    }
+  }, [connectionFailed]);
   
   const buildRomName = () => {
     if (gameData["is_gba"]) {
@@ -265,6 +285,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       runGame(emulator?.filePaths().gamePath + '/' + romName);
       setIsModalOpen(false);
       setIsLoading(false);
+      if(!isLargerThanPhone)
+        setIsSideMenuExpanded(false);
       return true;
     }
     return false;
@@ -328,16 +350,43 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     }
   };
 
+  interface LoadingModalHeaderProps {
+    title: string;
+  }
+
+  const LoadingModalHeader: React.FC<LoadingModalHeaderProps> = ({ title }) => {
+    const [dots, setDots] = useState('');
+  
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setDots((prev) => {
+          if (prev === '...') return '';
+          return prev + '.';
+        });
+      }, 500);
+  
+      return () => clearInterval(interval);
+    }, []);
+  
+    return <ModalHeader title={`${title}${dots}`} />;
+  };
+
   return (
     <>
-      {gameData && additionalData ? (
-      <ModalHeader title={additionalData.fullName} />
-      ) : gameData && !additionalData ? (
-      <ModalHeader title={gameData.romName == "" || gameData.romName == "Error" ? "Error Reading Cartridge": gameData.romName} />
-      ) : !gameData && additionalData ? (
-      <ModalHeader title={additionalData.fullName} />
+      {!connectionFailed ? (
+        <>
+        {gameData && additionalData ? (
+        <ModalHeader title={additionalData.fullName} />
+        ) : gameData && !additionalData ? (
+        <ModalHeader title={gameData.romName == "" || gameData.romName == "Error" ? "Error Reading Cartridge": gameData.romName} />
+        ) : !gameData && additionalData ? (
+        <ModalHeader title={additionalData.fullName} />
+        ) : (
+        <LoadingModalHeader title="Connecting to cartridge reader" />
+        )}
+        </>
       ) : (
-      <ModalHeader title="Connecting to cartridge reader..." />
+        <ModalHeader title="Connection to cartridge reader failed!" />
       )}
       <ModalBody>
         <RomLoadingIndicator

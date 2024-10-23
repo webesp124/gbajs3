@@ -60,9 +60,10 @@ const timeout = (delay: number) => {
 }
 
 // Function to fetch and display game information
-const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => {
+const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, boolean]> => {
   let gameData, additionalData;
   additionalData = null;
+  let responseCartridgeReaderOk = false;
   let checksum1000 = "";
   try {
     // Fetch the basic game info
@@ -78,6 +79,9 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
     if(gameData.romName == ""){
       throw new Error(`Error Reading Cartridge, ROM name empty`);
     }
+
+    responseCartridgeReaderOk = true;
+
     if (gameData["is_gba"]) {
       // Fetch additional information using the cartID
       const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json`);
@@ -119,11 +123,12 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string]> => 
         console.log("Checksums do not match. Trying to get a different one...");
       }
     }
-    return [gameData, additionalData, checksum1000];
+
+    return [gameData, additionalData, checksum1000, responseCartridgeReaderOk];
   } catch (error) {
     console.error('Error fetching game information:', error);
   } finally {
-    return [gameData, additionalData, checksum1000];
+    return [gameData, additionalData, checksum1000, responseCartridgeReaderOk];
   }
 };
 
