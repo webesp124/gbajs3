@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useAsyncData } from './use-async-data.tsx';
 import * as bps from 'bps';
-import { linkCartridgeInformation } from '../components/modals/util-rom.tsx';
+import { linkCartridgeInformation, applyCustomPatch } from '../components/modals/util-rom.tsx';
 
 type LoadExternalRomProps = {
   url: URL;
@@ -33,7 +33,7 @@ export const useLoadExternalRom = () => {
         }
       };
 
-      ajax.onload = () => {
+      ajax.onload = async () => {
         if (ajax.status >= 200 && ajax.status < 300) {
           const contentDisposition = ajax.getResponseHeader('Content-Disposition');
           const fileName = contentDisposition
@@ -50,39 +50,53 @@ export const useLoadExternalRom = () => {
           const file = new File([ajax.response], fetchProps.fullName ?? fileName ?? fallbackFileName);
           
           if (fetchProps.patchFile != null && fetchProps.patchFile != ""){
-            console.log("applying bps patch to file: " + fetchProps.patchFile);
+            
+            console.log("applying patch to file: " + fetchProps.patchFile);
             if (fetchProps.patchFile.startsWith('.')) {
               fetchProps.patchFile = linkCartridgeInformation + fetchProps.patchFile.substring(1);
             }
-            
-            const ajaxPatch = new XMLHttpRequest();
-            ajaxPatch.open("GET", fetchProps.patchFile, true);
-            ajaxPatch.responseType = "arraybuffer";
-            ajaxPatch.overrideMimeType("text/plain; charset=x-user-defined");
 
-            
-            ajaxPatch.onload = () => {
-              const ppp = new Uint8Array(ajaxPatch.response);
+            if(fetchProps.patchFile.endsWith(".txt")){
+              console.log("applying custom patch file");
+              const fetchPropsCustomPatchFile = {
+                fullName: fetchProps.fullName ?? fileName ?? fallbackFileName,
+                patchFile: fetchProps.patchFile
+              };
 
-              const {
-                instructions,
-                checksum
-              } = bps.parse(ppp);
-
-              console.log(checksum);
-              
               const sourceFile = new Uint8Array(ajax.response);
-              const target = bps.apply(instructions, sourceFile);
-              
-              const patchedFile = new File([target], fetchProps.fullName ?? fileName ?? fallbackFileName);
+              const patchedFile = await applyCustomPatch(fetchPropsCustomPatchFile, sourceFile);
               resolve(patchedFile);
+            } else {
+              const ajaxPatch = new XMLHttpRequest();
+              ajaxPatch.open("GET", fetchProps.patchFile, true);
+              ajaxPatch.responseType = "arraybuffer";
+              ajaxPatch.overrideMimeType("text/plain; charset=x-user-defined");
+
+              
+              ajaxPatch.onload = () => {
+                const ppp = new Uint8Array(ajaxPatch.response);
+
+                const {
+                  instructions,
+                  checksum
+                } = bps.parse(ppp);
+
+                console.log(checksum);
+                
+                const sourceFile = new Uint8Array(ajax.response);
+                const target = bps.apply(instructions, sourceFile);
+                
+                const patchedFile = new File([target], fetchProps.fullName ?? fileName ?? fallbackFileName);
+                resolve(patchedFile);
+              }
+              ajaxPatch.onerror = () => {
+                console.error('Request for patch file failed');
+                reject(new Error('Network error occurred: Patch File'));
+              };
+              ajaxPatch.send(null);
             }
-            ajaxPatch.onerror = () => {
-               console.error('Request for patch file failed'); // Debugging log
-               reject(new Error('Network error occurred: Patch File'));
-            };
-            ajaxPatch.send(null);
-            
+
+
           } else {
             console.log("resolved file");
             resolve(file);

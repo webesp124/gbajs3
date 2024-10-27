@@ -223,7 +223,7 @@ export const NavigationMenu = ({
     }
 
     const timer = setTimeout(() => {
-      setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded}/>);
+      setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded} />);
       setIsModalOpen(true);
     }, 500);
 
@@ -259,7 +259,7 @@ export const NavigationMenu = ({
             icon={<BiJoystick />}
             $withPadding
             onClick={() => {
-              setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded}/>);
+              setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded} />);
               setIsModalOpen(true);
             }}
           />

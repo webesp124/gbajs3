@@ -37,7 +37,7 @@ const getSaveTypeCodeFromString = (saveTypeString: string) => {
     }
 }
 
-const getChecksum1000 = (gameData: { checksum_1MB: string; checksum_2MB: string; checksum_4MB: string; checksum_8MB: string; checksum_16MB: string; }, additionalData: { cartSize: number; }) => {
+const getChecksum1000 = (gameData: { checksum_1MB: string; checksum_2MB: string; checksum_4MB: string; checksum_8MB: string; checksum_16MB: string; }, additionalData: { cartSize: number; saveType: string }) => {
   let cartSizeMB = Number(additionalData.cartSize /1024/1024);
   
   let checksum1000 = "";
@@ -84,17 +84,19 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, bool
 
     if (gameData["is_gba"]) {
       // Fetch additional information using the cartID
-      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json`);
+      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json?updated=1234567890`);
       additionalData = await additionalResponse.json();
       console.log(additionalData);
       
+      if(!additionalData)
+        additionalData = {"saveType": "REPRO_FLASH1M", "cartSize": 16*1024*1024};
       checksum1000 = getChecksum1000(gameData, additionalData);
       
       if(checksum1000 != additionalData.checksum1000){
         console.log("Checksums do not match. Trying to get a different one...");
         
         try {
-          const additionalResponseAdd = await fetch(linkCartridgeInformation + `/information_rom_gba/${checksum1000}-${gameData.cartID}.json`);
+          const additionalResponseAdd = await fetch(linkCartridgeInformation + `/information_rom_gba/${checksum1000}-${gameData.cartID}.json?updated=1234567890`);
 
           // Check if the response is successful
           if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
@@ -123,11 +125,18 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, bool
         console.log("Checksums do not match. Trying to get a different one...");
       }
     }
-
+    if(gameData && !additionalData){
+      additionalData = {"saveType": "REPRO_FLASH1M", "cartSize": 16*1024*1024};
+      checksum1000 = getChecksum1000(gameData, additionalData);
+    }
     return [gameData, additionalData, checksum1000, responseCartridgeReaderOk];
   } catch (error) {
     console.error('Error fetching game information:', error);
   } finally {
+    if(gameData && !additionalData){
+      additionalData = {"saveType": "REPRO_FLASH1M", "cartSize": 16*1024*1024};
+      checksum1000 = getChecksum1000(gameData, additionalData);
+    }
     return [gameData, additionalData, checksum1000, responseCartridgeReaderOk];
   }
 };
@@ -218,4 +227,112 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
   }
 }
 
-export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo, getCoverImage, uploadSaveToCartridge}
+// Custom patching function in TypeScript
+async function applyCustomPatch(fetchProps: any, fileData: ArrayBuffer): Promise<File> {
+  // Helper function to parse the patch file
+  async function parseTransformedChanges(url: string): Promise<{ changes: any[], checksumChanges: number }> {
+      const response = await fetch(url + "?updated=1234567890");
+      const text = await response.text();
+      const changes: any[] = [];
+      let checksumChanges = 0;
+      let currentGroup: any = null;
+
+      const lines = text.split("\n");
+      const changeGroupRegex = /Change Group \d+: Start = (0x[0-9a-fA-F]+), End = (0x[0-9a-fA-F]+)/;
+      const byteChangeRegex = /Original: ([0-9a-fA-F]+) -> Modified: ([0-9a-fA-F*]+)/;
+      const checksumRegex = /Checksum Changes: ([0-9a-fA-F]+)/;
+
+      for (const line of lines) {
+          const groupMatch = line.match(changeGroupRegex);
+          if (groupMatch) {
+              if (currentGroup) changes.push(currentGroup);
+              const start = parseInt(groupMatch[1], 16);
+              const end = parseInt(groupMatch[2], 16);
+              currentGroup = { start, end, modifications: [] };
+              continue;
+          }
+
+          const byteMatch = line.match(byteChangeRegex);
+          if (byteMatch && currentGroup) {
+              currentGroup.modifications.push([byteMatch[1], byteMatch[2]]);
+          }
+
+          const checksumMatch = line.match(checksumRegex);
+          if (checksumMatch) {
+              checksumChanges = parseInt(checksumMatch[1], 16);
+          }
+      }
+      if (currentGroup) changes.push(currentGroup);
+
+      console.log(`Checksum changes: ${checksumChanges}`);
+      return { changes, checksumChanges };
+  }
+
+  // Compatibility check for changes
+  function testCompatibilityChanges(data: Uint8Array, changes: any[], checksumChanges: number): boolean {
+      let cumulativeChecksumFull = 0;
+
+      changes.forEach(group => {
+          const { start, modifications } = group;
+          modifications.forEach(([, modified]: [any, string], i: number) => {
+              const modValue = data[start + i];
+              if (modified !== "*") {
+                  cumulativeChecksumFull = (cumulativeChecksumFull + modValue) & 0xFFFFFFFF;
+              }
+          });
+      });
+
+      console.log(`Cumulative checksum full: ${cumulativeChecksumFull}`);
+      return cumulativeChecksumFull === checksumChanges;
+  }
+
+  // Function to calculate original byte values
+  function calculateOrigValue(modValue: number, difference: number): number {
+      return (modValue - difference) & 0xFF;
+  }
+
+  // Main patch application
+  async function applyTransformedChanges(data: Uint8Array, changes: any[]): Promise<Uint8Array> {
+      let cumulativeChecksum = 0;
+
+      changes.forEach(group => {
+          const { start, modifications } = group;
+          modifications.forEach(([original, modified]: [string, string], i: number) => {
+              const modValue = data[start + i];
+              if (modified !== "*") {
+                  cumulativeChecksum = (cumulativeChecksum + modValue) & 0xFF;
+              }
+
+              console.log(`Cumulative checksum: ${cumulativeChecksum.toString(16)}, Modified: ${modified}`);
+
+              const newOriginal = modified !== "*" ? calculateOrigValue(modValue, parseInt(original, 16)) 
+                                                   : calculateOrigValue(cumulativeChecksum, parseInt(original, 16));
+              console.log(`New original: ${newOriginal.toString(16)}`);
+
+              if (original !== "*") {
+                  data[start + i] = newOriginal;
+              }
+          });
+      });
+
+      return data;
+  }
+
+  try {
+      const { changes, checksumChanges } = await parseTransformedChanges(fetchProps.patchFile);
+      const sourceData = new Uint8Array(fileData);
+
+      if (!testCompatibilityChanges(sourceData, changes, checksumChanges)) {
+          throw new Error("Checksum mismatch; patch may not be compatible with the ROM.");
+      }
+
+      const patchedData = await applyTransformedChanges(sourceData, changes);
+      const patchedFile = new File([patchedData], fetchProps.fullName ?? fetchProps.fileName ?? "patched_file.gba");
+      return patchedFile;
+  } catch (error: any) {
+      console.error("Failed to apply custom patch:", error);
+      throw new Error(`Patch application failed: ${error.message}`);
+  }
+}
+
+export {getSaveTypeCodeFromString, getChecksum1000, timeout, fetchGameInfo, getCoverImage, uploadSaveToCartridge, applyCustomPatch}

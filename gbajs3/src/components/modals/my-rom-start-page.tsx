@@ -241,13 +241,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   
   const buildRomName = () => {
     if (gameData["is_gba"]) {
-      if (additionalData)
+      if (additionalData && additionalData.fullName)
         return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
       else
         return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
     }
     else {
-      if (additionalData)
+      if (additionalData && additionalData.fullName)
         return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
       else
         return gameData.romName + "_" + gameData.checksumStr;
@@ -375,11 +375,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     <>
       {!connectionFailed ? (
         <>
-        {gameData && additionalData ? (
+        {gameData && additionalData && additionalData.fullName ? (
         <ModalHeader title={additionalData.fullName} />
-        ) : gameData && !additionalData ? (
+        ) : gameData && (!additionalData || !additionalData.fullName) ? (
         <ModalHeader title={gameData.romName == "" || gameData.romName == "Error" ? "Error Reading Cartridge": gameData.romName} />
-        ) : !gameData && additionalData ? (
+        ) : !gameData && additionalData && additionalData.fullName ? (
         <ModalHeader title={additionalData.fullName} />
         ) : (
         <LoadingModalHeader title="Connecting to cartridge reader" />
@@ -409,17 +409,30 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             )}
           
             <>
-          {gameData && additionalData && (
+          {gameData && (
             <>
-          <RomLoadingContainer>
-            <GameInfoImage
-              id="cover-image"
-              src={getCoverImage(gameData, additionalData)}
-              alt={`${additionalData.fullName} Cover`}
-            />
-          </RomLoadingContainer>
+            {additionalData && additionalData.fullName ? (
+              <RomLoadingContainer>
+                <GameInfoImage
+                  id="cover-image"
+                  src={getCoverImage(gameData, additionalData)}
+                  alt={`${additionalData.fullName} Cover`}
+                />
+              </RomLoadingContainer>
+            ) : (
+              <RomLoadingContainer>
+                <GameInfoImage
+                  id="cover-image"
+                  src={"./img/connect.jpeg"}
+                  alt={"Cover missing Image"}
+                />
+              </RomLoadingContainer>
+            )}
           <TableContainer id="game-info"><Table><TableBody>
+            {additionalData && additionalData.fullName && (
             <TableRow><TableCell>Full Name:</TableCell><TableCell>{additionalData.fullName}</TableCell></TableRow>
+            )}
+             
             <TableRow><TableCell>ROM Name:</TableCell><TableCell>{gameData.romName}</TableCell></TableRow>
             
             <TableRow>
@@ -439,6 +452,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                   </MenuItem>
                 ))}
               </Select></TableCell>
+
             </TableRow>
             
             {gameData && gameData.is_gba && (
@@ -446,7 +460,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               <TableCell>Save Type:</TableCell>
               <TableCell><Select
                 name="saveType"
-                value={additionalData.saveType}
+                value={additionalData ? additionalData.saveType : "REPRO_FLASH1M"}
                 onChange={handleAdditionalDataChange}
               >
                 {saveTypes.map((type) => (
@@ -457,8 +471,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               </Select></TableCell>
             </TableRow>
             )}
-
-            {additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
+            {additionalData && additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
               <TableRow><TableCell>BPS Patch File:</TableCell><TableCell>{additionalData.patchFile}</TableCell></TableRow>
             )}
 
@@ -475,9 +488,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             {gameData && !gameData.is_gba && (
             <TableRow><TableCell>Global Checksum:</TableCell><TableCell>0x{gameData.checksumStr}</TableCell></TableRow>
             )}
+
+            {additionalData && additionalData.publisher && additionalData.releaseDate && (
+              <>
             <TableRow><TableCell>Publisher:</TableCell><TableCell>{additionalData.publisher}</TableCell></TableRow>
             <TableRow><TableCell style={{border:"none"}}>Release Date:</TableCell><TableCell style={{border:"none"}}>{additionalData.releaseDate}</TableCell></TableRow>
-          
+              </>
+            )}
           </TableBody></Table></TableContainer>
         
         {emulator && (
@@ -551,7 +568,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       <ModalFooter>
       {!isLoading && (
         <ModalFooterButtonArea>
-          {gameData && additionalData && (
+          {gameData && (
           <Button
             variant="contained"
             color="primary"
