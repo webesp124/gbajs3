@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem, Alert, Typography, Box } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
@@ -55,6 +55,15 @@ const RomLoadingContainer = styled.div`
   text-align: center;
   align-items: center;
   margin-bottom: 15px;
+`;
+
+const RomCoverHeaderContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  align-items: center;
+  margin-bottom: 0px;
 `;
 
 const GameInfoImage = styled.img`
@@ -412,21 +421,50 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           {gameData && (
             <>
             {additionalData && additionalData.fullName ? (
-              <RomLoadingContainer>
+              <RomCoverHeaderContainer>
                 <GameInfoImage
                   id="cover-image"
                   src={getCoverImage(gameData, additionalData)}
                   alt={`${additionalData.fullName} Cover`}
                 />
-              </RomLoadingContainer>
+                {gameData && gameData.is_gba && checksum1000String != additionalData.checksum1000 && (
+                  <Box mt={0} display="flex" flexDirection="column" alignItems="center">
+                    <Alert severity="error" variant="outlined" sx={{ width: '100%', maxWidth: 400, paddingTop: 0, paddingBottom: 0, fontSize: 28, "& .MuiAlert-icon": {
+                          fontSize: 28,
+                          paddingTop: "12px",
+                        }, }}>
+                      <Typography variant="subtitle1" color="error" fontWeight="medium">
+                        Checksum Mismatch
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        The checksum of this file does not match the expected value.
+                        Please verify the ROM file integrity.
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
+              </RomCoverHeaderContainer>
             ) : (
-              <RomLoadingContainer>
+              <RomCoverHeaderContainer>
                 <GameInfoImage
                   id="cover-image"
-                  src={"./img/connect.jpeg"}
+                  src={"./img/cover_img_missing.jpeg"}
                   alt={"Cover missing Image"}
                 />
-              </RomLoadingContainer>
+                <Box mt={0} display="flex" flexDirection="column" alignItems="center">
+                    <Alert severity="error" variant="outlined" sx={{ width: '100%', maxWidth: 400, paddingTop: 0, paddingBottom: 0, fontSize: 28, "& .MuiAlert-icon": {
+                          fontSize: 28,
+                          paddingTop: "12px",
+                        }, }}>
+                      <Typography variant="subtitle1" color="error" fontWeight="medium">
+                        ROM Information Not Found
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        No information about the ROM found. Please verify the ROM size and save type.
+                      </Typography>
+                    </Alert>
+                  </Box>
+              </RomCoverHeaderContainer>
             )}
           <TableContainer id="game-info"><Table><TableBody>
             {additionalData && additionalData.fullName && (
@@ -472,7 +510,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             </TableRow>
             )}
             {additionalData && additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
-              <TableRow><TableCell>BPS Patch File:</TableCell><TableCell>{additionalData.patchFile}</TableCell></TableRow>
+              <TableRow><TableCell>Patch File:</TableCell><TableCell>{additionalData.patchFile}</TableCell></TableRow>
             )}
 
             {gameData && gameData.is_gba && (
