@@ -3,6 +3,8 @@ declare global {
       esp32IP?: string;
       additionalData?: any;
       gameData?: any;
+      currentCartridgeSaveName?: string;
+      hasRun?: boolean;
   }
 }
 

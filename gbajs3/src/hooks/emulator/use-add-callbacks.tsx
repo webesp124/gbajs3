@@ -22,16 +22,40 @@ export const useAddCallbacks = () => {
     CoreCallbackOptions | undefined
   >(emulatorCoreCallbacksLocalStorageKey);
 
+  // Callback that saves the current save data with a custom name
+  const saveDataUpdatedCallback = () => {
+    console.log("saving main save file");
+    const currentSave = emulator?.getCurrentSave?.();
+    
+    if (currentSave && window.currentCartridgeSaveName) {
+      console.log("saving main save file 2");
+      console.log(window.currentCartridgeSaveName);
+      // Rename and save the current save data
+      const renamedSaveFile = new File([currentSave], window.currentCartridgeSaveName);
+      emulator?.uploadSaveOrSaveState?.(renamedSaveFile);
+      setTimeout(function() { emulator?.fsSync?.(); }, 400);
+    } else {
+      console.warn("Failed to retrieve current save data or missing cartridge save name.");
+    }
+  };
+
   const addCallbacks = useCallback(
     (options: CoreCallbackOptions) =>
       emulator?.addCoreCallbacks({
-        saveDataUpdatedCallback: optionalFunc(
-          options.saveFileSystemOnInGameSave,
-          () => {
-            if(window.additionalData && window.esp32IP)
-              uploadSaveToCartridge(window.additionalData, emulator, window.esp32IP);
-          }
-        )
+        saveDataUpdatedCallback: () => {
+          // Always run saveDataUpdatedCallback for saving the current data
+          saveDataUpdatedCallback();
+  
+          // Run additional optional callback if conditions are met
+          optionalFunc(
+            options.saveFileSystemOnInGameSave,
+            () => {
+              if (window.additionalData && window.esp32IP) {
+                uploadSaveToCartridge(window.additionalData, emulator, window.esp32IP);
+              }
+            }
+          )?.();
+        }
       }),
     [emulator]
   );

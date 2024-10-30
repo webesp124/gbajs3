@@ -178,6 +178,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [checksum1000String, setChecksum1000String] = useState<string | null>(null);
   const [selectedSave, setSelectedSave] = useState("Cartridge Save");
   const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
+  const [cartridgeSaveName, setCartridgeSaveName] = useState(`none.sav`);
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
@@ -217,6 +218,10 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         const [gameData, additionalData, checksum1000String, success] = await fetchGameInfo([esp32IP]);
         setConnectionFailed(!success);
         setGameData(gameData), setAdditionalData(additionalData), setChecksum1000String(checksum1000String);
+        if(gameData){
+          let saveName = "Main_" + buildRomName2(gameData, additionalData, checksum1000String) + ".sav";
+          setCartridgeSaveName(saveName);
+        }
         setIsExternalRomInfoLoading(false);
     } catch (error) {
         console.error('Error fetching game info:', error);
@@ -247,27 +252,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       return () => clearInterval(reconnectInterval);
     }
   }, [connectionFailed]);
-  
-  const buildRomName = () => {
-    if (gameData["is_gba"]) {
-      if (additionalData && additionalData.fullName)
-        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
-      else
-        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
-    }
-    else {
-      if (additionalData && additionalData.fullName)
-        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
-      else
-        return gameData.romName + "_" + gameData.checksumStr;
-    }
-  };
 
   const startGameWithSave = async () => {
     setIsLoading(true);
     console.log("Using save: " + selectedSave);
 
-    console.log("Using save: " + selectedSave);
     let saveName = buildRomName() + ".sav";
     if (selectedSave == "Cartridge Save"){
       if (gameData["is_gba"])
@@ -356,6 +345,36 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     } catch (error) {
       console.error('Error fetching save:', error);
     } finally {
+    }
+  };
+
+  const buildRomName2 = (gameData: any, additionalData: any, checksum1000String: string) => {
+    if (gameData["is_gba"]) {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+      else
+        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
+    }
+    else {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
+      else
+        return gameData.romName + "_" + gameData.checksumStr;
+    }
+  };
+
+  const buildRomName = () => {
+    if (gameData["is_gba"]) {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+      else
+        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
+    }
+    else {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
+      else
+        return gameData.romName + "_" + gameData.checksumStr;
     }
   };
 
@@ -540,10 +559,10 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Saves</Divider>
 
             {gameData && gameData.is_gba && (
-            <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
+            <SaveSelectionTable gameData={gameData} checksum1000String={checksum1000String} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} cartridgeSaveName={cartridgeSaveName} setCartridgeSaveName={setCartridgeSaveName} />
             )}
             {gameData && !gameData.is_gba && (
-            <SaveSelectionTable gameData={gameData} checksum1000String={gameData.checksum_gb} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} />
+            <SaveSelectionTable gameData={gameData} checksum1000String={gameData.checksum_gb} selectedSave={selectedSave} setSelectedSave={setSelectedSave} saveName={buildRomName() + ".sav"} cartridgeSaveName={cartridgeSaveName} setCartridgeSaveName={setCartridgeSaveName} />
             )}
 
             <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Local Roms</Divider>

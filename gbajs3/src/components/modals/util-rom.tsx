@@ -51,6 +51,8 @@ const getChecksum1000 = (gameData: { checksum_1MB: string; checksum_2MB: string;
     checksum1000 = gameData.checksum_8MB;
   else if(cartSizeMB == 16)
     checksum1000 = gameData.checksum_16MB;
+  else
+    checksum1000 = gameData.checksum_16MB;
   
   return checksum1000.toUpperCase();
 }
@@ -84,7 +86,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, bool
 
     if (gameData["is_gba"]) {
       // Fetch additional information using the cartID
-      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json?updated=12345678901`);
+      const additionalResponse = await fetch(linkCartridgeInformation + `/information_rom_gba/${gameData.cartID}.json?updated=123456789d01`);
       additionalData = await additionalResponse.json();
       console.log(additionalData);
       
@@ -96,7 +98,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, bool
         console.log("Checksums do not match. Trying to get a different one...");
         
         try {
-          const additionalResponseAdd = await fetch(linkCartridgeInformation + `/information_rom_gba/${checksum1000}-${gameData.cartID}.json?updated=12345678901`);
+          const additionalResponseAdd = await fetch(linkCartridgeInformation + `/information_rom_gba/${checksum1000}-${gameData.cartID}.json?updated=12345678d901`);
 
           // Check if the response is successful
           if (!additionalResponseAdd.ok  || additionalResponseAdd.status != 200) {
@@ -238,7 +240,7 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
 async function applyCustomPatch(fetchProps: any, fileData: ArrayBuffer): Promise<File> {
   // Helper function to parse the patch file
   async function parseTransformedChanges(url: string): Promise<{ changes: any[], checksumChanges: number }> {
-      const response = await fetch(url + "?updated=12345678901");
+      const response = await fetch(url + "?updated=123456789d01");
       const text = await response.text();
       const changes: any[] = [];
       let checksumChanges = 0;
