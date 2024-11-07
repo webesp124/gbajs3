@@ -182,6 +182,16 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
         return;
     }
     
+    if (!additionalData.saveType) {
+      console.log("Save Type not set");
+      return;
+    }
+
+    if (!window.gameData?.is_gba) {
+      console.log("Is not GBA. Not implemented.");
+      return;
+    }
+
     var saveType = getSaveTypeCodeFromString(additionalData.saveType);
     if (saveType == -1) {
         console.log("Invalid Save Type");

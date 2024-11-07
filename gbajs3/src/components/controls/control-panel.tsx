@@ -34,8 +34,8 @@ import {
 } from '../product-tour/embedded-product-tour.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 import { GripperHandle } from '../shared/gripper-handle.tsx';
-
 import type { IconButtonProps, SliderProps } from '@mui/material';
+import useShortcutListener from './use-shortcut-listener.ts';
 
 type PanelProps = {
   $controlled: boolean;
@@ -241,6 +241,8 @@ export const ControlPanel = () => {
     1
   );
 
+  const [previousFastForwardSpeed, setPreviousFastForwardSpeed] = useState(4);
+
   // pause emulator when document is not visible,
   // resumes if applicable when document is visible
   useBackgroundEmulator({ isPaused });
@@ -291,6 +293,28 @@ export const ControlPanel = () => {
     emulator?.setFastForwardMultiplier(ffMultiplier);
     setFastForwardMultiplier(ffMultiplier);
   };
+
+  type ActionsType = {
+    fastForward: (isKeyDown?: boolean) => void;
+  };
+
+  const actions: ActionsType = {
+    fastForward: (isKeyDown = false) => {
+      if (emulator && isKeyDown) {
+        console.log('Fast Forward action triggered!');
+  
+        if (fastForwardMultiplier > 1) {
+          // Store the current speed and set fast forward to normal (1x)
+          setPreviousFastForwardSpeed(fastForwardMultiplier);
+          setFastForward(1);
+        } else {
+          setFastForward(previousFastForwardSpeed);
+        }
+      }
+    },
+  };
+
+  useShortcutListener(actions);
 
   const tourSteps: TourSteps = [
     {

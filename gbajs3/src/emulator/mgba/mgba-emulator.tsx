@@ -65,6 +65,7 @@ export type GBAEmulator = {
   run: (romPath: string) => boolean;
   screenshot: (fileName?: string) => boolean;
   setCurrentGameName: (gameName: string | undefined) => void;
+  getFastForwardMultiplier: () => number;
   setFastForwardMultiplier: (multiplier: number) => void;
   setVolume: (volumePercent: number) => void;
   simulateKeyDown: (keyId: string) => void;
@@ -237,6 +238,7 @@ export const mGBAEmulator = (mGBA: mGBAEmulatorTypeDef): GBAEmulator => {
     simulateKeyDown: mGBA.buttonPress,
     simulateKeyUp: mGBA.buttonUnpress,
     setFastForwardMultiplier: mGBA.setFastForwardMultiplier,
+    getFastForwardMultiplier: mGBA.getFastForwardMultiplier,
     isFastForwardEnabled: () => mGBA.getFastForwardMultiplier() > 1,
     run: mGBA.loadGame,
     getCurrentRom: () =>

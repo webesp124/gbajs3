@@ -4,6 +4,7 @@ import { styled } from 'styled-components';
 
 import { KeyBindingsForm } from './controls/key-bindings-form.tsx';
 import { VirtualControlsForm } from './controls/virtual-controls-form.tsx';
+import { ShortcutBindingsForm } from './shortcut-bindings-form.tsx';
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
@@ -24,6 +25,7 @@ type TabPanelProps = {
 type ControlTabsProps = {
   setFormId: Dispatch<React.SetStateAction<string>>;
   virtualControlsFormId: string;
+  shortcutBindingsFormId: string;
   controlProfilesFormId: string;
   keyBindingsFormId: string;
   resetPositionsButtonId: string;
@@ -66,6 +68,7 @@ const TabPanel = ({ children, index, value }: TabPanelProps) => {
 const ControlTabs = ({
   setFormId,
   virtualControlsFormId,
+  shortcutBindingsFormId,
   controlProfilesFormId,
   keyBindingsFormId,
   resetPositionsButtonId,
@@ -82,6 +85,8 @@ const ControlTabs = ({
         return controlProfilesFormId;
       case 2:
         return keyBindingsFormId;
+      case 3:
+        return shortcutBindingsFormId;
       default:
         return virtualControlsFormId;
     }
@@ -103,10 +108,18 @@ const ControlTabs = ({
         onChange={handleTabChange}
         aria-label="Control tabs"
         allowScrollButtonsMobile
+        sx={{
+    '& .MuiTab-root': {
+      padding: '6px 12px',
+      margin: '0 0',
+      fontSize: "0.84rem"
+    },
+  }}
       >
         <Tab label="Virtual Controls" {...a11yProps(0)} />
         <Tab label="Profiles" {...a11yProps(1)} />
         <Tab label="Key Bindings" {...a11yProps(2)} />
+        <Tab label="Shortcuts" {...a11yProps(3)} />
       </TabsWithBorder>
       <TabPanel value={value} index={0}>
         <VirtualControlsForm
@@ -126,6 +139,9 @@ const ControlTabs = ({
       </TabPanel>
       <TabPanel value={value} index={2}>
         <KeyBindingsForm id={keyBindingsFormId} onAfterSubmit={onAfterSubmit} />
+      </TabPanel>
+      <TabPanel value={value} index={3}>
+        <ShortcutBindingsForm id={shortcutBindingsFormId} onAfterSubmit={onAfterSubmit} />
       </TabPanel>
     </>
   );
@@ -201,6 +217,7 @@ export const ControlsModal = () => {
         <ControlTabs
           setFormId={setFormId}
           virtualControlsFormId={`${baseId}--virtual-controls-form`}
+          shortcutBindingsFormId={`${baseId}--shortcut-binding-form`}
           controlProfilesFormId={`${baseId}--control-profiles`}
           keyBindingsFormId={`${baseId}--key-bindings-form`}
           resetPositionsButtonId={`${baseId}--reset-positions-button`}

@@ -28,6 +28,8 @@ import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
 import { uploadSaveToCartridge } from '../modals/util-rom.tsx';
 
 import type { AreVirtualControlsEnabledProps } from '../modals/controls/virtual-controls-form.tsx';
+import useShortcutListener from './use-shortcut-listener.ts';
+
 
 const VirtualButtonTextLarge = styled.p`
   text-align: center;
@@ -99,6 +101,88 @@ export const VirtualControls = ({
   // align with initial control panel positioning
   const verticalStartPos = controlPanelBounds.bottom;
   const horizontalStartPos = controlPanelBounds.left;
+
+  let autoFireAInterval: NodeJS.Timeout | null = null;
+  let autoFireBInterval: NodeJS.Timeout | null = null;
+
+  type ActionsType = {
+    autoFireA: (isKeyDown?: boolean) => void;
+    autoFireB: (isKeyDown?: boolean) => void;
+    uploadSave: () => void;
+    quickReload: () => void;
+    quickLoad: () => void;
+    quickSave: () => void;
+  };
+
+  const actions: ActionsType = {
+    autoFireA: (isKeyDown = false) => {
+      if (isKeyDown) {
+        if (!autoFireAInterval) {
+          autoFireAInterval = setInterval(() => {
+            if (emulator) {
+              emulator.simulateKeyDown("A");
+              setTimeout(() => {
+                emulator.simulateKeyUp("A");
+              }, 20);
+            }
+          }, 50); // 20 presses per second
+        }
+      } else {
+        if (autoFireAInterval) clearInterval(autoFireAInterval);
+        autoFireAInterval = null;
+        if (emulator) emulator.simulateKeyUp("A");
+      }
+    },
+
+    autoFireB: (isKeyDown = false) => {
+      if (isKeyDown) {
+        if (!autoFireBInterval) {
+          autoFireBInterval = setInterval(() => {
+            if (emulator) {
+              emulator.simulateKeyDown("B");
+              setTimeout(() => {
+                emulator.simulateKeyUp("B");
+              }, 20);
+            }
+          }, 50); // 20 presses per second
+        }
+      } else {
+        if (autoFireBInterval) clearInterval(autoFireBInterval);
+        autoFireBInterval = null;
+        if (emulator) emulator.simulateKeyUp("B");
+      }
+    },
+
+    uploadSave: () => {
+      console.log('Upload Save action triggered!');
+      if (emulator) {
+        // Call method to upload save to cartridge or emulator
+      }
+    },
+
+    quickReload: () => {
+      console.log('Quick Reload action triggered!');
+      if (emulator) {
+        // Call method to reload the current ROM or reset the emulator
+      }
+    },
+
+    quickLoad: () => {
+      console.log('Quick Load Save State action triggered!');
+      if (emulator) {
+        // Call method to load a save state
+      }
+    },
+
+    quickSave: () => {
+      console.log('Quick Save State action triggered!');
+      if (emulator) {
+        // Call method to save the current state
+      }
+    }
+  };
+
+  useShortcutListener(actions);
 
   const positionVariations: {
     [key: string]: {
