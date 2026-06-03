@@ -282,11 +282,13 @@ export const NavigationMenu = ({
       openMyCartridge();
     }, 500);
 
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     (window as any).additionalData = additionalData;
     (window as any).gameData = gameData;
     (window as any).esp32IP = esp32IP;
-
-    return () => window.clearTimeout(timer);
   }, [additionalData, gameData, esp32IP]);
 
   useShowLoadPublicRoms();

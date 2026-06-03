@@ -179,6 +179,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [selectedSave, setSelectedSave] = useState("Cartridge Save");
   const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
   const [cartridgeSaveName, setCartridgeSaveName] = useState(`none.sav`);
+  const [currentEsp32IP, setCurrentEsp32IP] = useState(esp32IP);
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
@@ -215,7 +216,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     try {
         setConnectionFailed(false);
         setIsExternalRomInfoLoading(true);
-        const [gameData, additionalData, checksum1000String, success] = await fetchGameInfo([esp32IP]);
+        const [gameData, additionalData, checksum1000String, success] = await fetchGameInfo([currentEsp32IP]);
         setConnectionFailed(!success);
         setGameData(gameData), setAdditionalData(additionalData), setChecksum1000String(checksum1000String);
         if(gameData){
@@ -303,13 +304,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
        if (gameData["is_gba"]){
         let romName = buildRomName() + ".gba";
         let cartSizeBytes = additionalData.cartSize;
-        let romURL = `${esp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
+        let romURL = `${currentEsp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
         await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
        }
        else {
         let romName = buildRomName() + ".gb";
-        let romURL = `${esp32IP}/get_current_game.gb`;
+        let romURL = `${currentEsp32IP}/get_current_game.gb`;
 
         await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: null });
        }
@@ -328,7 +329,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       }
       console.log(saveType);
       
-      var saveURL = `${esp32IP}/get_current_save?saveType=${saveType}`;
+      var saveURL = `${currentEsp32IP}/get_current_save?saveType=${saveType}`;
       await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
 
     } catch (error) {
@@ -339,7 +340,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
   const fetchMySave_gb = async (fullName: string) => {
     try {
-      var saveURL = `${esp32IP}/get_current_save`;
+      var saveURL = `${currentEsp32IP}/get_current_save`;
       await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
 
     } catch (error) {
@@ -605,8 +606,9 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               autoComplete="esp32IPInputField"
               variant="filled"
               style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '5px' }}
-              defaultValue={esp32IP}
+              value={currentEsp32IP}
               onChange={(event) => {
+                setCurrentEsp32IP(event.target.value);
                 setEsp32IP(event.target.value);
               }}
             />
