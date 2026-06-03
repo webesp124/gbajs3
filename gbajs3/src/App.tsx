@@ -1,6 +1,7 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
 import './App.css';
 import { ControlPanel } from './components/controls/control-panel.tsx';
@@ -29,39 +30,41 @@ export const App = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <AppErrorBoundary>
-        <ToasterWithDefaults />
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <EmulatorContextProvider>
-              <InitialBoundsProvider>
-                <LayoutProvider>
-                  <ModalProvider>
-                    <main>
-                      <PwaPrompt />
-                      <NavigationMenu
-                        additionalData={additionalData}
-                        setAdditionalData={setAdditionalData}
-                        gameData={gameData}
-                        setGameData={setGameData}
-                        esp32IP={esp32IP}
-                        setEsp32IP={setEsp32IP}
-                      />
-                      <Screen />
-                      <ControlPanel />
-                      <VirtualControls
-                        additionalData={additionalData}
-                        esp32IP={esp32IP}
-                      />
-                      <ModalContainer />
-                    </main>
-                  </ModalProvider>
-                </LayoutProvider>
-              </InitialBoundsProvider>
-            </EmulatorContextProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </AppErrorBoundary>
+      <StyledThemeProvider theme={theme}>
+        <AppErrorBoundary>
+          <ToasterWithDefaults />
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <EmulatorContextProvider>
+                <InitialBoundsProvider>
+                  <LayoutProvider>
+                    <ModalProvider>
+                      <main>
+                        <PwaPrompt />
+                        <NavigationMenu
+                          additionalData={additionalData}
+                          setAdditionalData={setAdditionalData}
+                          gameData={gameData}
+                          setGameData={setGameData}
+                          esp32IP={esp32IP}
+                          setEsp32IP={setEsp32IP}
+                        />
+                        <Screen />
+                        <ControlPanel />
+                        <VirtualControls
+                          additionalData={additionalData}
+                          esp32IP={esp32IP}
+                        />
+                        <ModalContainer />
+                      </main>
+                    </ModalProvider>
+                  </LayoutProvider>
+                </InitialBoundsProvider>
+              </EmulatorContextProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </AppErrorBoundary>
+      </StyledThemeProvider>
     </ThemeProvider>
   );
 };
