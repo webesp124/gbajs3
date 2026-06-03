@@ -1,6 +1,6 @@
 import { useMediaQuery } from '@mui/material';
 import { useLocalStorage } from '@uidotdev/usehooks';
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { IconContext } from 'react-icons';
 import {
@@ -79,31 +79,8 @@ export const VirtualControls = ({
   const [areVirtualControlsEnabled] = useLocalStorage<
     AreVirtualControlsEnabledProps | undefined
   >(virtualControlsLocalStorageKey);
-
-  const controlPanelBounds = layouts?.controlPanel?.initialBounds;
-
-  if (!controlPanelBounds) return null;
-
-  const shouldShowVirtualControl = (virtualControlEnabled?: boolean) => {
-    return (
-      (virtualControlEnabled === undefined && !isLargerThanPhone) ||
-      !!virtualControlEnabled
-    );
-  };
-
-  const shouldShowVirtualButtonsAndOpad = shouldShowVirtualControl(
-    areVirtualControlsEnabled?.OpadAndButtons
-  );
-
-  const areNotificationsEnabled =
-    areVirtualControlsEnabled?.NotificationsEnabled ?? true;
-
-  // align with initial control panel positioning
-  const verticalStartPos = controlPanelBounds.bottom;
-  const horizontalStartPos = controlPanelBounds.left;
-
-  let autoFireAInterval: NodeJS.Timeout | null = null;
-  let autoFireBInterval: NodeJS.Timeout | null = null;
+  const autoFireAInterval = useRef<NodeJS.Timeout | null>(null);
+  const autoFireBInterval = useRef<NodeJS.Timeout | null>(null);
 
   type ActionsType = {
     autoFireA: (isKeyDown?: boolean) => void;
@@ -117,8 +94,8 @@ export const VirtualControls = ({
   const actions: ActionsType = {
     autoFireA: (isKeyDown = false) => {
       if (isKeyDown) {
-        if (!autoFireAInterval) {
-          autoFireAInterval = setInterval(() => {
+        if (!autoFireAInterval.current) {
+          autoFireAInterval.current = setInterval(() => {
             if (emulator) {
               emulator.simulateKeyDown("A");
               setTimeout(() => {
@@ -128,16 +105,16 @@ export const VirtualControls = ({
           }, 50); // 20 presses per second
         }
       } else {
-        if (autoFireAInterval) clearInterval(autoFireAInterval);
-        autoFireAInterval = null;
+        if (autoFireAInterval.current) clearInterval(autoFireAInterval.current);
+        autoFireAInterval.current = null;
         if (emulator) emulator.simulateKeyUp("A");
       }
     },
 
     autoFireB: (isKeyDown = false) => {
       if (isKeyDown) {
-        if (!autoFireBInterval) {
-          autoFireBInterval = setInterval(() => {
+        if (!autoFireBInterval.current) {
+          autoFireBInterval.current = setInterval(() => {
             if (emulator) {
               emulator.simulateKeyDown("B");
               setTimeout(() => {
@@ -147,8 +124,8 @@ export const VirtualControls = ({
           }, 50); // 20 presses per second
         }
       } else {
-        if (autoFireBInterval) clearInterval(autoFireBInterval);
-        autoFireBInterval = null;
+        if (autoFireBInterval.current) clearInterval(autoFireBInterval.current);
+        autoFireBInterval.current = null;
         if (emulator) emulator.simulateKeyUp("B");
       }
     },
@@ -183,6 +160,28 @@ export const VirtualControls = ({
   };
 
   useShortcutListener(actions);
+
+  const controlPanelBounds = layouts?.controlPanel?.initialBounds;
+
+  if (!controlPanelBounds) return null;
+
+  const shouldShowVirtualControl = (virtualControlEnabled?: boolean) => {
+    return (
+      (virtualControlEnabled === undefined && !isLargerThanPhone) ||
+      !!virtualControlEnabled
+    );
+  };
+
+  const shouldShowVirtualButtonsAndOpad = shouldShowVirtualControl(
+    areVirtualControlsEnabled?.OpadAndButtons
+  );
+
+  const areNotificationsEnabled =
+    areVirtualControlsEnabled?.NotificationsEnabled ?? true;
+
+  // align with initial control panel positioning
+  const verticalStartPos = controlPanelBounds.bottom;
+  const horizontalStartPos = controlPanelBounds.left;
 
   const positionVariations: {
     [key: string]: {

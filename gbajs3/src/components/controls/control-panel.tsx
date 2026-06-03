@@ -257,6 +257,33 @@ export const ControlPanel = () => {
     [setLayout, layouts]
   );
 
+  const setFastForward = (ffMultiplier: number) => {
+    emulator?.setFastForwardMultiplier(ffMultiplier);
+    setFastForwardMultiplier(ffMultiplier);
+  };
+
+  type ActionsType = {
+    fastForward: (isKeyDown?: boolean) => void;
+  };
+
+  const actions: ActionsType = {
+    fastForward: (isKeyDown = false) => {
+      if (emulator && isKeyDown) {
+        console.log('Fast Forward action triggered!');
+  
+        if (fastForwardMultiplier > 1) {
+          // Store the current speed and set fast forward to normal (1x)
+          setPreviousFastForwardSpeed(fastForwardMultiplier);
+          setFastForward(1);
+        } else {
+          setFastForward(previousFastForwardSpeed);
+        }
+      }
+    },
+  };
+
+  useShortcutListener(actions);
+
   const canvasBounds = layouts?.screen?.initialBounds;
 
   if (!canvasBounds) return null;
@@ -283,38 +310,11 @@ export const ControlPanel = () => {
     setVolume(volumePercent);
   };
 
-  const setFastForward = (ffMultiplier: number) => {
-    emulator?.setFastForwardMultiplier(ffMultiplier);
-    setFastForwardMultiplier(ffMultiplier);
-  };
-
   const setFastForwardFromEvent = (event: Event) => {
     const ffMultiplier = Number((event.target as HTMLInputElement)?.value);
     emulator?.setFastForwardMultiplier(ffMultiplier);
     setFastForwardMultiplier(ffMultiplier);
   };
-
-  type ActionsType = {
-    fastForward: (isKeyDown?: boolean) => void;
-  };
-
-  const actions: ActionsType = {
-    fastForward: (isKeyDown = false) => {
-      if (emulator && isKeyDown) {
-        console.log('Fast Forward action triggered!');
-  
-        if (fastForwardMultiplier > 1) {
-          // Store the current speed and set fast forward to normal (1x)
-          setPreviousFastForwardSpeed(fastForwardMultiplier);
-          setFastForward(1);
-        } else {
-          setFastForward(previousFastForwardSpeed);
-        }
-      }
-    },
-  };
-
-  useShortcutListener(actions);
 
   const tourSteps: TourSteps = [
     {
