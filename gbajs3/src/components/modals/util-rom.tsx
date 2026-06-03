@@ -69,12 +69,7 @@ const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, bool
   let checksum1000 = "";
   try {
     // Fetch the basic game info
-    const response = await fetch(`${esp32IP}/get_game_info`, {
-      method: 'GET',
-      headers: {
-        'Access-Control-Request-Private-Network': 'true',
-      }
-    });
+    const response = await fetch(`${esp32IP}/get_game_info`);
 
     gameData = await response.json();
 
