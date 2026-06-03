@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { UploadRomToServerModal } from './upload-rom-to-server.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
@@ -65,14 +64,14 @@ describe('<UploadRomToServerModal />', () => {
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<UploadRomToServerModal />);
@@ -82,41 +81,6 @@ describe('<UploadRomToServerModal />', () => {
     expect(closeButton).toBeInTheDocument();
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<UploadRomToServerModal />);
-
-    expect(
-      await screen.findByText(
-        'Use this button to upload your current rom file to the server.'
-      )
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText(
-        'Use this button to upload your current rom file to the server.'
-      )
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

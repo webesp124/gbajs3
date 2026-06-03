@@ -1,38 +1,26 @@
-import { Button } from '@mui/material';
+import { Box, Button, Divider, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useId, useState } from 'react';
 import { BiError } from 'react-icons/bi';
-import { useTheme } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
-import { CenteredText } from '../shared/styled.tsx';
+import { ManagedCheckbox } from '../shared/managed-checkbox.tsx';
+import { Copy } from '../shared/styled.tsx';
+import { downloadBlob } from './file-utilities/blob.ts';
+
+const saveSize128KiBBytes = 128 * 1024;
 
 export const DownloadSaveModal = () => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
   const downloadSaveButtonId = useId();
   const [error, setError] = useState(false);
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>Use this button to download your current save file.</p>
-          <p>Remember to save in game before downloading!</p>
-        </>
-      ),
-      placement: 'right',
-      target: `#${CSS.escape(downloadSaveButtonId)}`
-    }
-  ];
+  const [downloadTruncatedSave, setDownloadTruncatedSave] = useState(false);
 
   return (
     <>
@@ -44,29 +32,45 @@ export const DownloadSaveModal = () => {
             text="Load a rom to download its save file"
           />
         ) : (
-          <CenteredText>
+          <Copy>
             Remember to save in game before downloading your save file!
-          </CenteredText>
+          </Copy>
         )}
+        <Divider flexItem sx={{ margin: '10px 0' }} />
+        <Copy>Download Options</Copy>
+        <ManagedCheckbox
+          label={
+            <Box sx={{ ml: 1, my: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                Truncate save (128 KiB)
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Removes metadata at the end of the sav file
+              </Typography>
+            </Box>
+          }
+          watcher={downloadTruncatedSave}
+          onChange={(_, checked) => {
+            setDownloadTruncatedSave(checked);
+          }}
+        />
       </ModalBody>
       <ModalFooter>
         <Button
           id={downloadSaveButtonId}
           variant="contained"
           onClick={() => {
-            const save = emulator?.getCurrentSave();
+            const save = downloadTruncatedSave
+              ? emulator?.getCurrentSaveTruncated(saveSize128KiBBytes)
+              : emulator?.getCurrentSave();
             const saveName = emulator?.getCurrentSaveName();
 
             if (save && saveName) {
-              const saveFile = new Blob([save], {
+              const saveFile = new Blob([save.slice()], {
                 type: 'data:application/octet-stream'
               });
 
-              const link = document.createElement('a');
-              link.download = saveName;
-              link.href = URL.createObjectURL(saveFile);
-              link.click();
-              link.remove();
+              downloadBlob(saveName, saveFile);
             } else {
               setError(true);
             }
@@ -74,14 +78,10 @@ export const DownloadSaveModal = () => {
         >
           Download
         </Button>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedDownloadSaveTour"
-      />
     </>
   );
 };

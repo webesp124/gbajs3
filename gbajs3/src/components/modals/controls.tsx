@@ -1,6 +1,6 @@
 import { Button, Tabs, Tab } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useId, useState, type Dispatch, type ReactNode } from 'react';
-import { styled } from 'styled-components';
 
 import { KeyBindingsForm } from './controls/key-bindings-form.tsx';
 import { VirtualControlsForm } from './controls/virtual-controls-form.tsx';
@@ -8,11 +8,11 @@ import { ShortcutBindingsForm } from './shortcut-bindings-form.tsx';
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
-import { useLayoutContext, useModalContext } from '../../hooks/context.tsx';
 import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
+  useInitialBoundsContext,
+  useLayoutContext,
+  useModalContext
+} from '../../hooks/context.tsx';
 import { CircleCheckButton } from '../shared/circle-check-button.tsx';
 import { ControlProfiles } from './controls/control-profiles.tsx';
 
@@ -32,25 +32,27 @@ type ControlTabsProps = {
   setIsSuccessfulSubmit: (successfulSubmit: boolean) => void;
 };
 
+const StyledModalBody = styled(ModalBody)`
+  padding: 0 0 1rem 0;
+`;
+
 const TabsWithBorder = styled(Tabs)`
   border-bottom: 1px solid;
-  border-color: rgba(0, 0, 0, 0.12);
+  border-color: ${({ theme }) => theme.modalTabBorder};
 
   & .MuiTabs-scrollButtons {
     width: fit-content;
   }
 `;
 
-const TabWrapper = styled.div`
-  padding: 24px;
+const TabWrapper = styled('div')`
+  padding: 20px 40px 20px 40px;
 `;
 
-const a11yProps = (index: number) => {
-  return {
-    id: `control-tab-${index}`,
-    'aria-controls': `tabpanel-${index}`
-  };
-};
+const a11yProps = (index: number) => ({
+  id: `control-tab-${index}`,
+  'aria-controls': `tabpanel-${index}`
+});
 
 const TabPanel = ({ children, index, value }: TabPanelProps) => {
   return (
@@ -75,6 +77,7 @@ const ControlTabs = ({
   setIsSuccessfulSubmit
 }: ControlTabsProps) => {
   const { clearLayouts } = useLayoutContext();
+  const { clearInitialBounds } = useInitialBoundsContext();
   const [value, setValue] = useState(0);
 
   const tabIndexToFormId = (tabIndex: number) => {
@@ -98,7 +101,14 @@ const ControlTabs = ({
     setIsSuccessfulSubmit(false);
   };
 
-  const onAfterSubmit = () => setIsSuccessfulSubmit(true);
+  const onAfterSubmit = () => {
+    setIsSuccessfulSubmit(true);
+  };
+
+  const clearLayoutsAndInitialBounds = () => {
+    clearInitialBounds();
+    clearLayouts();
+  };
 
   return (
     <>
@@ -129,7 +139,7 @@ const ControlTabs = ({
         <Button
           id={resetPositionsButtonId}
           sx={{ marginTop: '10px' }}
-          onClick={clearLayouts}
+          onClick={clearLayoutsAndInitialBounds}
         >
           Reset All Positions
         </Button>
@@ -148,72 +158,15 @@ const ControlTabs = ({
 };
 
 export const ControlsModal = () => {
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const baseId = useId();
-  const [formId, setFormId] = useState<string>(
-    `${baseId}--virtual-controls-form`
-  );
-  const [isSuccessfulSubmit, setIsSuccessfulSubmit] = useState<boolean>(false);
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <p>
-          Select which virtual controls you wish to enable in this form tab.
-        </p>
-      ),
-      target: `#${CSS.escape(`${baseId}--virtual-controls-form`)}`
-    },
-    {
-      content: (
-        <p>
-          Use this button to reset the positions of the screen, control panel,
-          and all virtual controls.
-        </p>
-      ),
-      target: `#${CSS.escape(`${baseId}--reset-positions-button`)}`
-    },
-    {
-      content: (
-        <>
-          <p>Use the tab panel to change which form you are seeing.</p>
-          <p>
-            Select the <i>KEY BINDINGS</i> tab above, then click next!
-          </p>
-        </>
-      ),
-      placement: 'right',
-      target: `#${CSS.escape(a11yProps(1).id)}`,
-      disableBeacon: true,
-      disableOverlayClose: true,
-      hideCloseButton: false,
-      spotlightClicks: true
-    },
-    {
-      content: (
-        <p>
-          Remap keybindings by selecting a form field and typing your desired
-          input.
-        </p>
-      ),
-      placement: 'top-end',
-      target: `#${CSS.escape(`${baseId}--key-bindings-form`)}`
-    },
-    {
-      content: (
-        <p>
-          Use the <i>Save Changes</i> button to persist changes from the current
-          form tab.
-        </p>
-      ),
-      target: `#${CSS.escape(`${baseId}--save-changes-button`)}`
-    }
-  ];
+  const [formId, setFormId] = useState(`${baseId}--virtual-controls-form`);
+  const [isSuccessfulSubmit, setIsSuccessfulSubmit] = useState(false);
 
   return (
     <>
       <ModalHeader title="Controls" />
-      <ModalBody>
+      <StyledModalBody>
         <ControlTabs
           setFormId={setFormId}
           virtualControlsFormId={`${baseId}--virtual-controls-form`}
@@ -223,25 +176,20 @@ export const ControlsModal = () => {
           resetPositionsButtonId={`${baseId}--reset-positions-button`}
           setIsSuccessfulSubmit={setIsSuccessfulSubmit}
         />
-      </ModalBody>
+      </StyledModalBody>
       <ModalFooter>
         {formId !== `${baseId}--control-profiles` && (
           <CircleCheckButton
             copy="Save Changes"
             form={formId}
-            id={`${baseId}--save-changes-button`}
             type="submit"
             showSuccess={isSuccessfulSubmit}
           />
         )}
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedControlsTour"
-      />
     </>
   );
 };

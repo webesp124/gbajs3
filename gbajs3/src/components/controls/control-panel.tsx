@@ -1,8 +1,13 @@
-import { IconButton, Slider, useMediaQuery } from '@mui/material';
+import { useMediaQuery } from '@mui/material';
+import { useTheme, styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
-import { useCallback, useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { IconContext } from 'react-icons';
-import { AiOutlineFastForward, AiOutlineForward } from 'react-icons/ai';
+import {
+  AiOutlineBackward,
+  AiOutlineFastForward,
+  AiOutlineForward
+} from 'react-icons/ai';
 import {
   BiPlay,
   BiUndo,
@@ -13,75 +18,52 @@ import {
 } from 'react-icons/bi';
 import { TbResize } from 'react-icons/tb';
 import { Rnd } from 'react-rnd';
-import { css, styled, useTheme } from 'styled-components';
 
 import {
-  emulatorVolumeLocalStorageKey,
-  emulatorFFMultiplierLocalStorageKey
+  emulatorFFMultiplierLocalStorageKey,
+  emulatorSettingsLocalStorageKey,
+  emulatorVolumeLocalStorageKey
 } from '../../context/emulator/consts.ts';
 import {
   useDragContext,
   useEmulatorContext,
+  useInitialBoundsContext,
   useLayoutContext,
   useResizeContext,
   useRunningContext
 } from '../../hooks/context.tsx';
 import { useBackgroundEmulator } from '../../hooks/emulator/use-background-emulator.tsx';
 import { useQuitGame } from '../../hooks/emulator/use-quit-game.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
-import { ButtonBase } from '../shared/custom-button-base.tsx';
 import { GripperHandle } from '../shared/gripper-handle.tsx';
-import type { IconButtonProps, SliderProps } from '@mui/material';
-import useShortcutListener from './use-shortcut-listener.ts';
+import { PanelButton, SliderButton } from './control-panel/buttons.tsx';
+import { PanelSlider } from './control-panel/panel-slider.tsx';
+import { useUnloadEmulator } from '../../hooks/emulator/use-unload-emulator.tsx';
+
+import type { EmulatorSettings } from '../modals/emulator-settings.tsx';
 
 type PanelProps = {
   $controlled: boolean;
   $isLargerThanPhone: boolean;
+  $areItemsDraggable: boolean;
 };
 
-type SliderIconButtonProps = {
-  icon: ReactNode;
-} & IconButtonProps;
+type emulatorVolumeBeforeAutoMuteSources = 'rewind' | 'fastForwardSlowdown';
 
-type PanelControlProps = {
-  ariaLabel: string;
-  children: ReactNode;
-  controlled: boolean;
-  id: string;
-  onClick?: () => void;
-};
-
-type PanelSliderProps = {
-  controlled: boolean;
-  gridArea: string;
-  maxIcon: ReactNode;
-  minIcon: ReactNode;
-} & SliderProps;
-
-type ControlledProps = {
-  $controlled: boolean;
-};
-
-type PanelControlSliderProps = {
-  $gridArea: string;
-} & ControlledProps;
-
-const Panel = styled.ul<PanelProps>`
+const Panel = styled('ul', {
+  shouldForwardProp: (propName) => !propName.toString().startsWith('$')
+})<PanelProps>`
   background-color: ${({ theme }) => theme.panelBlueGray};
   list-style: none;
   padding: 10px;
   margin: 0;
   max-width: 100%;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(10, 1fr);
   grid-template-rows: 1fr 1fr;
   gap: 10px 10px;
   grid-template-areas:
-    '. . . .'
-    'volume volume fastForward fastForward';
+    'play play quit quit drag drag resize resize rewind rewind'
+    'volume volume volume volume volume fastForward fastForward fastForward fastForward fastForward';
 
   ${({ $controlled, $isLargerThanPhone }) =>
     ($controlled || $isLargerThanPhone) &&
@@ -92,209 +74,122 @@ const Panel = styled.ul<PanelProps>`
     justify-content: space-evenly;
     gap: 10px;
   `}
-`;
 
-const PanelControlWrapper = styled.li`
-  display: contents;
-`;
-
-const InteractivePanelControlStyle = css<ControlledProps>`
-  cursor: pointer;
-  background-color: ${({ theme }) => theme.panelControlGray};
-  border-radius: 0.25rem;
-  min-width: 40px;
-  min-height: 40px;
-  width: fit-content;
-  height: fit-content;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${({ theme }) => theme.pureBlack};
-  width: ${({ $controlled }) => ($controlled ? 'auto' : '100%')};
-
-  ${({ $controlled, theme }) =>
-    !$controlled &&
+  ${({ $areItemsDraggable, theme }) =>
+    $areItemsDraggable &&
     `
-    @media ${theme.isLargerThanPhone} {
-      width: auto;
-    }
+    outline-color: ${theme.gbaThemeBlue};
+    outline-style: dashed;
+    outline-width: 2px;
+    outline-offset: -2px;
   `}
 `;
 
-const PanelControlButton = styled(ButtonBase).attrs({
-  className: 'noDrag'
-})<ControlledProps>`
-  ${InteractivePanelControlStyle}
+const FAST_FORWARD_SLOWDOWN_VALUES = [
+  { value: -5, label: '1/5x' },
+  { value: -4, label: '1/4x' },
+  { value: -3, label: '1/3x' },
+  { value: -2, label: '1/2x' },
+  { value: 1, label: '1x' },
+  { value: 2, label: '2x' },
+  { value: 3, label: '3x' },
+  { value: 4, label: '4x' },
+  { value: 5, label: '5x' }
+] as const;
 
-  border: none;
-  flex-grow: 1;
-  margin: 0;
-  padding: 0;
-
-  &:focus {
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-  }
-
-  &:active {
-    color: ${({ theme }) => theme.gbaThemeBlue};
-  }
-`;
-
-const PanelControlSlider = styled.li<PanelControlSliderProps>`
-  ${InteractivePanelControlStyle}
-  grid-area: ${({ $gridArea }) => $gridArea};
-  max-height: 40px;
-`;
-
-const MutedMarkSlider = styled(Slider)`
-  flex-grow: 1;
-
-  > .MuiSlider-markActive {
-    opacity: 1;
-    background-color: currentColor;
-  }
-`;
-
-const PanelButton = ({
-  ariaLabel,
-  children,
-  controlled,
-  id,
-  onClick
-}: PanelControlProps) => {
-  return (
-    <PanelControlWrapper>
-      <PanelControlButton
-        aria-label={ariaLabel}
-        id={id}
-        onClick={onClick}
-        $controlled={controlled}
-      >
-        {children}
-      </PanelControlButton>
-    </PanelControlWrapper>
-  );
-};
-
-const SliderIconButton = ({ icon, ...rest }: SliderIconButtonProps) => {
-  const theme = useTheme();
-
-  return (
-    <IconButton
-      size="small"
-      sx={{
-        padding: 0,
-        color: theme.pureBlack,
-        '&:active': { color: theme.gbaThemeBlue }
-      }}
-      {...rest}
-    >
-      {icon}
-    </IconButton>
-  );
-};
-
-const PanelSlider = ({
-  controlled,
-  gridArea,
-  id,
-  maxIcon,
-  minIcon,
-  ...rest
-}: PanelSliderProps) => {
-  return (
-    <PanelControlSlider id={id} $gridArea={gridArea} $controlled={controlled}>
-      {minIcon}
-      <MutedMarkSlider
-        marks
-        sx={{
-          width: '85px',
-          margin: '0 10px',
-          maxHeight: '40px'
-        }}
-        valueLabelDisplay="auto"
-        {...rest}
-      />
-      {maxIcon}
-    </PanelControlSlider>
-  );
-};
+const FAST_FORWARD_SLOWDOWN_BY_VALUE = new Map<number, number>(
+  FAST_FORWARD_SLOWDOWN_VALUES.map((r, i) => [r.value, i])
+);
 
 export const ControlPanel = () => {
   const { emulator } = useEmulatorContext();
   const { isRunning } = useRunningContext();
   const { areItemsDraggable, setAreItemsDraggable } = useDragContext();
   const { areItemsResizable, setAreItemsResizable } = useResizeContext();
-  const { layouts, setLayout } = useLayoutContext();
+  const { setLayout, getLayout } = useLayoutContext();
+  const { initialBounds, setInitialBound } = useInitialBoundsContext();
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
+  const isMobileLandscape = useMediaQuery(theme.isMobileLandscape);
   const [isPaused, setIsPaused] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const controlPanelId = useId();
   const quitGame = useQuitGame();
-  const [currentEmulatorVolume, setCurrentEmulatorVolume] = useLocalStorage(
-    emulatorVolumeLocalStorageKey,
-    1
-  );
   const [fastForwardMultiplier, setFastForwardMultiplier] = useLocalStorage(
     emulatorFFMultiplierLocalStorageKey,
     1
   );
+  const [currentEmulatorVolume, setCurrentEmulatorVolume] = useLocalStorage(
+    emulatorVolumeLocalStorageKey,
+    1
+  );
+  const [emulatorSettings] = useLocalStorage<EmulatorSettings | undefined>(
+    emulatorSettingsLocalStorageKey
+  );
+  const [emulatorVolumeBeforeAutoMute, setEmulatorVolumeBeforeAutoMute] =
+    useLocalStorage<
+      | {
+          volumeBeforeMute: number;
+          type: emulatorVolumeBeforeAutoMuteSources;
+        }
+      | undefined
+    >('emulatorVolumeBeforeAutoMuteLocalStorageKey');
+  const rndRef = useRef<Rnd | null>(null);
 
-  const [previousFastForwardSpeed, setPreviousFastForwardSpeed] = useState(4);
+  const muteAndPreserveVolume = (type: emulatorVolumeBeforeAutoMuteSources) => {
+    if (currentEmulatorVolume > 0) {
+      setEmulatorVolumeBeforeAutoMute({
+        volumeBeforeMute: currentEmulatorVolume,
+        type
+      });
+      emulator?.setVolume(0);
+      setCurrentEmulatorVolume(0);
+    }
+  };
+
+  const restoreVolume = (type: emulatorVolumeBeforeAutoMuteSources) => {
+    if (type !== emulatorVolumeBeforeAutoMute?.type) return;
+
+    emulator?.setVolume(emulatorVolumeBeforeAutoMute.volumeBeforeMute);
+    setCurrentEmulatorVolume(emulatorVolumeBeforeAutoMute.volumeBeforeMute);
+
+    setEmulatorVolumeBeforeAutoMute(undefined);
+  };
 
   // pause emulator when document is not visible,
   // resumes if applicable when document is visible
   useBackgroundEmulator({ isPaused });
 
+  // take auto save state when page is hidden (best effort)
+  useUnloadEmulator();
+
   const refSetLayout = useCallback(
     (node: Rnd | null) => {
-      if (!layouts?.controlPanel?.initialBounds && node)
-        setLayout('controlPanel', {
-          initialBounds: node.resizableElement.current?.getBoundingClientRect()
-        });
+      if (!initialBounds?.controlPanel && node)
+        setInitialBound(
+          'controlPanel',
+          node.resizableElement.current?.getBoundingClientRect()
+        );
+
+      rndRef.current = node;
     },
-    [setLayout, layouts]
+    [initialBounds?.controlPanel, setInitialBound]
   );
 
-  const setFastForward = (ffMultiplier: number) => {
-    emulator?.setFastForwardMultiplier(ffMultiplier);
-    setFastForwardMultiplier(ffMultiplier);
-  };
+  const screenLayout = getLayout('screen');
+  const controlPanelLayout = getLayout('controlPanel');
 
-  type ActionsType = {
-    fastForward: (isKeyDown?: boolean) => void;
-  };
-
-  const actions: ActionsType = {
-    fastForward: (isKeyDown = false) => {
-      if (emulator && isKeyDown) {
-        console.log('Fast Forward action triggered!');
-  
-        if (fastForwardMultiplier > 1) {
-          // Store the current speed and set fast forward to normal (1x)
-          setPreviousFastForwardSpeed(fastForwardMultiplier);
-          setFastForward(1);
-        } else {
-          setFastForward(previousFastForwardSpeed);
-        }
-      }
-    },
-  };
-
-  useShortcutListener(actions);
-
-  const canvasBounds = layouts?.screen?.initialBounds;
+  const canvasBounds = screenLayout?.originalBounds ?? initialBounds?.screen;
 
   if (!canvasBounds) return null;
 
   const dragWrapperPadding = isLargerThanPhone ? 5 : 0;
-  const isControlled = !!layouts?.controlPanel?.size || isResizing;
+  const isControlled = !!controlPanelLayout?.size || isResizing;
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!isRunning) return;
 
-    if (isPaused) emulator?.resume();
+    if (isPaused) await emulator?.resume();
     else emulator?.pause();
 
     setIsPaused((prevState) => !prevState);
@@ -303,100 +198,45 @@ export const ControlPanel = () => {
   const setVolume = (volumePercent: number) => {
     emulator?.setVolume(volumePercent);
     setCurrentEmulatorVolume(volumePercent);
+    setEmulatorVolumeBeforeAutoMute(undefined);
   };
 
-  const setVolumeFromEvent = (event: Event) => {
-    const volumePercent = Number((event.target as HTMLInputElement)?.value);
-    setVolume(volumePercent);
-  };
-
-  const setFastForwardFromEvent = (event: Event) => {
-    const ffMultiplier = Number((event.target as HTMLInputElement)?.value);
+  const setFastForward = (ffMultiplier: number) => {
     emulator?.setFastForwardMultiplier(ffMultiplier);
     setFastForwardMultiplier(ffMultiplier);
-  };
 
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>
-            Use the control panel to quickly perform in game actions and
-            reposition controls.
-          </p>
-          <p>Click next to take a tour of the controls!</p>
-        </>
-      ),
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(controlPanelId)}`
-    },
-    {
-      content: (
-        <p>
-          Use the this button to pause and resume your game if it is running.
-        </p>
-      ),
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--play`)}`
-    },
-    {
-      content: <p>Use this button to quit your current game.</p>,
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--quit-game`)}`
-    },
-    {
-      content: (
-        <p>
-          Use this button to enable dragging and repositioning of the screen,
-          controls, and control panel.
-        </p>
-      ),
-      placement: isLargerThanPhone ? 'auto' : 'right',
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--drag`)}`
-    },
-    {
-      content: <p>Use this button to resize the screen and control panel.</p>,
-      placement: isLargerThanPhone ? 'auto' : 'right',
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--resize`)}`
-    },
-    {
-      content: (
-        <>
-          <p>Use this slider to increase and decrease the emulator volume.</p>
-          <p>Your volume setting will be saved between refreshes!</p>
-        </>
-      ),
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--volume-slider`)}`
-    },
-    {
-      content: (
-        <>
-          <p>
-            Use this slider to increase and decrease the fast forward speed.
-          </p>
-          <p>Your fast forward setting will be saved between refreshes!</p>
-        </>
-      ),
-      placement: isLargerThanPhone ? 'auto' : 'right',
-      placementBeacon: 'bottom',
-      target: `#${CSS.escape(`${controlPanelId}--fast-forward`)}`
+    const shouldMuteNext =
+      (!!emulatorSettings?.muteOnFastForward && ffMultiplier > 1) ||
+      (!!emulatorSettings?.muteOnSlowdown && ffMultiplier < 1);
+
+    if (shouldMuteNext) {
+      if (!emulatorVolumeBeforeAutoMute)
+        muteAndPreserveVolume('fastForwardSlowdown');
+
+      return;
     }
-  ];
 
-  const defaultPosition = {
-    x: Math.floor(canvasBounds.left),
-    y: Math.floor(canvasBounds.bottom + dragWrapperPadding)
-  };
-  const defaultSize = {
-    width: isLargerThanPhone ? 'auto' : '100dvw',
-    height: 'auto'
+    restoreVolume('fastForwardSlowdown');
   };
 
-  const position = layouts?.controlPanel?.position ?? defaultPosition;
-  const size = layouts?.controlPanel?.size ?? defaultSize;
+  const defaultPosition = isMobileLandscape
+    ? { x: Math.floor(canvasBounds.left + canvasBounds.width), y: 0 }
+    : {
+        x: Math.floor(canvasBounds.left),
+        y: Math.floor(canvasBounds.bottom + dragWrapperPadding)
+      };
+  const defaultSize = isMobileLandscape
+    ? {
+        width: Math.min(80, canvasBounds.left),
+        height: 'auto'
+      }
+    : {
+        width: isLargerThanPhone ? 'auto' : '100dvw',
+        height: 'auto'
+      };
+
+  const position = controlPanelLayout?.position ?? defaultPosition;
+  const size = controlPanelLayout?.size ?? defaultSize;
 
   const defaultSliderEvents = {
     onFocus: emulator?.disableKeyboardInput,
@@ -407,158 +247,222 @@ export const ControlPanel = () => {
   };
 
   return (
-    <>
-      <Rnd
-        data-testid="control-panel-wrapper"
-        id={controlPanelId}
-        disableDragging={!areItemsDraggable}
-        enableResizing={areItemsResizable}
-        resizeHandleComponent={{
-          bottomRight: <GripperHandle variation="bottomRight" />,
-          bottomLeft: <GripperHandle variation="bottomLeft" />
-        }}
-        resizeHandleStyles={{
-          bottomRight: { marginBottom: '15px', marginRight: '15px' },
-          bottomLeft: { marginBottom: '15px', marginLeft: '15px' }
-        }}
-        ref={refSetLayout}
-        cancel=".noDrag"
-        position={position}
-        size={size}
-        onDragStop={(_, data) => {
-          setLayout('controlPanel', { position: { x: data.x, y: data.y } });
-        }}
-        onResizeStart={() => setIsResizing(true)}
-        onResizeStop={(_1, _2, ref, _3, position) => {
+    <Rnd
+      data-testid="control-panel-wrapper"
+      id={controlPanelId}
+      disableDragging={!areItemsDraggable}
+      enableResizing={areItemsResizable}
+      resizeHandleComponent={{
+        bottomRight: <GripperHandle variation="bottomRight" />,
+        bottomLeft: <GripperHandle variation="bottomLeft" />
+      }}
+      resizeHandleStyles={{
+        bottomRight: { marginBottom: '15px', marginRight: '15px' },
+        bottomLeft: { marginBottom: '15px', marginLeft: '15px' }
+      }}
+      ref={refSetLayout}
+      cancel=".noDrag"
+      position={position}
+      size={size}
+      onDragStart={() => {
+        if (!controlPanelLayout?.originalBounds)
           setLayout('controlPanel', {
-            size: { width: ref.clientWidth, height: ref.clientHeight },
-            position: { ...position }
+            originalBounds:
+              rndRef.current?.resizableElement.current?.getBoundingClientRect()
           });
-          setIsResizing(false);
-        }}
-        default={{
-          ...defaultPosition,
-          ...defaultSize
-        }}
+      }}
+      onDragStop={(_, data) => {
+        setLayout('controlPanel', { position: { x: data.x, y: data.y } });
+      }}
+      onResizeStart={() => {
+        setIsResizing(true);
+        if (!controlPanelLayout?.originalBounds)
+          setLayout('controlPanel', {
+            originalBounds:
+              rndRef.current?.resizableElement.current?.getBoundingClientRect()
+          });
+      }}
+      onResizeStop={(_1, _2, ref, _3, position) => {
+        setLayout('controlPanel', {
+          size: { width: ref.clientWidth, height: ref.clientHeight },
+          position: { ...position }
+        });
+        setIsResizing(false);
+      }}
+      default={{
+        ...defaultPosition,
+        ...defaultSize
+      }}
+    >
+      <Panel
+        $controlled={isControlled}
+        $isLargerThanPhone={isLargerThanPhone}
+        $areItemsDraggable={areItemsDraggable}
       >
-        <Panel
-          $controlled={isControlled}
-          $isLargerThanPhone={isLargerThanPhone}
-        >
-          <IconContext.Provider value={{ size: '2em' }}>
-            <PanelButton
-              id={`${controlPanelId}--play`}
-              ariaLabel={isPaused || !isRunning ? 'Play' : 'Pause'}
-              onClick={togglePlay}
-              controlled={isControlled}
-            >
-              {isPaused || !isRunning ? <BiPlay /> : <BiPause />}
-            </PanelButton>
-            <PanelButton
-              id={`${controlPanelId}--quit-game`}
-              ariaLabel="Quit Game"
-              onClick={() => {
-                quitGame();
-                setIsPaused(false);
-              }}
-              controlled={isControlled}
-            >
-              <BiUndo />
-            </PanelButton>
-            <PanelButton
-              id={`${controlPanelId}--drag`}
-              ariaLabel={areItemsDraggable ? 'Anchor Items' : 'Drag Items'}
-              onClick={() => {
-                setAreItemsDraggable((prevState) => !prevState);
-              }}
-              controlled={isControlled}
-            >
-              {areItemsDraggable ? (
-                <BiMove color={theme.gbaThemeBlue} />
-              ) : (
-                <BiMove />
-              )}
-            </PanelButton>
-            <PanelButton
-              id={`${controlPanelId}--resize`}
-              ariaLabel={
-                areItemsResizable ? 'Stop Resizing Items' : 'Resize Items'
-              }
-              onClick={() => {
-                setAreItemsResizable((prevState) => !prevState);
-              }}
-              controlled={isControlled}
-            >
-              {areItemsResizable ? (
-                <TbResize color={theme.gbaThemeBlue} />
-              ) : (
-                <TbResize />
-              )}
-            </PanelButton>
-            <PanelSlider
-              id={`${controlPanelId}--volume-slider`}
-              aria-label="Volume Slider"
-              gridArea="volume"
-              controlled={isControlled}
-              value={currentEmulatorVolume}
-              step={0.1}
-              min={0}
-              max={1}
-              minIcon={
-                <SliderIconButton
-                  aria-label="Mute Volume"
-                  icon={<BiVolumeMute style={{ maxHeight: '100%' }} />}
-                  onClick={() => setVolume(0)}
-                />
-              }
-              maxIcon={
-                <SliderIconButton
-                  aria-label="Max Volume"
-                  icon={<BiVolumeFull style={{ maxHeight: '100%' }} />}
-                  onClick={() => setVolume(1)}
-                />
-              }
-              valueLabelFormat={`${currentEmulatorVolume * 100}`}
-              onChange={setVolumeFromEvent}
-              {...defaultSliderEvents}
-            />
-            <PanelSlider
-              id={`${controlPanelId}--fast-forward`}
-              aria-label="Fast Forward Slider"
-              gridArea="fastForward"
-              controlled={isControlled}
-              value={fastForwardMultiplier}
-              step={1}
-              min={1}
-              max={5}
-              minIcon={
-                <SliderIconButton
-                  aria-label="Regular Speed"
-                  icon={<AiOutlineForward style={{ maxHeight: '100%' }} />}
-                  onClick={() => setFastForward(1)}
-                />
-              }
-              maxIcon={
-                <SliderIconButton
-                  aria-label="Max Fast Forward"
-                  icon={<AiOutlineFastForward style={{ maxHeight: '100%' }} />}
-                  onClick={() => setFastForward(5)}
-                />
-              }
-              valueLabelFormat={`x${fastForwardMultiplier}`}
-              onChange={setFastForwardFromEvent}
-              {...defaultSliderEvents}
-            />
-          </IconContext.Provider>
-        </Panel>
-      </Rnd>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedControlPanelTour"
-        zIndex={isLargerThanPhone ? 160 : 0}
-        renderWithoutDelay
-        isNotInModal
-      />
-    </>
+        <IconContext.Provider value={{ size: '2em' }}>
+          <PanelButton
+            id={`${controlPanelId}--play`}
+            ariaLabel={isPaused || !isRunning ? 'Play' : 'Pause'}
+            onClick={togglePlay}
+            controlled={isControlled}
+            $gridArea="play"
+          >
+            {isPaused || !isRunning ? <BiPlay /> : <BiPause />}
+          </PanelButton>
+          <PanelButton
+            id={`${controlPanelId}--quit-game`}
+            ariaLabel="Quit Game"
+            onClick={() => {
+              quitGame();
+              setIsPaused(false);
+            }}
+            controlled={isControlled}
+            $gridArea="quit"
+          >
+            <BiUndo />
+          </PanelButton>
+          <PanelButton
+            id={`${controlPanelId}--drag`}
+            className="noDrag"
+            ariaLabel={areItemsDraggable ? 'Anchor Items' : 'Drag Items'}
+            onClick={() => {
+              setAreItemsDraggable((prevState) => !prevState);
+            }}
+            controlled={isControlled}
+            $gridArea="drag"
+          >
+            {areItemsDraggable ? (
+              <BiMove color={theme.gbaThemeBlue} />
+            ) : (
+              <BiMove />
+            )}
+          </PanelButton>
+          <PanelButton
+            id={`${controlPanelId}--resize`}
+            className="noDrag"
+            ariaLabel={
+              areItemsResizable ? 'Stop Resizing Items' : 'Resize Items'
+            }
+            onClick={() => {
+              setAreItemsResizable((prevState) => !prevState);
+            }}
+            controlled={isControlled}
+            $gridArea="resize"
+          >
+            {areItemsResizable ? (
+              <TbResize color={theme.gbaThemeBlue} />
+            ) : (
+              <TbResize />
+            )}
+          </PanelButton>
+          <PanelButton
+            id={`${controlPanelId}--rewind`}
+            ariaLabel={'Rewind Emulator'}
+            controlled={isControlled}
+            $gridArea="rewind"
+            onPointerDown={() => {
+              if (areItemsDraggable) return;
+
+              emulator?.toggleRewind(true);
+              if (
+                emulatorSettings?.muteOnRewind &&
+                !emulatorVolumeBeforeAutoMute
+              )
+                muteAndPreserveVolume('rewind');
+            }}
+            onPointerUp={() => {
+              if (areItemsDraggable) return;
+
+              emulator?.toggleRewind(false);
+              if (emulatorSettings?.muteOnRewind) restoreVolume('rewind');
+            }}
+          >
+            <AiOutlineBackward style={{ maxHeight: '100%' }} />
+          </PanelButton>
+          <PanelSlider
+            id={`${controlPanelId}--volume-slider`}
+            aria-label="Volume Slider"
+            gridArea="volume"
+            controlled={isControlled}
+            disablePointerEvents={areItemsDraggable}
+            value={currentEmulatorVolume}
+            step={0.1}
+            min={0}
+            max={1}
+            minIcon={
+              <SliderButton
+                aria-label="Mute Volume"
+                icon={<BiVolumeMute style={{ maxHeight: '100%' }} />}
+                onClick={() => {
+                  setVolume(0);
+                }}
+              />
+            }
+            maxIcon={
+              <SliderButton
+                aria-label="Max Volume"
+                icon={<BiVolumeFull style={{ maxHeight: '100%' }} />}
+                onClick={() => {
+                  setVolume(1);
+                }}
+              />
+            }
+            valueLabelFormat={`${currentEmulatorVolume * 100}`}
+            onChange={(_, value) => {
+              const volumePercent = Number(value);
+              setVolume(volumePercent);
+            }}
+            ButtonIcon={BiVolumeFull}
+            {...defaultSliderEvents}
+          />
+          <PanelSlider
+            id={`${controlPanelId}--fast-forward`}
+            aria-label="Fast Forward/Slowdown Slider"
+            gridArea="fastForward"
+            controlled={isControlled}
+            disablePointerEvents={areItemsDraggable}
+            value={
+              FAST_FORWARD_SLOWDOWN_BY_VALUE.get(fastForwardMultiplier) ??
+              FAST_FORWARD_SLOWDOWN_BY_VALUE.get(4)
+            }
+            min={emulatorSettings?.slowdownEnabled ? 0 : 4}
+            max={emulatorSettings?.slowdownEnabled ? 8 : 8}
+            minIcon={
+              <SliderButton
+                aria-label="Regular Speed"
+                icon={<AiOutlineForward style={{ maxHeight: '100%' }} />}
+                onClick={() => {
+                  setFastForward(1);
+                }}
+              />
+            }
+            maxIcon={
+              <SliderButton
+                aria-label="Max Fast Forward"
+                icon={<AiOutlineFastForward style={{ maxHeight: '100%' }} />}
+                onClick={() => {
+                  setFastForward(5);
+                }}
+              />
+            }
+            valueLabelFormat={(value) =>
+              (
+                FAST_FORWARD_SLOWDOWN_VALUES[value] ??
+                FAST_FORWARD_SLOWDOWN_VALUES[4]
+              ).label
+            }
+            onChange={(_, value) => {
+              const ffMultiplier = (
+                FAST_FORWARD_SLOWDOWN_VALUES[Number(value)] ??
+                FAST_FORWARD_SLOWDOWN_VALUES[4]
+              ).value;
+              setFastForward(ffMultiplier);
+            }}
+            ButtonIcon={AiOutlineFastForward}
+            {...defaultSliderEvents}
+          />
+        </IconContext.Provider>
+      </Panel>
+    </Rnd>
   );
 };

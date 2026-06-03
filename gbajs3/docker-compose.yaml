@@ -1,6 +1,6 @@
 services:
     gba-webserver:
-        image: gba-webserver
+        image: ${REGISTRY_PREFIX}gba-webserver
         logging:
             options:
                 max-size: '20m'
@@ -10,9 +10,10 @@ services:
             context: ${SERVICE_GBAJS3:-.}
             args:
                 CLIENT_HOST: ${CLIENT_HOST}
+                RELEASE_VERSION: ${RELEASE_VERSION}
         ports:
-            - "443:443"
-            - "80:80"
+            - 443:443
+            - 80:80
         environment:
             - CLIENT_HOST=${CLIENT_HOST}
         volumes:

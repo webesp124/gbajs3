@@ -1,6 +1,7 @@
 import { useMediaQuery } from '@mui/material';
+import { useTheme, styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
-import { useId, useRef } from 'react';
+import { useId } from 'react';
 import toast from 'react-hot-toast';
 import { IconContext } from 'react-icons';
 import {
@@ -9,40 +10,42 @@ import {
   BiSave,
   BiSolidBookmark
 } from 'react-icons/bi';
-import { styled, useTheme } from 'styled-components';
 
 import {
-  saveStateSlotLocalStorageKey,
+  saveStateSlotsLocalStorageKey,
   virtualControlsLocalStorageKey
 } from './consts.tsx';
 import { OPad } from './o-pad.tsx';
 import { VirtualButton } from './virtual-button.tsx';
 import {
   useEmulatorContext,
-  useLayoutContext,
-//  useAuthContext,
-//  useModalContext,
-//  useRunningContext
+  useInitialBoundsContext,
+  useLayoutContext
 } from '../../hooks/context.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
 import { uploadSaveToCartridge } from '../modals/util-rom.tsx';
+import { Copy } from '../shared/styled.tsx';
 
 import type { AreVirtualControlsEnabledProps } from '../modals/controls/virtual-controls-form.tsx';
-import useShortcutListener from './use-shortcut-listener.ts';
+import type { CurrentSaveStateSlots } from '../modals/save-states.tsx';
 
-
-const VirtualButtonTextLarge = styled.p`
+const VirtualButtonTextLarge = styled(Copy)`
   text-align: center;
   vertical-align: middle;
   line-height: 54px;
-  color: ${({ theme }) => theme.pureWhite};
-  margin: 0;
+  color: ${({ theme }) => theme.surfaceTextPrimary};
+  font-weight: 600;
+  letter-spacing: 0.01em;
   font-size: 1.5em;
 `;
 
-const VirtualButtonTextSmall = styled.p`
-  color: ${({ theme }) => theme.pureWhite};
+const VirtualButtonTextSmall = styled('p')`
+  color: ${({ theme }) => theme.surfaceTextPrimary};
   margin: 4px 5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
 `;
 
 const keyToAriaLabel = (key: string) =>
@@ -54,120 +57,46 @@ const keyToAriaLabel = (key: string) =>
     );
 
 interface VirtualControlsProps {
-  additionalData: any;
-  esp32IP: any;
-}    
+  additionalData?: any;
+  esp32IP?: string;
+}
 
 export const VirtualControls = ({
-  additionalData,
-  esp32IP,
-  }: VirtualControlsProps) => {
+  additionalData = null,
+  esp32IP = 'https://192.168.1.3'
+}: VirtualControlsProps) => {
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   const isMobileWithUrlBar = useMediaQuery(theme.isMobileWithUrlBar);
+  const isMobileLandscape = useMediaQuery(theme.isMobileLandscape);
   const { emulator } = useEmulatorContext();
-  //const { isRunning } = useRunningContext();
-  //const { isAuthenticated } = useAuthContext();
-  //const { setModalContent, setIsModalOpen } = useModalContext();
-  const { layouts } = useLayoutContext();
+  const { getLayout } = useLayoutContext();
+  const { initialBounds } = useInitialBoundsContext();
   const virtualControlToastId = useId();
-  const quickReload = useQuickReload();
-  const [currentSaveStateSlot] = useLocalStorage(
-    saveStateSlotLocalStorageKey,
-    0
+  const { quickReload } = useQuickReload();
+  const { syncActionIfEnabled } = useAddCallbacks();
+  const isEmulatorReady = !!emulator;
+  const [currentSaveStateSlots] = useLocalStorage<CurrentSaveStateSlots>(
+    saveStateSlotsLocalStorageKey,
+    {}
   );
   const [areVirtualControlsEnabled] = useLocalStorage<
     AreVirtualControlsEnabledProps | undefined
   >(virtualControlsLocalStorageKey);
-  const autoFireAInterval = useRef<NodeJS.Timeout | null>(null);
-  const autoFireBInterval = useRef<NodeJS.Timeout | null>(null);
 
-  type ActionsType = {
-    autoFireA: (isKeyDown?: boolean) => void;
-    autoFireB: (isKeyDown?: boolean) => void;
-    uploadSave: () => void;
-    quickReload: () => void;
-    quickLoad: () => void;
-    quickSave: () => void;
-  };
+  const screenLayout = getLayout('screen');
+  const controlPanelLayout = getLayout('controlPanel');
 
-  const actions: ActionsType = {
-    autoFireA: (isKeyDown = false) => {
-      if (isKeyDown) {
-        if (!autoFireAInterval.current) {
-          autoFireAInterval.current = setInterval(() => {
-            if (emulator) {
-              emulator.simulateKeyDown("A");
-              setTimeout(() => {
-                emulator.simulateKeyUp("A");
-              }, 20);
-            }
-          }, 50); // 20 presses per second
-        }
-      } else {
-        if (autoFireAInterval.current) clearInterval(autoFireAInterval.current);
-        autoFireAInterval.current = null;
-        if (emulator) emulator.simulateKeyUp("A");
-      }
-    },
+  const controlPanelBounds =
+    controlPanelLayout?.originalBounds ?? initialBounds?.controlPanel;
+  const canvasBounds = screenLayout?.originalBounds ?? initialBounds?.screen;
 
-    autoFireB: (isKeyDown = false) => {
-      if (isKeyDown) {
-        if (!autoFireBInterval.current) {
-          autoFireBInterval.current = setInterval(() => {
-            if (emulator) {
-              emulator.simulateKeyDown("B");
-              setTimeout(() => {
-                emulator.simulateKeyUp("B");
-              }, 20);
-            }
-          }, 50); // 20 presses per second
-        }
-      } else {
-        if (autoFireBInterval.current) clearInterval(autoFireBInterval.current);
-        autoFireBInterval.current = null;
-        if (emulator) emulator.simulateKeyUp("B");
-      }
-    },
-
-    uploadSave: () => {
-      console.log('Upload Save action triggered!');
-      if (emulator) {
-        // Call method to upload save to cartridge or emulator
-      }
-    },
-
-    quickReload: () => {
-      console.log('Quick Reload action triggered!');
-      if (emulator) {
-        // Call method to reload the current ROM or reset the emulator
-      }
-    },
-
-    quickLoad: () => {
-      console.log('Quick Load Save State action triggered!');
-      if (emulator) {
-        // Call method to load a save state
-      }
-    },
-
-    quickSave: () => {
-      console.log('Quick Save State action triggered!');
-      if (emulator) {
-        // Call method to save the current state
-      }
-    }
-  };
-
-  useShortcutListener(actions);
-
-  const controlPanelBounds = layouts?.controlPanel?.initialBounds;
-
-  if (!controlPanelBounds) return null;
+  if (!controlPanelBounds || !canvasBounds) return null;
 
   const shouldShowVirtualControl = (virtualControlEnabled?: boolean) => {
     return (
-      (virtualControlEnabled === undefined && !isLargerThanPhone) ||
+      (virtualControlEnabled === undefined &&
+        (!isLargerThanPhone || isMobileLandscape)) ||
       !!virtualControlEnabled
     );
   };
@@ -183,13 +112,15 @@ export const VirtualControls = ({
   const verticalStartPos = controlPanelBounds.bottom;
   const horizontalStartPos = controlPanelBounds.left;
 
-  const positionVariations: {
-    [key: string]: {
+  const positionVariations: Record<
+    string,
+    {
       mobileWithUrlBar?: { top?: string; left?: string };
       largerThanPhone?: { top?: string; left?: string };
       defaultMobile: { top: string; left: string };
-    };
-  } = {
+      mobileLandscape?: { top: string; left: string };
+    }
+  > = {
     'a-button': {
       defaultMobile: {
         top: `calc(${verticalStartPos}px + 12%)`,
@@ -200,7 +131,11 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 35px - 3%)`,
-        left: `calc(${horizontalStartPos}px + 450px)`
+        left: `calc(${horizontalStartPos}px + 465px)`
+      },
+      mobileLandscape: {
+        top: '235px',
+        left: `calc(${horizontalStartPos}px - 10px)`
       }
     },
     'b-button': {
@@ -213,55 +148,75 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 35px)`,
-        left: `calc(${horizontalStartPos}px + 375px)`
-      }
-    },
-    'start-button': {
-      defaultMobile: {
-        top: '88dvh',
-        left: '25dvw'
+        left: `calc(${horizontalStartPos}px + 400px)`
       },
-      mobileWithUrlBar: {
-        top: '92dvh',
-        left: '50dvw'
-      },
-      largerThanPhone: {
-        top: `calc(${verticalStartPos}px + 60px)`,
-        left: `${horizontalStartPos}px`
+      mobileLandscape: {
+        top: 'calc(235px + 3%)',
+        left: `calc(${horizontalStartPos}px - 85px)`
       }
     },
     'select-button': {
       defaultMobile: {
         top: '88dvh',
-        left: '55dvw'
+        left: '50dvw'
       },
       mobileWithUrlBar: {
         top: '92dvh',
-        left: '75dvw'
+        left: '40dvw'
+      },
+      largerThanPhone: {
+        top: `calc(${verticalStartPos}px + 60px)`,
+        left: `${horizontalStartPos + 120}px`
+      },
+      mobileLandscape: {
+        top: 'calc(100dvh - 60px)',
+        left: '335px'
+      }
+    },
+    'start-button': {
+      defaultMobile: {
+        top: '88dvh',
+        left: '50dvw'
+      },
+      mobileWithUrlBar: {
+        top: '92dvh',
+        left: '70dvw'
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 60px)`,
         left: `calc(${horizontalStartPos}px + 103px)`
+      },
+      mobileLandscape: {
+        top: 'calc(100dvh - 60px)',
+        left: 'calc(100dvw - 305px)'
       }
     },
     'l-button': {
       defaultMobile: {
-        top: `${verticalStartPos + 15}px`,
+        top: `${verticalStartPos + 13}px`,
         left: '15px'
       },
       largerThanPhone: {
-        top: `calc(${verticalStartPos}px + 15px)`,
+        top: `calc(${verticalStartPos}px + 13px)`,
         left: `${horizontalStartPos}px`
+      },
+      mobileLandscape: {
+        top: 'calc(100dvh - 105px)',
+        left: '230px'
       }
     },
     'r-button': {
       defaultMobile: {
-        top: `${verticalStartPos + 15}px`,
+        top: `${verticalStartPos + 13}px`,
         left: 'calc(100dvw - 15px)'
       },
       largerThanPhone: {
-        top: `calc(${verticalStartPos}px + 15px)`,
-        left: `calc(${horizontalStartPos}px + 190px)`
+        top: `calc(${verticalStartPos}px + 13px)`,
+        left: `calc(${horizontalStartPos}px + 225px)`
+      },
+      mobileLandscape: {
+        top: 'calc(100dvh - 60px)',
+        left: 'calc(100dvw - 65px)'
       }
     },
     'quickreload-button': {
@@ -271,7 +226,11 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 10px)`,
-        left: `calc(${horizontalStartPos}px + 205px)`
+        left: `calc(${horizontalStartPos}px + 235px)`
+      },
+      mobileLandscape: {
+        top: '5px',
+        left: `calc(${canvasBounds.left}px - 50px)`
       }
     },
     'uploadsave-button': {
@@ -281,7 +240,11 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 10px)`,
-        left: `calc(${horizontalStartPos}px + 300px)`
+        left: `calc(${horizontalStartPos}px + 330px)`
+      },
+      mobileLandscape: {
+        top: '55px',
+        left: `calc(${canvasBounds.left}px - 5px)`
       }
     },
     'loadstate-button': {
@@ -294,7 +257,11 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 60px)`,
-        left: `calc(${horizontalStartPos}px + 248px)`
+        left: `calc(${horizontalStartPos}px + 278px)`
+      },
+      mobileLandscape: {
+        top: '105px',
+        left: `calc(${canvasBounds.left}px - 5px)`
       }
     },
     'savestate-button': {
@@ -307,7 +274,11 @@ export const VirtualControls = ({
       },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 60px)`,
-        left: `calc(${horizontalStartPos}px + 300px)`
+        left: `calc(${horizontalStartPos}px + 330px)`
+      },
+      mobileLandscape: {
+        top: '155px',
+        left: `calc(${canvasBounds.left}px - 5px)`
       }
     },
     'o-pad': {
@@ -315,19 +286,29 @@ export const VirtualControls = ({
         top: `calc(${verticalStartPos}px + 11%)`,
         left: '10px'
       },
+      mobileWithUrlBar: {
+        top: `calc(${verticalStartPos}px + 9%)`,
+        left: '10px'
+      },
       largerThanPhone: {
         top: `calc(${verticalStartPos}px + 10px)`,
-        left: `calc(${horizontalStartPos}px + 450px)`
+        left: `calc(${horizontalStartPos}px + 460px)`
+      },
+      mobileLandscape: {
+        top: 'calc(100dvh - 205px)',
+        left: '25px'
       }
     }
   };
 
   const initialPositionForKey = (key: string) => {
     let variation = undefined;
-    if (isMobileWithUrlBar && positionVariations[key]?.mobileWithUrlBar) {
-      variation = positionVariations[key]?.mobileWithUrlBar;
-    } else if (isLargerThanPhone && positionVariations[key]?.largerThanPhone) {
-      variation = positionVariations[key]?.largerThanPhone;
+    if (isMobileWithUrlBar && positionVariations[key].mobileWithUrlBar) {
+      variation = positionVariations[key].mobileWithUrlBar;
+    } else if (isMobileLandscape && positionVariations[key].mobileLandscape) {
+      variation = positionVariations[key].mobileLandscape;
+    } else if (isLargerThanPhone && positionVariations[key].largerThanPhone) {
+      variation = positionVariations[key].largerThanPhone;
     }
 
     return {
@@ -348,6 +329,11 @@ export const VirtualControls = ({
       );
   };
 
+  const currentGameName = emulator?.getCurrentGameName();
+  const currentSaveStateSlot = currentGameName
+    ? (currentSaveStateSlots[currentGameName] ?? 0)
+    : 0;
+
   const virtualButtons = [
     {
       keyId: 'A',
@@ -358,7 +344,7 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'a-button',
-      enabled: shouldShowVirtualButtonsAndOpad
+      shown: shouldShowVirtualButtonsAndOpad
     },
     {
       keyId: 'B',
@@ -369,23 +355,35 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'b-button',
-      enabled: shouldShowVirtualButtonsAndOpad
-    },
-    {
-      keyId: 'START',
-      isRectangular: true,
-      children: <VirtualButtonTextSmall>Start</VirtualButtonTextSmall>,
-      initialPosition: initialPositionForKey('start-button'),
-      keyName: 'start-button',
-      enabled: shouldShowVirtualButtonsAndOpad
+      shown: shouldShowVirtualButtonsAndOpad
     },
     {
       keyId: 'SELECT',
       isRectangular: true,
       children: <VirtualButtonTextSmall>Select</VirtualButtonTextSmall>,
       initialPosition: initialPositionForKey('select-button'),
+      initialOffset: isMobileWithUrlBar
+        ? undefined
+        : {
+            x: 'calc(-100% - 12px)',
+            y: '0px'
+          },
       keyName: 'select-button',
-      enabled: shouldShowVirtualButtonsAndOpad
+      shown: shouldShowVirtualButtonsAndOpad
+    },
+    {
+      keyId: 'START',
+      isRectangular: true,
+      children: <VirtualButtonTextSmall>Start</VirtualButtonTextSmall>,
+      initialPosition: initialPositionForKey('start-button'),
+      initialOffset: isMobileWithUrlBar
+        ? undefined
+        : {
+            x: '12px',
+            y: '0px'
+          },
+      keyName: 'start-button',
+      shown: shouldShowVirtualButtonsAndOpad
     },
     {
       keyId: 'L',
@@ -393,7 +391,7 @@ export const VirtualControls = ({
       children: <VirtualButtonTextSmall>L</VirtualButtonTextSmall>,
       initialPosition: initialPositionForKey('l-button'),
       keyName: 'l-button',
-      enabled: shouldShowVirtualButtonsAndOpad
+      shown: shouldShowVirtualButtonsAndOpad
     },
     {
       keyId: 'R',
@@ -405,11 +403,11 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'r-button',
-      enabled: shouldShowVirtualButtonsAndOpad
+      shown: shouldShowVirtualButtonsAndOpad
     },
     {
       children: <BiRefresh />,
-      onClick: () => {
+      onPointerDown: () => {
         quickReload();
 
         if (!emulator?.getCurrentGameName() && areNotificationsEnabled)
@@ -420,11 +418,12 @@ export const VirtualControls = ({
       width: 40,
       initialPosition: initialPositionForKey('quickreload-button'),
       keyName: 'quickreload-button',
-      enabled: shouldShowVirtualControl(areVirtualControlsEnabled?.QuickReload)
+      disabled: !isEmulatorReady,
+      shown: shouldShowVirtualControl(areVirtualControlsEnabled?.QuickReload)
     },
     {
       children: <BiSolidCloudUpload />,
-      onClick: () => {
+      onPointerDown: () => {
         uploadSaveToCartridge(additionalData, emulator, esp32IP);
       },
       width: 40,
@@ -434,13 +433,22 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'uploadsave-button',
-      enabled: shouldShowVirtualControl(
+      disabled: !isEmulatorReady,
+      shown: shouldShowVirtualControl(
         areVirtualControlsEnabled?.SendSaveToServer
       )
     },
     {
       children: <BiSolidBookmark />,
-      onClick: () => {
+      onPointerDown: () => {
+        if (!currentGameName) {
+          toast.error('Load a game to load state slots', {
+            id: virtualControlToastId
+          });
+
+          return;
+        }
+
         const wasSuccessful = emulator?.loadSaveState(currentSaveStateSlot);
 
         toastOnCondition(
@@ -456,12 +464,23 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'loadstate-button',
-      enabled: shouldShowVirtualControl(areVirtualControlsEnabled?.LoadState)
+      disabled: !isEmulatorReady,
+      shown: shouldShowVirtualControl(areVirtualControlsEnabled?.LoadState)
     },
     {
       children: <BiSave />,
-      onClick: () => {
+      onPointerDown: async () => {
+        if (!currentGameName) {
+          toast.error('Load a game to save state slots', {
+            id: virtualControlToastId
+          });
+
+          return;
+        }
+
         const wasSuccessful = emulator?.createSaveState(currentSaveStateSlot);
+
+        if (wasSuccessful) await syncActionIfEnabled({ withToast: false });
 
         toastOnCondition(
           !!wasSuccessful,
@@ -476,7 +495,8 @@ export const VirtualControls = ({
         y: '0px'
       },
       keyName: 'savestate-button',
-      enabled: shouldShowVirtualControl(areVirtualControlsEnabled?.SaveState)
+      disabled: !isEmulatorReady,
+      shown: shouldShowVirtualControl(areVirtualControlsEnabled?.SaveState)
     }
   ];
 
@@ -485,14 +505,17 @@ export const VirtualControls = ({
       {shouldShowVirtualButtonsAndOpad && (
         <OPad initialPosition={initialPositionForKey('o-pad')} />
       )}
-      {virtualButtons.map((virtualButtonProps) => (
-        <VirtualButton
-          ariaLabel={keyToAriaLabel(virtualButtonProps.keyName)}
-          inputName={virtualButtonProps.keyName}
-          key={virtualButtonProps.keyName}
-          {...virtualButtonProps}
-        />
-      ))}
+      {virtualButtons.map(
+        ({ keyName, shown, ...rest }) =>
+          shown && (
+            <VirtualButton
+              ariaLabel={keyToAriaLabel(keyName)}
+              inputName={keyName}
+              key={keyName}
+              {...rest}
+            />
+          )
+      )}
     </IconContext.Provider>
   );
 };

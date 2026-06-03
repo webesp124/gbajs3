@@ -6,12 +6,12 @@ import { ControlPanel } from './control-panel.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import {
   emulatorFFMultiplierLocalStorageKey,
+  emulatorSettingsLocalStorageKey,
   emulatorVolumeLocalStorageKey
 } from '../../context/emulator/consts.ts';
 import { GbaDarkTheme } from '../../context/theme/theme.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
 import * as quitGameHooks from '../../hooks/emulator/use-quit-game.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
@@ -26,20 +26,19 @@ describe('<ControlPanel />', () => {
   ];
 
   beforeEach(async () => {
-    const { useLayoutContext: original } = await vi.importActual<
+    const { useInitialBoundsContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
-    vi.spyOn(contextHooks, 'useLayoutContext').mockImplementation(() => ({
-      ...original(),
-      layouts: {
-        ...original().layouts,
-        screen: { initialBounds: { left: 0, bottom: 0 } as DOMRect }
-      }
-    }));
+    vi.spyOn(contextHooks, 'useInitialBoundsContext').mockImplementation(
+      () => ({
+        ...original(),
+        initialBounds: { screen: { left: 0, bottom: 0 } as DOMRect }
+      })
+    );
   });
 
-  it('renders panel controls', async () => {
+  it('renders panel controls', () => {
     renderWithContext(<ControlPanel />);
 
     expect(screen.getByRole('list')).toBeVisible();
@@ -49,7 +48,7 @@ describe('<ControlPanel />', () => {
     expect(screen.getByLabelText('Drag Items')).toBeVisible();
     expect(screen.getByLabelText('Resize Items')).toBeVisible();
     expect(screen.getByLabelText('Volume Slider')).toBeVisible();
-    expect(screen.getByLabelText('Fast Forward Slider')).toBeVisible();
+    expect(screen.getByLabelText('Fast Forward/Slowdown Slider')).toBeVisible();
   });
 
   it('renders with default mobile position and size', () => {
@@ -72,11 +71,21 @@ describe('<ControlPanel />', () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
       matches: query === GbaDarkTheme.isLargerThanPhone,
       media: '',
-      addListener: () => {},
-      removeListener: () => {},
-      onchange: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
+      addListener: () => {
+        /* empty */
+      },
+      removeListener: () => {
+        /* empty */
+      },
+      onchange: () => {
+        /* empty */
+      },
+      addEventListener: () => {
+        /* empty */
+      },
+      removeEventListener: () => {
+        /* empty */
+      },
       dispatchEvent: () => true
     }));
 
@@ -94,22 +103,28 @@ describe('<ControlPanel />', () => {
     expect(controlPanelWrapper).toMatchSnapshot();
   });
 
-  it('sets initial bounds when rendered', async () => {
-    const setLayoutSpy = vi.fn();
+  it('sets initial bounds when rendered', () => {
+    const setInitialBoundSpy: (key: string, bounds?: DOMRect) => void = vi.fn();
 
-    const { useLayoutContext: originalLayout } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useLayoutContext').mockImplementation(() => ({
-      ...originalLayout(),
-      setLayout: setLayoutSpy
-    }));
+    vi.spyOn(contextHooks, 'useInitialBoundsContext').mockImplementation(
+      () => ({
+        setInitialBound: setInitialBoundSpy,
+        initialBounds: { screen: {} as DOMRect },
+        clearInitialBounds: vi.fn()
+      })
+    );
 
     renderWithContext(<ControlPanel />);
 
-    expect(setLayoutSpy).toHaveBeenCalledWith('controlPanel', {
-      initialBounds: expect.anything()
+    expect(setInitialBoundSpy).toHaveBeenCalledWith('controlPanel', {
+      bottom: 0,
+      height: 0,
+      left: 0,
+      right: 0,
+      top: 0,
+      width: 0,
+      x: 0,
+      y: 0
     });
   });
 
@@ -125,9 +140,7 @@ describe('<ControlPanel />', () => {
 
     vi.spyOn(contextHooks, 'useLayoutContext').mockImplementation(() => ({
       ...originalLayout(),
-      setLayout: setLayoutSpy,
-      hasSetLayout: true,
-      layouts: { screen: { initialBounds: new DOMRect() } }
+      setLayout: setLayoutSpy
     }));
 
     renderWithContext(<ControlPanel />);
@@ -140,9 +153,24 @@ describe('<ControlPanel />', () => {
       initialPos
     );
     fireEvent.mouseMove(document, movements[0]);
-    fireEvent.mouseUp(document, movements[1]);
 
     expect(setLayoutSpy).toHaveBeenCalledOnce();
+    expect(setLayoutSpy).toHaveBeenCalledWith('controlPanel', {
+      originalBounds: {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        width: 0,
+        x: 0,
+        y: 0
+      }
+    });
+
+    fireEvent.mouseUp(document, movements[1]);
+
+    expect(setLayoutSpy).toHaveBeenCalledTimes(2);
     expect(setLayoutSpy).toHaveBeenCalledWith('controlPanel', {
       position: {
         x: movements[1].clientX,
@@ -167,8 +195,8 @@ describe('<ControlPanel />', () => {
       clearLayouts: vi.fn(),
       setLayout: setLayoutSpy,
       setLayouts: vi.fn(),
-      hasSetLayout: true,
-      layouts: { screen: { initialBounds: new DOMRect() } }
+      layouts: {},
+      getLayout: () => undefined
     };
 
     vi.spyOn(contextHooks, 'useLayoutContext').mockImplementation(
@@ -184,9 +212,24 @@ describe('<ControlPanel />', () => {
     // simulate mouse events on a resize handle
     fireEvent.mouseDown(screen.getAllByTestId('gripper-handle')[0], initialPos);
     fireEvent.mouseMove(document, movements[0]);
-    fireEvent.mouseUp(document, movements[1]);
 
     expect(setLayoutSpy).toHaveBeenCalledOnce();
+    expect(setLayoutSpy).toHaveBeenCalledWith('controlPanel', {
+      originalBounds: {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        width: 0,
+        x: 0,
+        y: 0
+      }
+    });
+
+    fireEvent.mouseUp(document, movements[1]);
+
+    expect(setLayoutSpy).toHaveBeenCalledTimes(2);
     expect(setLayoutSpy).toHaveBeenCalledWith('controlPanel', {
       position: {
         x: expect.anything(),
@@ -283,6 +326,64 @@ describe('<ControlPanel />', () => {
 
       expect(screen.getByLabelText('Resize Items')).toBeVisible();
       expect(screen.queryAllByTestId('gripper-handle')).toHaveLength(0);
+    });
+
+    it('toggles emulator rewind', async () => {
+      const toggleRewindSpy: (v: boolean) => void = vi.fn();
+      const { useEmulatorContext: originalEmulator } = await vi.importActual<
+        typeof contextHooks
+      >('../../hooks/context.tsx');
+
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...originalEmulator(),
+        emulator: {
+          toggleRewind: toggleRewindSpy
+        } as GBAEmulator
+      }));
+
+      renderWithContext(<ControlPanel />);
+
+      fireEvent.pointerDown(screen.getByLabelText('Rewind Emulator'));
+
+      expect(toggleRewindSpy).toHaveBeenCalledOnce();
+      expect(toggleRewindSpy).toHaveBeenCalledWith(true);
+
+      fireEvent.pointerUp(screen.getByLabelText('Rewind Emulator'));
+
+      expect(toggleRewindSpy).toHaveBeenCalledTimes(2);
+      expect(toggleRewindSpy).toHaveBeenCalledWith(true);
+    });
+
+    it('mutes emulator when rewinding if setting is ON', async () => {
+      const setVolumeSpy: (v: number) => void = vi.fn();
+      const { useEmulatorContext: originalEmulator } = await vi.importActual<
+        typeof contextHooks
+      >('../../hooks/context.tsx');
+
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...originalEmulator(),
+        emulator: {
+          toggleRewind: vi.fn() as (v: boolean) => void,
+          setVolume: setVolumeSpy
+        } as GBAEmulator
+      }));
+
+      localStorage.setItem(
+        emulatorSettingsLocalStorageKey,
+        '{"muteOnRewind":true}'
+      );
+
+      renderWithContext(<ControlPanel />);
+
+      fireEvent.pointerDown(screen.getByLabelText('Rewind Emulator'));
+
+      expect(setVolumeSpy).toHaveBeenCalledOnce();
+      expect(setVolumeSpy).toHaveBeenCalledWith(0);
+
+      fireEvent.pointerUp(screen.getByLabelText('Rewind Emulator'));
+
+      expect(setVolumeSpy).toHaveBeenCalledTimes(2);
+      expect(setVolumeSpy).toHaveBeenLastCalledWith(1);
     });
 
     it('mutes volume', async () => {
@@ -417,8 +518,8 @@ describe('<ControlPanel />', () => {
 
       renderWithContext(<ControlPanel />);
 
-      fireEvent.change(screen.getByLabelText('Fast Forward Slider'), {
-        target: { value: 3 }
+      fireEvent.change(screen.getByLabelText('Fast Forward/Slowdown Slider'), {
+        target: { value: 6 }
       });
 
       expect(ffMultiplierSpy).toHaveBeenCalledOnce();
@@ -461,107 +562,42 @@ describe('<ControlPanel />', () => {
 
       renderWithContext(<ControlPanel />);
 
-      expect(screen.getByLabelText('Fast Forward Slider')).toHaveDisplayValue(
-        '4'
-      );
+      expect(
+        screen.getByLabelText('Fast Forward/Slowdown Slider')
+      ).toHaveDisplayValue('7');
     });
   });
 
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
+  it('mutes emulator when fast forwarding if setting is ON', async () => {
+    const ffMultiplierSpy: (v: number) => void = vi.fn();
+    const setVolumeSpy: (v: number) => void = vi.fn();
+    const { useEmulatorContext: originalEmulator } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
+    vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+      ...originalEmulator(),
+      emulator: {
+        setFastForwardMultiplier: ffMultiplierSpy,
+        setVolume: setVolumeSpy
+      } as GBAEmulator
     }));
 
     localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
+      emulatorSettingsLocalStorageKey,
+      '{"muteOnFastForward":true}'
     );
 
     renderWithContext(<ControlPanel />);
 
-    expect(
-      await screen.findByText(
-        'Use the control panel to quickly perform in game actions and reposition controls.'
-      )
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('Max Fast Forward'));
 
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
+    expect(setVolumeSpy).toHaveBeenCalledOnce();
+    expect(setVolumeSpy).toHaveBeenCalledWith(0);
 
-    expect(
-      screen.getByText(
-        'Use the control panel to quickly perform in game actions and reposition controls.'
-      )
-    ).toBeVisible();
-    expect(
-      screen.getByText('Click next to take a tour of the controls!')
-    ).toBeVisible();
+    await userEvent.click(screen.getByLabelText('Regular Speed'));
 
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        'Use the this button to pause and resume your game if it is running.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText('Use this button to quit your current game.')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        'Use this button to enable dragging and repositioning of the screen, controls, and control panel.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        'Use this button to resize the screen and control panel.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        'Use this slider to increase and decrease the emulator volume.'
-      )
-    ).toBeVisible();
-    expect(
-      screen.getByText('Your volume setting will be saved between refreshes!')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        'Use this slider to increase and decrease the fast forward speed.'
-      )
-    ).toBeVisible();
-    expect(
-      screen.getByText(
-        'Your fast forward setting will be saved between refreshes!'
-      )
-    ).toBeVisible();
+    expect(setVolumeSpy).toHaveBeenCalledTimes(2);
+    expect(setVolumeSpy).toHaveBeenLastCalledWith(1);
   });
 });

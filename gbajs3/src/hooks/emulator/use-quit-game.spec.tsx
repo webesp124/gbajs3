@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useQuitGame } from './use-quit-game.tsx';
 import { renderHookWithContext } from '../../../test/render-hook-with-context.tsx';
-import * as fadeCanvas from '../../components/screen/fade.ts';
 import * as contextHooks from '../../hooks/context.tsx';
+import * as fadeCanvasHooks from '../../hooks/use-fade-canvas.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
 describe('useQuitGame hook', () => {
-  it('quits game if the emulator exists', async () => {
+  it('quits game if the emulator exists', () => {
     const emulatorQuitGameSpy: () => void = vi.fn();
     const screenshotSpy: (fileName?: string) => boolean = vi.fn(() => true);
     const getFileSpy: (p: string) => Uint8Array = vi.fn(() =>
@@ -17,8 +17,10 @@ describe('useQuitGame hook', () => {
     );
     const deleteFileSpy: (filePath: string) => void = vi.fn();
     const setIsRunningSpy = vi.fn();
-    const fadeCanvasSpy = vi.fn();
+    const startFadeSpy = vi.fn();
+    const cancelFadeSpy = vi.fn();
     const testCanvas = {} as HTMLCanvasElement;
+    // must be stable
     const emu = {
       quitGame: emulatorQuitGameSpy,
       screenshot: screenshotSpy,
@@ -40,7 +42,10 @@ describe('useQuitGame hook', () => {
       setIsRunning: setIsRunningSpy
     }));
 
-    vi.spyOn(fadeCanvas, 'fadeCanvas').mockImplementation(fadeCanvasSpy);
+    vi.spyOn(fadeCanvasHooks, 'useFadeCanvas').mockImplementation(() => ({
+      startFade: startFadeSpy,
+      cancelFade: cancelFadeSpy
+    }));
 
     const { result } = renderHookWithContext(() => useQuitGame());
 
@@ -48,9 +53,12 @@ describe('useQuitGame hook', () => {
       result.current();
     });
 
-    expect(fadeCanvasSpy).toHaveBeenCalledOnce();
+    expect(startFadeSpy).toHaveBeenCalledOnce();
     // blob is not implemented, but we can check the type
-    expect(fadeCanvasSpy).toHaveBeenCalledWith(testCanvas, new Blob());
+    expect(startFadeSpy).toHaveBeenCalledWith(testCanvas, expect.any(Blob));
+    // if the emulator is running, it is expected that we attempt to cancel the fade
+    // if the fade itself is not actively running, it is a no-op
+    expect(cancelFadeSpy).toHaveBeenCalledOnce();
 
     expect(screenshotSpy).toHaveBeenCalledOnce();
     expect(screenshotSpy).toHaveBeenCalledWith('fade-copy.png');
@@ -69,7 +77,8 @@ describe('useQuitGame hook', () => {
 
   it('sets running to false if emulator is not running', () => {
     const setIsRunningSpy = vi.fn();
-    const fadeCanvasSpy = vi.fn();
+    const startFadeSpy = vi.fn();
+    const cancelFadeSpy = vi.fn();
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       setCanvas: vi.fn(),
@@ -82,7 +91,10 @@ describe('useQuitGame hook', () => {
       setIsRunning: setIsRunningSpy
     }));
 
-    vi.spyOn(fadeCanvas, 'fadeCanvas').mockImplementation(fadeCanvasSpy);
+    vi.spyOn(fadeCanvasHooks, 'useFadeCanvas').mockImplementation(() => ({
+      startFade: startFadeSpy,
+      cancelFade: cancelFadeSpy
+    }));
 
     const { result } = renderHookWithContext(() => useQuitGame());
 
@@ -90,7 +102,8 @@ describe('useQuitGame hook', () => {
       result.current();
     });
 
-    expect(fadeCanvasSpy).not.toHaveBeenCalled();
+    expect(startFadeSpy).not.toHaveBeenCalled();
+    expect(cancelFadeSpy).not.toHaveBeenCalled();
 
     expect(setIsRunningSpy).toHaveBeenCalledOnce();
     expect(setIsRunningSpy).toHaveBeenCalledWith(false);

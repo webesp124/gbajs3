@@ -1,0 +1,87 @@
+name: Build images
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      repo_name: ${{ steps.set_repo_name.outputs.repo_name }}
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
+
+    steps:
+      - id: set_repo_name
+        run: echo "repo_name=$(echo "${{ github.repository }}" | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+
+      - id: set_image_tag
+        run: echo "image_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs: setup
+    strategy:
+      matrix:
+        image:
+          - name: gba-postgres
+            directory: ./postgres
+            needs_pg_db_user: true
+          - name: gba-webserver
+            directory: ./gbajs3
+            needs_client_host: true
+            needs_release_version: true
+          - name: gba-auth-server
+            directory: ./auth
+          - name: gba-admin-server
+            directory: ./admin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Login to Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        env:
+          REPO_NAME: ${{ needs.setup.outputs.repo_name }}
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          NEEDS_PG_DB_USER: ${{ matrix.image.needs_pg_db_user }}
+          NEEDS_CLIENT_HOST: ${{ matrix.image.needs_client_host }}
+          NEEDS_RELEASE_VERSION: ${{ matrix.image.needs_release_version }}
+          PG_DB_USER: ${{ secrets.PG_DB_USER }}
+          CLIENT_HOST: ${{ secrets.CLIENT_HOST }}
+        run: |
+          BUILD_ARG_FLAGS=""
+          if [ "$NEEDS_PG_DB_USER" = "true" ]; then
+            BUILD_ARG_FLAGS="$BUILD_ARG_FLAGS --build-arg PG_DB_USER=$PG_DB_USER"
+          fi
+          if [ "$NEEDS_CLIENT_HOST" = "true" ]; then
+            BUILD_ARG_FLAGS="$BUILD_ARG_FLAGS --build-arg CLIENT_HOST=$CLIENT_HOST"
+          fi
+          if [ "$NEEDS_RELEASE_VERSION" = "true" ]; then
+            BUILD_ARG_FLAGS="$BUILD_ARG_FLAGS --build-arg RELEASE_VERSION=$IMAGE_TAG"
+          fi
+
+          docker build $BUILD_ARG_FLAGS \
+              -t ghcr.io/${{ github.actor }}/${REPO_NAME}/${{ matrix.image.name }}:${IMAGE_TAG} \
+              -t ghcr.io/${{ github.actor }}/${REPO_NAME}/${{ matrix.image.name }}:latest \
+              ${{ matrix.image.directory }}
+
+      - name: Push
+        env:
+          REPO_NAME: ${{ needs.setup.outputs.repo_name }}
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+        run: |
+          docker push ghcr.io/${{ github.actor }}/${REPO_NAME}/${{ matrix.image.name }}:${IMAGE_TAG}
+          docker push ghcr.io/${{ github.actor }}/${REPO_NAME}/${{ matrix.image.name }}:latest

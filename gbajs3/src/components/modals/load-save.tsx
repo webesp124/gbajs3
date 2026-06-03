@@ -1,18 +1,15 @@
 import { Button } from '@mui/material';
-import { useEffect, useState, useId } from 'react';
+import { useTheme, styled } from '@mui/material/styles';
+import { useState, useId } from 'react';
 import { BiError } from 'react-icons/bi';
-import { styled, useTheme } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
 import { useListSaves } from '../../hooks/use-list-saves.tsx';
 import { useLoadSave } from '../../hooks/use-load-save.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import {
   LoadingIndicator,
@@ -24,45 +21,64 @@ type SaveErrorProps = {
   $withMarginTop?: boolean;
 };
 
-const LoadSaveButton = styled.button`
-  padding: 0.5rem 1rem;
+const LoadSaveButton = styled('button')`
   width: 100%;
-  color: ${({ theme }) => theme.blueCharcoal};
-  text-decoration: none;
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: 1px solid rgba(0, 0, 0, 0.125);
+  display: block;
+  padding: 0.875rem 1rem;
   text-align: left;
+  cursor: pointer;
+  color: ${({ theme }) => theme.modalTextPrimary};
+  background-color: transparent;
+  border: 0;
+  font: inherit;
+  line-height: 1.35;
+  overflow: hidden;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.darkGrayBlue};
-    background-color: ${({ theme }) => theme.aliceBlue1};
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+  }
+
+  &:focus-visible {
+    outline: none;
+    position: relative;
+    z-index: 1;
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.gbaThemeBlue};
+  }
+
+  &:active {
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
   }
 `;
 
-const StyledLi = styled.li`
-  cursor: pointer;
+const StyledLi = styled('li')`
+  margin: 0;
 `;
 
-const SaveList = styled.ul`
-  list-style-type: none;
+const SaveList = styled('ul')`
+  list-style: none;
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
 
-  & > ${StyledLi}:first-child > ${LoadSaveButton} {
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-  }
+  background: ${({ theme }) => theme.modalSurfaceElevated};
+  border: 1px solid ${({ theme }) => theme.modalListBorder};
+  border-radius: 10px;
+  overflow: hidden;
 
-  & > ${StyledLi}:last-child > ${LoadSaveButton} {
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
+  & > ${StyledLi} + ${StyledLi} {
+    border-top: 1px solid ${({ theme }) => theme.modalListBorder};
   }
+`;
 
-  & > ${StyledLi}:not(:first-child) > ${LoadSaveButton} {
-    border-top-width: 0;
-  }
+const EmptyState = styled(CenteredText)`
+  padding: 1rem;
+  color: ${({ theme }) => theme.modalTextSecondary};
 `;
 
 const SaveError = styled(ErrorWithIcon)<SaveErrorProps>`
@@ -71,51 +87,34 @@ const SaveError = styled(ErrorWithIcon)<SaveErrorProps>`
     `
     margin-top: 15px;
     `}
+  justify-content: center;
 `;
 
 export const LoadSaveModal = () => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
   const saveListId = useId();
+  const { syncActionIfEnabled } = useAddCallbacks();
   const {
     data: saveList,
-    isLoading: saveListLoading,
-    error: saveListError
-  } = useListSaves({ loadOnMount: true });
+    isPending: saveListLoading,
+    error: saveListError,
+    isPaused: saveListPaused
+  } = useListSaves();
   const {
-    data: saveFile,
-    isLoading: saveLoading,
+    isPending: saveLoading,
     error: saveLoadError,
-    execute: executeLoadSave
-  } = useLoadSave();
+    mutate: executeLoadSave
+  } = useLoadSave({
+    onSuccess: (file) => {
+      emulator?.uploadSaveOrSaveState(file, syncActionIfEnabled);
+      setCurrentSaveLoading(null);
+    }
+  });
   const [currentSaveLoading, setCurrentSaveLoading] = useState<string | null>(
     null
   );
-
-  const shouldUploadSave = !saveLoading && !!saveFile && !!currentSaveLoading;
-
-  useEffect(() => {
-    if (shouldUploadSave) {
-      emulator?.uploadSaveOrSaveState(saveFile);
-      setCurrentSaveLoading(null);
-    }
-  }, [emulator, shouldUploadSave, saveFile]);
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>
-            Use this area to load save files from the server. Once the list has
-            loaded, click a row to load the save.
-          </p>
-          <p>You may load multiple save files in a row!</p>
-        </>
-      ),
-      target: `#${CSS.escape(saveListId)}`
-    }
-  ];
 
   return (
     <>
@@ -131,12 +130,13 @@ export const LoadSaveModal = () => {
             loadingCopy="Loading save:"
           >
             <SaveList id={saveListId}>
-              {saveList?.map?.((save: string, idx: number) => (
+              {saveList?.map((save: string, idx: number) => (
                 <StyledLi key={`${save}_${idx}`}>
                   <LoadSaveButton
                     onClick={() => {
-                      executeLoadSave({ saveName: save });
                       setCurrentSaveLoading(save);
+
+                      executeLoadSave({ saveName: save });
                     }}
                   >
                     {save}
@@ -144,15 +144,21 @@ export const LoadSaveModal = () => {
                 </StyledLi>
               ))}
               {!saveList?.length && !saveListError && (
-                <li>
-                  <CenteredText>
+                <StyledLi>
+                  <EmptyState>
                     No saves on the server, load a game and send your save to
                     the server
-                  </CenteredText>
-                </li>
+                  </EmptyState>
+                </StyledLi>
               )}
             </SaveList>
           </LoadingIndicator>
+        )}
+        {saveListPaused && (
+          <SaveError
+            icon={<BiError style={{ color: theme.errorRed }} />}
+            text="Requests will resume once online"
+          />
         )}
         {!!saveListError && (
           <SaveError
@@ -169,17 +175,10 @@ export const LoadSaveModal = () => {
         )}
       </ModalBody>
       <ModalFooter>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        skipRenderCondition={
-          saveLoading || saveListLoading || !!saveListError || !!saveLoadError
-        }
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedLoadSaveTour"
-      />
     </>
   );
 };

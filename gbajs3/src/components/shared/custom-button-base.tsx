@@ -1,27 +1,20 @@
-import React, { type ReactNode } from 'react';
-import { styled } from 'styled-components';
+import { styled } from '@mui/material/styles';
 
-type ButtonBaseProps = {
-  children?: ReactNode;
-  className?: string;
-  disabled?: boolean;
-  id?: string;
-  onClick?: React.MouseEventHandler<HTMLButtonElement>;
-};
+import type { ComponentProps } from 'react';
 
-const StyledButton = styled.button`
+const StyledButton = styled('button')`
   font-size: inherit;
   font-family: inherit;
   line-height: inherit;
   padding: inherit;
 `;
 
-export const ButtonBase = React.forwardRef<HTMLButtonElement, ButtonBaseProps>(
-  ({ children, ...rest }, ref) => {
-    return (
-      <StyledButton ref={ref} {...rest}>
-        {children}
-      </StyledButton>
-    );
-  }
+export const ButtonBase = ({
+  children,
+  ref,
+  ...rest
+}: ComponentProps<'button'>) => (
+  <StyledButton ref={ref} {...rest}>
+    {children}
+  </StyledButton>
 );

@@ -1,9 +1,12 @@
 import { useMediaQuery } from '@mui/material';
-import { useId, useState, useEffect } from 'react';
+import { useTheme, styled } from '@mui/material/styles';
+import { useEffect, useId, useRef, useState } from 'react';
+import Draggable from 'react-draggable';
 import toast from 'react-hot-toast';
 import {
   BiInfoCircle,
   BiFolderPlus,
+  BiCloudUpload,
   BiUpload,
   BiGame,
   BiScreenshot,
@@ -13,60 +16,60 @@ import {
   BiBookmarks,
   BiEdit,
   BiJoystick,
+  BiUserCheck,
+  BiLogInCircle,
+  BiLogOutCircle,
+  BiCheckShield,
+  BiConversation,
   BiMenu,
   BiFileFind,
+  BiBrain,
+  BiRefresh,
+  BiDownload,
   BiGitCompare,
-  BiDownload
+  BiX
 } from 'react-icons/bi';
-import { GrWifi } from "react-icons/gr";
-import { MdOutlineUploadFile } from "react-icons/md";
-import { IoHardwareChipOutline, IoCogSharp, IoBatteryFull } from "react-icons/io5";
-import { IoIosGlobe } from "react-icons/io";
-
-import { styled, useTheme } from 'styled-components';
+import { IoHardwareChipOutline } from 'react-icons/io5';
+import { MdOutlineUploadFile } from 'react-icons/md';
+import { MdImportExport } from 'react-icons/md';
 
 import { NavigationMenuWidth } from './consts.tsx';
 import { NavComponent } from './nav-component.tsx';
 import { NavLeaf } from './nav-leaf.tsx';
 import {
   useEmulatorContext,
+  useAuthContext,
   useModalContext,
-  useRunningContext
+  useRunningContext,
+  useDragContext,
+  useLayoutContext
 } from '../../hooks/context.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
+import { useLogout } from '../../hooks/use-logout.tsx';
 import { useShowLoadPublicRoms } from '../../hooks/use-show-load-public-roms.tsx';
-import { AboutModal } from '../modals/about.tsx';
-import { CheatsModal } from '../modals/cheats.tsx';
-import { ControlsModal } from '../modals/controls.tsx';
-import { DownloadSaveModal } from '../modals/download-save.tsx';
-import { FileSystemModal } from '../modals/file-system.tsx';
-import { SaveStatesModal } from '../modals/save-states.tsx';
-import { UploadRomReflashModal } from '../modals/upload-rom-reflash.tsx';
+import {
+  getSaveTypeCodeFromString,
+  uploadSaveToCartridge
+} from '../modals/util-rom.tsx';
 import { ButtonBase } from '../shared/custom-button-base.tsx';
-
-import { MyRomStartPage } from '../modals/my-rom-start-page.tsx';
-import { getSaveTypeCodeFromString, uploadSaveToCartridge } from '../modals/util-rom.tsx';
-import { CreatePatchFileModal } from '../modals/create-patch-file.tsx';
 
 type ExpandableComponentProps = {
   $isExpanded?: boolean;
 };
 
-const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
+const NavigationMenuWrapper = styled('div')<ExpandableComponentProps>`
   display: flex;
   flex-direction: column;
   width: ${NavigationMenuWidth}px;
   height: 100dvh;
   position: fixed;
   background-color: ${({ theme }) => theme.mediumBlack};
-  transition: 0.4s ease-in-out;
-  -webkit-transition: 0.4s ease-in-out;
+  transition: left 0.4s ease-in-out;
   z-index: 150;
   text-align: left;
   left: 0;
   top: 0;
   touch-action: none;
-  border-right: 1px solid ${({ theme }) => theme.borderBlue};
 
   ${({ $isExpanded = false }) =>
     !$isExpanded &&
@@ -74,7 +77,7 @@ const NavigationMenuWrapper = styled.div<ExpandableComponentProps>`
   `};
 `;
 
-const StyledMenuHeader = styled.h2`
+const StyledMenuHeader = styled('h2')`
   color: ${({ theme }) => theme.pureWhite};
   padding: 0.5rem 1rem;
   font-size: calc(1.3rem + 0.6vw);
@@ -82,14 +85,13 @@ const StyledMenuHeader = styled.h2`
   line-height: 1.2;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  border-bottom: 1px solid ${({ theme }) => theme.borderBlue};
 
   &:hover {
     background-color: ${({ theme }) => theme.menuHighlight};
   }
 `;
 
-const MenuItemWrapper = styled.ul`
+const MenuItemWrapper = styled('ul')`
   margin-bottom: 0;
   margin-top: 0;
   list-style: none;
@@ -103,175 +105,256 @@ const MenuItemWrapper = styled.ul`
   }
 `;
 
-const HamburgerButton = styled(ButtonBase)<ExpandableComponentProps>`
+const HamburgerButton = styled(ButtonBase)<
+  ExpandableComponentProps & { $areItemsDraggable: boolean }
+>`
   background-color: ${({ theme }) => theme.mediumBlack};
   color: ${({ theme }) => theme.pureWhite};
   z-index: 200;
   position: fixed;
   left: ${NavigationMenuWidth - 50}px;
-  top: 12px;
+  top: 88dvh;
   transition: 0.4s ease-in-out;
-  -webkit-transition: 0.4s ease-in-out;
+  transition-property: left;
   cursor: pointer;
-  padding: 0.05rem 0.3rem;
-  border-radius: 0.35rem;
+  border-radius: 0.25rem;
   border: none;
   min-height: 36px;
-  min-width: 36px;
+  min-width: 40px;
+
+  @media ${({ theme }) => theme.isLargerThanPhone} {
+    top: 12px;
+  }
+
+  @media ${({ theme }) => theme.isMobileLandscape} {
+    bottom: 15px;
+    top: unset;
+  }
 
   ${({ $isExpanded = false }) =>
     !$isExpanded &&
-    `left: 5px;
+    `left: -5px;
     `}
 
   &:focus {
     outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.25rem ${({ theme }) => theme.menuToggleFocusRing};
   }
+
+  ${({ $areItemsDraggable, theme }) =>
+    $areItemsDraggable &&
+    `
+    outline-color: ${theme.gbaThemeBlue};
+    outline-style: dashed;
+    outline-width: 2px;
+  `}
 `;
 
-const NavigationMenuClearDismiss = styled.button`
-  position: absolute;
-  width: calc(100dvw - ${NavigationMenuWidth}px);
-  left: ${NavigationMenuWidth}px;
-  height: 99%;
-  background: 0 0;
+const NavigationMenuClearDismiss = styled('button')<{
+  $visible: boolean;
+}>`
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
   z-index: 140;
   border: none;
+  background: ${({ theme }) => theme.menuBackdrop};
+  backdrop-filter: blur(8px);
+
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+
+  transition: opacity 0.4s ease-in-out;
 `;
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => void;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
-declare global {
-  interface WindowEventMap {
-    'beforeinstallprompt': BeforeInstallPromptEvent;
-  }
-}
-
 interface NavigationMenuProps {
-  additionalData: any;
-  setAdditionalData: any;
-  gameData: any;
-  setGameData: any;
-  esp32IP: any;
-  setEsp32IP: any;
+  additionalData?: any;
+  setAdditionalData?: (data: any) => void;
+  gameData?: any;
+  setGameData?: (data: any) => void;
+  esp32IP?: string;
+  setEsp32IP?: (data: string) => void;
 }
 
 export const NavigationMenu = ({
-  additionalData,
-  setAdditionalData,
-  gameData,
-  setGameData,
-  esp32IP,
-  setEsp32IP,
-  }: NavigationMenuProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const { setModalContent, setIsModalOpen } = useModalContext();
+  additionalData = null,
+  setAdditionalData = () => {},
+  gameData = null,
+  setGameData = () => {},
+  esp32IP = 'https://192.168.1.3',
+  setEsp32IP = () => {}
+}: NavigationMenuProps) => {
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const { openModal } = useModalContext();
+  const { isAuthenticated } = useAuthContext();
   const { canvas, emulator } = useEmulatorContext();
   const { isRunning } = useRunningContext();
+  const { mutate: executeLogout } = useLogout();
+  const { areItemsDraggable } = useDragContext();
+  const { getLayout, setLayout } = useLayoutContext();
+  const menuButtonLayout = getLayout('menuButton');
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
+  const [isExpandedByUser, setIsExpandedByUser] = useState<boolean | null>(
+    null
+  );
+  const isMobileLandscape = useMediaQuery(theme.isMobileLandscape);
   const menuHeaderId = useId();
-  const quickReload = useQuickReload();
-  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const screenshotToastId = useId();
+  const fullScreenToastId = useId();
+  const { quickReload, isQuickReloadAvailable } = useQuickReload();
 
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (event: BeforeInstallPromptEvent) => {
-      console.log(67547);
-      event.preventDefault(); // Prevent the automatic prompt
-      setInstallPromptEvent(event); // Save the event for later use
-      console.log(event);
-    };
+  const isExpanded =
+    isExpandedByUser ?? (isLargerThanPhone && !isMobileLandscape);
+  const isEmulatorReady = !!emulator;
+  const isMenuItemDisabledByAuth = !isAuthenticated();
+  const hasApiLocation = !!import.meta.env.VITE_GBA_SERVER_LOCATION;
+  const hasNoLocalRoms = isEmulatorReady && !emulator.listRoms().length;
 
-    // Listen for the beforeinstallprompt event
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Clean up the event listener on unmount
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = () => {
-    if (installPromptEvent) {
-      installPromptEvent.prompt(); // Show the install prompt
-      installPromptEvent.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
-        } else {
-          console.log('User dismissed the install prompt');
+  const openMyCartridge = () => {
+    openModal({
+      type: 'myRomStartPage',
+      props: {
+        additionalData,
+        setAdditionalData,
+        gameData,
+        setGameData,
+        esp32IP,
+        setEsp32IP,
+        setIsSideMenuExpanded: (isExpanded) => {
+          setIsExpandedByUser(isExpanded);
         }
-        setInstallPromptEvent(null); // Clear the event after use
-      });
-    }
+      }
+    });
   };
-  
-  //const [additionalData, setAdditionalData] = useState<any>(null);
-  //const [gameData, setGameData] = useState(null);
-  
-  //const defaultIP = 'https://192.168.1.3';
-  //const [esp32IP, setEsp32IP] = useState(defaultIP);
-  
+
+  const verifyCartridgeSave = () => {
+    let save = emulator?.getCurrentSave();
+    const saveName = emulator?.getCurrentSaveName();
+
+    if (!save || !saveName) {
+      toast.error('Load a game before verifying cartridge save');
+      return;
+    }
+
+    if (!additionalData) {
+      toast.error('No save type information');
+      return;
+    }
+
+    if (save.length > 131072) save = save.slice(0, 131072);
+
+    const saveType = getSaveTypeCodeFromString(additionalData.saveType);
+    if (saveType === -1) {
+      toast.error('Invalid save type');
+      return;
+    }
+
+    const uploadPromise = new Promise<string>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300)
+          resolve('Verified save on cartridge');
+        else reject('Save on cartridge is not the same');
+      };
+      xhr.onerror = () => reject('Failed to verify save');
+      xhr.send(save as XMLHttpRequestBodyInit);
+    });
+
+    toast.promise(uploadPromise, {
+      loading: 'Verifying save on cartridge...',
+      success: (msg) => msg,
+      error: (err) => String(err)
+    });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ip = params.get('esp32_ip');
-    if (ip) {
-      setEsp32IP("https://" + ip);
-    }
+    if (ip) setEsp32IP(`https://${ip}`);
+  }, [setEsp32IP]);
 
-    const timer = setTimeout(() => {
-      setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded} />);
-      setIsModalOpen(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      openMyCartridge();
     }, 500);
 
-    window.additionalData = additionalData;
-    window.gameData = gameData;
-    window.esp32IP = esp32IP;
-    
-    return () => clearTimeout(timer);
+    (window as any).additionalData = additionalData;
+    (window as any).gameData = gameData;
+    (window as any).esp32IP = esp32IP;
+
+    return () => window.clearTimeout(timer);
   }, [additionalData, gameData, esp32IP]);
-  
+
   useShowLoadPublicRoms();
 
   return (
     <>
-      <HamburgerButton
-        id="menu-btn"
-        $isExpanded={isExpanded}
-        onClick={() => setIsExpanded((prevState) => !prevState)}
-        aria-label="Menu Toggle"
-      >
-        <BiMenu style={{ height: "1.8em", width: "1.8em", verticalAlign: "middle" }} />
-      </HamburgerButton>
       <NavigationMenuWrapper
         data-testid="menu-wrapper"
         id="menu-wrapper"
         $isExpanded={isExpanded}
       >
+        <Draggable
+          nodeRef={menuButtonRef}
+          bounds="parent"
+          axis="y"
+          position={menuButtonLayout?.position ?? { x: 0, y: 0 }}
+          disabled={!areItemsDraggable}
+          onStop={(_, data) => {
+            setLayout('menuButton', {
+              position: { x: 0, y: data.y },
+              standalone: true
+            });
+          }}
+        >
+          <HamburgerButton
+            ref={menuButtonRef}
+            id="menu-btn"
+            $isExpanded={isExpanded}
+            onClick={() => {
+              setIsExpandedByUser((prevState) => !prevState);
+            }}
+            aria-label="Menu Toggle"
+            $areItemsDraggable={areItemsDraggable}
+          >
+            {isExpanded ? (
+              <BiX
+                style={{
+                  height: '29px',
+                  width: '29px',
+                  verticalAlign: 'middle'
+                }}
+              />
+            ) : (
+              <BiMenu
+                style={{
+                  height: '29px',
+                  width: '29px',
+                  verticalAlign: 'middle'
+                }}
+              />
+            )}
+          </HamburgerButton>
+        </Draggable>
         <StyledMenuHeader id={menuHeaderId}>WifiBOY</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
-        
           <NavLeaf
             title="My Cartridge"
             icon={<BiJoystick />}
             $withPadding
-            onClick={() => {
-              setModalContent(<MyRomStartPage additionalData={additionalData} setAdditionalData={setAdditionalData} gameData={gameData} setGameData={setGameData} esp32IP={esp32IP} setEsp32IP={setEsp32IP} setIsSideMenuExpanded={setIsExpanded} />);
-              setIsModalOpen(true);
-            }}
+            onClick={openMyCartridge}
           />
 
           <NavComponent
             title="Cartridge Actions"
-            //$disabled={!isRunning}
-            $isExpanded={true}
+            $isExpanded
             icon={<IoHardwareChipOutline />}
           >
-        
-           <NavLeaf
+            <NavLeaf
               title="Save to Cartridge"
               $disabled={!isRunning}
               icon={<MdOutlineUploadFile />}
@@ -279,83 +362,48 @@ export const NavigationMenu = ({
                 uploadSaveToCartridge(additionalData, emulator, esp32IP);
               }}
             />
-
             <NavLeaf
               title="Verify Cartridge Save"
               $disabled={!isRunning}
               icon={<BiGitCompare />}
-              onClick={() => {
-                let save = emulator?.getCurrentSave();
-                const saveName = emulator?.getCurrentSaveName();
-
-                if (save && saveName) {
-                  if (save.length > 131072) {
-                    // Truncate the byte array to a maximum length of 137072
-                    save = save.slice(0, 131072);
-                  }
-
-                  const xhr = new XMLHttpRequest();
-                  
-                  if(!additionalData){
-                    console.log("No save type information.");
-                    return;
-                  }
-                  
-                  var saveType = getSaveTypeCodeFromString(additionalData.saveType);
-                  if (saveType == -1) {
-                    console.log("Invalid Save Type");
-                    return;
-                  }
-                  
-                  const uploadPromise = new Promise((resolve, reject) => {
-                    xhr.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
-
-                    xhr.upload.onprogress = function(event) {
-                      if (event.lengthComputable) {
-                        const percentComplete = 67 + ((event.loaded / event.total) * 33);
-                        console.log(percentComplete + "( " + event.loaded + " )");
-                      } else{
-                        console.log("event.lengthComputable is false")
-                      }
-                    };
-
-                    xhr.onload = () => {
-                      if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve('Verified save on cartridge'); // Resolves the promise when successful
-                      } else {
-                        reject('Save on cartridge is not the same.'); // Rejects the promise on failure
-                      }
-                    };
-
-                    xhr.onerror = () => reject('Failed to upload save'); // Handles network errors
-
-                    xhr.send(save);
-                  });
-
-                  // Display the toast with the promise
-                  toast.promise(uploadPromise, {
-                    loading: 'Verifying save on cartridge...',
-                    success: (msg) => `${msg}`,
-                    error: (err) => `${err}`,
-                  });
-                } else {
-                  toast.error('Current save not available');
-                }
-              }}
+              onClick={verifyCartridgeSave}
             />
+          </NavComponent>
 
+          <NavLeaf
+            title="About"
+            icon={<BiInfoCircle />}
+            $withPadding
+            onClick={() => {
+              openModal({ type: 'about' });
+            }}
+          />
+
+          <NavComponent
+            title="Pre Game Actions"
+            $disabled={isRunning}
+            $isExpanded={!isRunning}
+            icon={<BiFolderPlus />}
+          >
             <NavLeaf
-              title="Reflash Cartridge Rom"
+              title="Upload Files"
+              $disabled={isRunning || !isEmulatorReady}
               icon={<BiUpload />}
               onClick={() => {
-                setModalContent(<UploadRomReflashModal esp32IP={esp32IP} />);
-                setIsModalOpen(true);
+                openModal({ type: 'uploadFiles' });
               }}
             />
-        </NavComponent>
-        
+            <NavLeaf
+              title="Load Local Rom"
+              $disabled={isRunning || !isEmulatorReady || hasNoLocalRoms}
+              icon={<BiRedo />}
+              onClick={() => {
+                openModal({ type: 'loadLocalRom' });
+              }}
+            />
+          </NavComponent>
 
-        <NavComponent
+          <NavComponent
             title="In Game Actions"
             $disabled={!isRunning}
             $isExpanded={isRunning}
@@ -367,8 +415,13 @@ export const NavigationMenu = ({
               icon={<BiScreenshot />}
               onClick={() => {
                 if (emulator?.screenshot())
-                  toast.success('Screenshot saved successfully');
-                else toast.error('Screenshot has failed');
+                  toast.success('Screenshot saved successfully', {
+                    id: screenshotToastId
+                  });
+                else
+                  toast.error('Screenshot has failed', {
+                    id: screenshotToastId
+                  });
               }}
             />
             <NavLeaf
@@ -377,32 +430,26 @@ export const NavigationMenu = ({
               icon={<BiFullscreen />}
               onClick={() => {
                 canvas?.requestFullscreen().catch(() => {
-                  toast.error('Full screen request has failed');
+                  toast.error('Full screen request has failed', {
+                    id: fullScreenToastId
+                  });
                 });
               }}
             />
             <NavLeaf
               title="Download Save"
               $disabled={!isRunning}
-              icon={<BiCloudDownload />}
+              icon={<BiDownload />}
               onClick={() => {
-                setModalContent(<DownloadSaveModal />);
-                setIsModalOpen(true);
+                openModal({ type: 'downloadSave' });
               }}
-            />
-            <NavLeaf
-              title="Quick Reload"
-              $disabled={!isRunning}
-              icon={<BiRedo />}
-              onClick={quickReload}
             />
             <NavLeaf
               title="Manage Save States"
               $disabled={!isRunning}
               icon={<BiBookmarks />}
               onClick={() => {
-                setModalContent(<SaveStatesModal />);
-                setIsModalOpen(true);
+                openModal({ type: 'saveStates' });
               }}
             />
             <NavLeaf
@@ -410,19 +457,25 @@ export const NavigationMenu = ({
               $disabled={!isRunning}
               icon={<BiEdit />}
               onClick={() => {
-                setModalContent(<CheatsModal />);
-                setIsModalOpen(true);
+                openModal({ type: 'cheats' });
               }}
             />
           </NavComponent>
+
+          <NavLeaf
+            title="Quick Reload"
+            $disabled={!isQuickReloadAvailable}
+            icon={<BiRefresh />}
+            $withPadding
+            onClick={quickReload}
+          />
 
           <NavLeaf
             title="Controls"
             icon={<BiJoystick />}
             $withPadding
             onClick={() => {
-              setModalContent(<ControlsModal />);
-              setIsModalOpen(true);
+              openModal({ type: 'controls' });
             }}
           />
 
@@ -430,59 +483,107 @@ export const NavigationMenu = ({
             title="File System"
             icon={<BiFileFind />}
             $withPadding
+            $disabled={!isEmulatorReady}
             onClick={() => {
-              setModalContent(<FileSystemModal />);
-              setIsModalOpen(true);
+              openModal({ type: 'fileSystem' });
             }}
           />
-        <NavComponent
-          title="Other"
-          icon={<BiFolderPlus />}
-        >
+
           <NavLeaf
-            title="Create Patch File"
-            icon={<BiJoystick />}
+            title="Emulator Settings"
+            icon={<BiBrain />}
             $withPadding
             onClick={() => {
-              setModalContent(<CreatePatchFileModal />);
-              setIsModalOpen(true);
+              openModal({ type: 'emulatorSettings' });
             }}
           />
+
+          <NavComponent
+            title="Profile"
+            icon={<BiUserCheck />}
+            $disabled={!hasApiLocation}
+          >
+            <NavLeaf
+              title="Login"
+              icon={<BiLogInCircle />}
+              onClick={() => {
+                openModal({ type: 'login' });
+              }}
+            />
+            <NavLeaf
+              title="Logout"
+              $disabled={isMenuItemDisabledByAuth}
+              icon={<BiLogOutCircle />}
+              onClick={executeLogout}
+            />
+            <NavLeaf
+              title="Load Save (Server)"
+              $disabled={isMenuItemDisabledByAuth || !isEmulatorReady}
+              icon={<BiCloudDownload />}
+              onClick={() => {
+                openModal({ type: 'loadSave' });
+              }}
+            />
+            <NavLeaf
+              title="Load Rom (Server)"
+              $disabled={isMenuItemDisabledByAuth || !isEmulatorReady}
+              icon={<BiCloudDownload />}
+              onClick={() => {
+                openModal({ type: 'loadRom' });
+              }}
+            />
+            <NavLeaf
+              title="Send Save to Server"
+              $disabled={isMenuItemDisabledByAuth || !isRunning}
+              icon={<BiCloudUpload />}
+              onClick={() => {
+                openModal({ type: 'uploadSaveToServer' });
+              }}
+            />
+            <NavLeaf
+              title="Send Rom to Server"
+              $disabled={isMenuItemDisabledByAuth || !isRunning}
+              icon={<BiCloudUpload />}
+              onClick={() => {
+                openModal({ type: 'uploadRomToServer' });
+              }}
+            />
+          </NavComponent>
+
           <NavLeaf
-            title="About"
-            icon={<BiInfoCircle />}
-            $withPadding
+            title="Import/Export"
+            icon={<MdImportExport />}
+            $disabled={!isEmulatorReady}
             onClick={() => {
-              setModalContent(<AboutModal />);
-              setIsModalOpen(true);
+              openModal({ type: 'importExport' });
             }}
+            $withPadding
           />
-        </NavComponent>
 
-        {installPromptEvent && (
-        <NavLeaf
-          title="Install App"
-          icon={<BiDownload />}
-          $withPadding
-          onClick={handleInstallClick}
-        />
-      )}
+          <NavLeaf
+            title="Legal"
+            icon={<BiCheckShield />}
+            onClick={() => {
+              openModal({ type: 'legal' });
+            }}
+            $withPadding
+          />
 
+          <NavLeaf
+            title="Contact"
+            icon={<BiConversation />}
+            $link="https://github.com/thenick775/gbajs3"
+            $withPadding
+          />
         </MenuItemWrapper>
-        <GrWifi style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "15px" }}/>
-        <IoIosGlobe style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "45px" }}/>
-        <IoBatteryFull style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "75px" }}/>
-        <IoCogSharp style={{ color: "white", bottom: "15px", position: "absolute", fontSize: "24px", right: "105px" }}/>
-        
       </NavigationMenuWrapper>
-      {isExpanded && !isLargerThanPhone && (
-        <NavigationMenuClearDismiss
-          aria-label="Menu Dismiss"
-          onClick={() => {
-            setIsExpanded(false);
-          }}
-        />
-      )}
+      <NavigationMenuClearDismiss
+        $visible={isExpanded && (!isLargerThanPhone || isMobileLandscape)}
+        aria-label="Menu Dismiss"
+        onClick={() => {
+          setIsExpandedByUser(false);
+        }}
+      />
     </>
   );
 };

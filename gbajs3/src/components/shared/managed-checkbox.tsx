@@ -1,18 +1,22 @@
 import { Checkbox, FormControlLabel, type CheckboxProps } from '@mui/material';
-import React from 'react';
+
+import type { ReactNode } from 'react';
 
 type ManagedCheckBoxProps = {
-  label: string;
+  label: ReactNode;
   watcher?: boolean;
 } & CheckboxProps;
 
 // Shared managed checkbox component with label
 // Params: takes in label, button props,
 // and a watcher indicating the current value
-export const ManagedCheckbox = React.forwardRef<
-  HTMLButtonElement,
-  ManagedCheckBoxProps
->(({ id, label, watcher, ...rest }, ref) => (
+export const ManagedCheckbox = ({
+  id,
+  label,
+  watcher,
+  ref,
+  ...rest
+}: ManagedCheckBoxProps) => (
   <FormControlLabel
     data-testid="managed-checkbox:label"
     id={id}
@@ -20,4 +24,4 @@ export const ManagedCheckbox = React.forwardRef<
     label={label}
     style={{ margin: 0 }}
   />
-));
+);

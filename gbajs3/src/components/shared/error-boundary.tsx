@@ -1,6 +1,10 @@
 import { Button } from '@mui/material';
-import { ErrorBoundary } from 'react-error-boundary';
-import { styled } from 'styled-components';
+import { styled } from '@mui/material/styles';
+import {
+  ErrorBoundary,
+  getErrorMessage,
+  type FallbackProps
+} from 'react-error-boundary';
 
 import {
   BodyWrapper,
@@ -11,13 +15,8 @@ import {
 
 import type { ReactNode } from 'react';
 
-type FallbackRendererProps = {
-  error: Error;
-  resetErrorBoundary: () => void;
-};
-
-const ErrorWrapper = styled.div`
-  background-color: #fff;
+const ErrorWrapper = styled('div')`
+  background-color: ${({ theme }) => theme.pureWhite};
   border-radius: 4px;
   display: flex;
   flex-direction: column;
@@ -37,8 +36,8 @@ const ErrorWrapper = styled.div`
   }
 `;
 
-const Overlay = styled.div`
-  background-color: rgba(0, 0, 0, 0.5);
+const Overlay = styled('div')`
+  background-color: ${({ theme }) => theme.errorOverlay};
   width: 100dvw;
   height: 100dvh;
   position: absolute;
@@ -52,7 +51,7 @@ const PaddedBodyWrapper = styled(BodyWrapper)`
   padding: 1em 1em 0 1em;
 `;
 
-const ErrorImage = styled.img`
+const ErrorImage = styled('img')`
   object-fit: contain;
   max-width: 100%;
 `;
@@ -62,11 +61,11 @@ const CenteredFooter = styled(FooterWrapper)`
   flex-wrap: wrap;
 `;
 
-const ImageWrapper = styled.div`
+const ImageWrapper = styled('div')`
   position: relative;
 `;
 
-const AttributionLink = styled.a`
+const AttributionLink = styled('a')`
   font-size: 5px;
   position: absolute;
   right: 15%;
@@ -75,11 +74,8 @@ const AttributionLink = styled.a`
 
 const RightArrow = () => <span>&rarr;</span>;
 
-const fallbackRender = ({
-  error,
-  resetErrorBoundary
-}: FallbackRendererProps) => (
-  <Overlay>
+const fallbackRender = ({ error, resetErrorBoundary }: FallbackProps) => (
+  <Overlay data-testid="fallback-renderer">
     <ErrorWrapper role="alert">
       <CenteredHeaderWrapper>
         <Header>An irrecoverable error occurred</Header>
@@ -97,7 +93,7 @@ const fallbackRender = ({
             Font by NACreative
           </AttributionLink>
         </ImageWrapper>
-        <p style={{ color: 'red' }}>{error.message}</p>
+        <p style={{ color: 'red' }}>{getErrorMessage(error)}</p>
         <p>
           Please use the buttons below to copy the stack trace and create an
           issue, this helps a lot with error reporting!
@@ -107,8 +103,12 @@ const fallbackRender = ({
         <Button
           color="info"
           variant="contained"
-          onClick={() => {
-            navigator.clipboard.writeText(error.stack ?? 'No stack available');
+          onClick={async () => {
+            await navigator.clipboard.writeText(
+              error instanceof Error
+                ? (error.stack ?? 'Error had empty stack')
+                : 'No stack available'
+            );
           }}
         >
           Copy trace

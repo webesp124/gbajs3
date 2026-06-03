@@ -86,7 +86,7 @@ export const useLoadExternalRom = () => {
                 const sourceFile = new Uint8Array(ajax.response);
                 const target = bps.apply(instructions, sourceFile);
                 
-                const patchedFile = new File([target], fetchProps.fullName ?? fileName ?? fallbackFileName);
+                const patchedFile = new File([target as BlobPart], fetchProps.fullName ?? fileName ?? fallbackFileName);
                 resolve(patchedFile);
               }
               ajaxPatch.onerror = () => {

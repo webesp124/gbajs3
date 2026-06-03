@@ -1,11 +1,11 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CheatsModal } from './cheats.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
+import * as addCallbackHooks from '../../hooks/emulator/use-add-callbacks.tsx';
 
 import type {
   GBAEmulator,
@@ -42,8 +42,8 @@ describe('<CheatsModal />', () => {
 
     expect(screen.getByLabelText('Name')).toBeVisible();
     expect(screen.getByLabelText('Cheat Code')).toBeVisible();
-    expect(screen.getByLabelText('Enabled')).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeVisible();
+    expect(screen.getByLabelText('Enabled')).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Remove Cheat' })).toBeVisible();
   });
 
   it('renders existing raw and parsed cheats', async () => {
@@ -60,7 +60,8 @@ describe('<CheatsModal />', () => {
           str && [
             { desc: 'cheat1', code: 'code1', enable: true },
             { desc: 'cheat2', code: 'code2', enable: false }
-          ]
+          ],
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
     }));
 
@@ -73,7 +74,7 @@ describe('<CheatsModal />', () => {
     expect(screen.getByRole('list')).toBeVisible();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
 
-    const enabledCheckboxes = screen.getAllByRole('checkbox', {
+    const enabledCheckboxes = screen.getAllByRole('switch', {
       name: 'Enabled'
     });
 
@@ -94,6 +95,8 @@ describe('<CheatsModal />', () => {
   });
 
   it('adds new cheat', async () => {
+    const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+
     renderWithContext(<CheatsModal />);
 
     expect(screen.getByRole('list')).toBeVisible();
@@ -104,15 +107,19 @@ describe('<CheatsModal />', () => {
     );
 
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    // adding a new cheat should cause the create button to scroll into view fully
+    await waitFor(() => {
+      expect(scrollIntoViewSpy).toHaveBeenCalledOnce();
+    });
   });
 
-  it('deletes cheat', async () => {
+  it('removes cheat', async () => {
     renderWithContext(<CheatsModal />);
 
     expect(screen.getByRole('list')).toBeVisible();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Cheat' }));
 
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
@@ -120,16 +127,18 @@ describe('<CheatsModal />', () => {
   it('submits parsed cheats', async () => {
     const testCheatsFile = new TextEncoder().encode('Some cheat file contents');
     const uploadCheatsSpy: (file: File, cb?: () => void) => void = vi.fn(
-      (_file, cb) => cb && cb()
+      (_file: File, cb?: () => void) => cb?.()
     );
     const parsedCheatsToFileSpy: (cheatsList: ParsedCheats[]) => File | null =
-      vi.fn(
-        (cheatsList) => cheatsList && new File([testCheatsFile], 'rom1.cheats')
-      );
+      vi.fn(() => new File([testCheatsFile], 'rom1.cheats'));
     const { useEmulatorContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
+    const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+      typeof addCallbackHooks
+    >('../../hooks/emulator/use-add-callbacks.tsx');
     const autoLoadCheatsSpy: () => boolean = vi.fn(() => true);
+    const syncActionIfEnabledSpy = vi.fn();
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       ...original(),
@@ -139,8 +148,14 @@ describe('<CheatsModal />', () => {
         autoLoadCheats: autoLoadCheatsSpy,
         getCurrentCheatsFile: () => testCheatsFile,
         parseCheatsString: (str) =>
-          str && [{ desc: 'cheat1', code: 'code1', enable: false }]
+          str && [{ desc: 'cheat1', code: 'code1', enable: false }],
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
+    }));
+
+    vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+      ...originalCallbacks(),
+      syncActionIfEnabled: syncActionIfEnabledSpy
     }));
 
     renderWithContext(<CheatsModal />);
@@ -159,6 +174,7 @@ describe('<CheatsModal />', () => {
         enable: true
       }
     ]);
+    expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
     expect(uploadCheatsSpy).toHaveBeenCalledOnce();
     expect(autoLoadCheatsSpy).toHaveBeenCalledOnce();
   });
@@ -166,7 +182,7 @@ describe('<CheatsModal />', () => {
   it('submits raw cheats', async () => {
     const testCheatsFile = new TextEncoder().encode('Some cheat file contents');
     const uploadCheatsSpy: (file: File, cb?: () => void) => void = vi.fn(
-      (_file, cb) => cb && cb()
+      (_file: File, cb?: () => void) => cb?.()
     );
     const getCurrentCheatsFileNameSpy: () => string = vi.fn(
       () => 'rom1.cheats'
@@ -174,7 +190,11 @@ describe('<CheatsModal />', () => {
     const { useEmulatorContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
+    const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+      typeof addCallbackHooks
+    >('../../hooks/emulator/use-add-callbacks.tsx');
     const autoLoadCheatsSpy: () => boolean = vi.fn(() => true);
+    const syncActionIfEnabledSpy = vi.fn();
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       ...original(),
@@ -184,8 +204,14 @@ describe('<CheatsModal />', () => {
         getCurrentCheatsFile: () => testCheatsFile,
         parseCheatsString: (str) =>
           str && [{ desc: 'cheat1', code: 'code1', enable: false }],
-        getCurrentCheatsFileName: getCurrentCheatsFileNameSpy
+        getCurrentCheatsFileName: getCurrentCheatsFileNameSpy,
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
+    }));
+
+    vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+      ...originalCallbacks(),
+      syncActionIfEnabled: syncActionIfEnabledSpy
     }));
 
     renderWithContext(<CheatsModal />);
@@ -200,6 +226,7 @@ describe('<CheatsModal />', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
+    expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
     expect(uploadCheatsSpy).toHaveBeenCalledOnce();
     expect(autoLoadCheatsSpy).toHaveBeenCalledOnce();
     expect(getCurrentCheatsFileNameSpy).toHaveBeenCalledOnce();
@@ -215,14 +242,14 @@ describe('<CheatsModal />', () => {
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<CheatsModal />);
@@ -232,105 +259,6 @@ describe('<CheatsModal />', () => {
     expect(closeButton).toBeInTheDocument();
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<CheatsModal />);
-
-    expect(
-      await screen.findByText('Use this form to enter, add, and delete cheats.')
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText('Use this form to enter, add, and delete cheats.')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText('This form field is for the name of the cheat.')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText('Put your cheat code into this field.')
-    ).toBeVisible();
-    expect(
-      screen.getByText(
-        "Remember to separate multi-line cheats with the '+' character!"
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText('Use the checkbox to enable/disable a cheat.')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText('Use the trash button to remove a cheat entirely.')
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.nodeName === 'P' &&
-          element?.textContent === 'Use the plus button to add a new cheat.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.nodeName === 'P' &&
-          element?.textContent ===
-            'Use the Submit button to save your cheats, and convert them to libretro format.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.nodeName === 'P' &&
-          element?.textContent ===
-            'Use this button to toggle between viewing parsed cheats or raw cheats in libretro file format.'
-      )
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

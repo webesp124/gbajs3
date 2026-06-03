@@ -14,6 +14,13 @@ if [[ $REPLY == "y" || $REPLY == "Y" ]]; then
       echo "Directory $dir does not exist."
     fi
   done
+
+  if [[ -f "./.env.example.swarm" ]]; then
+    cp "./.env.example.swarm" "./.env.swarm" &&
+      echo "Copied .env.example.swarm to .env.swarm in ."
+  else
+    echo ".env.example.swarm does not exist."
+  fi
 else
   echo "Operation cancelled."
 fi
@@ -28,7 +35,7 @@ fi
 # create default directories
 read -r -p "Do you want to create default directories? (y/n) " REPLY
 
-required_vars=("ROM_PATH" "SAVE_PATH" "CERT_DIR")
+required_vars=("ROM_PATH" "SAVE_PATH" "CERT_DIR" "PG_DATA_LOCATION")
 
 for var in "${required_vars[@]}"; do
   if [ -z "${!var}" ]; then
@@ -38,7 +45,7 @@ for var in "${required_vars[@]}"; do
 done
 
 if [[ $REPLY == "y" || $REPLY == "Y" ]]; then
-  for dir in "$ROM_PATH" "$SAVE_PATH" "$CERT_DIR"; do
+  for dir in "$ROM_PATH" "$SAVE_PATH" "$CERT_DIR" "$PG_DATA_LOCATION"; do
     if [ ! -d "$dir" ]; then
       mkdir -p "$dir" &&
         echo "Created directory: $dir"

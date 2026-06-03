@@ -7,7 +7,7 @@ import {
   emulatorGameNameLocalStorageKey,
   emulatorFFMultiplierLocalStorageKey,
   emulatorKeyBindingsLocalStorageKey,
-  emulatorCoreCallbacksLocalStorageKey
+  emulatorSettingsLocalStorageKey
 } from '../../context/emulator/consts.ts';
 import * as contextHooks from '../../hooks/context.tsx';
 import * as addCallbacksHooks from '../../hooks/emulator/use-add-callbacks.tsx';
@@ -17,25 +17,34 @@ import type {
   GBAEmulator,
   KeyBinding
 } from '../../emulator/mgba/mgba-emulator.tsx';
+import type { coreSettings } from '@thenick775/mgba-wasm';
 
 describe('useRunGame hook', () => {
-  it('runs game sets default and stored values', () => {
+  it('runs game, sets default and stored values', () => {
     const setIsRunningSpy = vi.fn();
     const emulatorRunSpy: (romPath: string) => boolean = vi.fn(() => true);
     const emulatorSetVolumeSpy: (v: number) => void = vi.fn();
+    const setCoreSettingsSpy: (c: coreSettings) => void = vi.fn();
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       setCanvas: vi.fn(),
       canvas: null,
       emulator: {
         run: emulatorRunSpy,
-        setVolume: emulatorSetVolumeSpy
+        setVolume: emulatorSetVolumeSpy,
+        filePaths: () => ({
+          gamePath: '/data/games'
+        }),
+        setCoreSettings: setCoreSettingsSpy,
+        isFastForwardEnabled: () => false,
+        isSlowdownEnabled: () => false
       } as GBAEmulator
     }));
 
     vi.spyOn(addCallbacksHooks, 'useAddCallbacks').mockImplementation(() => ({
       addCallbacks: vi.fn(),
-      addCallbacksAndSaveSettings: vi.fn()
+      addCallbacksAndSaveSettings: vi.fn(),
+      syncActionIfEnabled: vi.fn()
     }));
 
     vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
@@ -48,11 +57,14 @@ describe('useRunGame hook', () => {
     const { result } = renderHookWithContext(() => useRunGame());
 
     act(() => {
-      expect(result.current('/games/some_rom.gba')).toBeTruthy();
+      expect(result.current('some_rom.gba')).toBeTruthy();
     });
 
     expect(emulatorRunSpy).toHaveBeenCalledOnce();
-    expect(emulatorRunSpy).toHaveBeenCalledWith('/games/some_rom.gba');
+    expect(emulatorRunSpy).toHaveBeenCalledWith(
+      '/data/games/some_rom.gba',
+      undefined
+    );
 
     expect(setIsRunningSpy).toHaveBeenCalledOnce();
     expect(setIsRunningSpy).toHaveBeenCalledWith(true);
@@ -60,15 +72,33 @@ describe('useRunGame hook', () => {
     // set stored game name
     expect(setItemSpy).toHaveBeenCalledWith(
       emulatorGameNameLocalStorageKey,
-      '"/games/some_rom.gba"'
+      '"some_rom.gba"'
     );
 
     // set volume
     expect(emulatorSetVolumeSpy).toHaveBeenCalledOnce();
     expect(emulatorSetVolumeSpy).toHaveBeenCalledWith(1);
+
+    // sets core settings
+    expect(setCoreSettingsSpy).toHaveBeenCalledOnce();
+    expect(setCoreSettingsSpy).toHaveBeenCalledWith({
+      allowOpposingDirections: true,
+      audioBufferSize: 1024,
+      audioSampleRate: 48000,
+      audioSync: false,
+      baseFpsTarget: undefined,
+      frameSkip: undefined,
+      rewindBufferCapacity: undefined,
+      rewindBufferInterval: undefined,
+      rewindEnable: true,
+      showFpsCounter: false,
+      threadedVideo: false,
+      timestepSync: true,
+      videoSync: false
+    });
   });
 
-  it('sets keybindings, fast forward, and callbacks from storage on success', () => {
+  it('sets keybindings, fast forward, and settings from storage on success', () => {
     localStorage.setItem(
       emulatorKeyBindingsLocalStorageKey,
       '"some set of keybindings"'
@@ -76,8 +106,8 @@ describe('useRunGame hook', () => {
 
     localStorage.setItem(emulatorFFMultiplierLocalStorageKey, '2');
     localStorage.setItem(
-      emulatorCoreCallbacksLocalStorageKey,
-      '{"saveFileSystemOnInGameSave": true}'
+      emulatorSettingsLocalStorageKey,
+      '{"frameSkip":5,"rewindBufferCapacity":1200,"rewindBufferInterval":5,"allowOpposingDirections":false,"muteOnFastForward":false,"muteOnRewind":false,"saveFileSystemOnInGameSave":false,"saveFileSystemOnCreateUpdateDelete":false,"fileSystemNotificationsEnabled":false,"audioSampleRate":48000,"audioBufferSize":1024,"videoSync":false,"audioSync":true,"threadedVideo":true,"rewindEnable":false,"saveFileName":"custom_sav.sav"}'
     );
 
     const setIsRunningSpy = vi.fn();
@@ -87,6 +117,7 @@ describe('useRunGame hook', () => {
     const emulatorSetFastForwardMultiplierSpy: (multiplier: number) => void =
       vi.fn();
     const addCallbacksSpy: (f: CoreCallbackOptions) => void = vi.fn();
+    const setCoreSettingsSpy: (c: coreSettings) => void = vi.fn();
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       setCanvas: vi.fn(),
@@ -94,15 +125,22 @@ describe('useRunGame hook', () => {
       emulator: {
         run: emulatorRunSpy,
         isFastForwardEnabled: () => false,
+        isSlowdownEnabled: () => false,
         setVolume: vi.fn() as (v: number) => void,
         remapKeyBindings: emulatorRemapKeyBindingsSpy,
-        setFastForwardMultiplier: emulatorSetFastForwardMultiplierSpy
+        setFastForwardMultiplier: emulatorSetFastForwardMultiplierSpy,
+        filePaths: () => ({
+          gamePath: '/data/games',
+          savePath: '/data/saves'
+        }),
+        setCoreSettings: setCoreSettingsSpy
       } as GBAEmulator
     }));
 
     vi.spyOn(addCallbacksHooks, 'useAddCallbacks').mockImplementation(() => ({
       addCallbacks: addCallbacksSpy,
-      addCallbacksAndSaveSettings: vi.fn()
+      addCallbacksAndSaveSettings: vi.fn(),
+      syncActionIfEnabled: vi.fn()
     }));
 
     vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
@@ -113,8 +151,14 @@ describe('useRunGame hook', () => {
     const { result } = renderHookWithContext(() => useRunGame());
 
     act(() => {
-      expect(result.current('/games/some_rom.gba')).toBeTruthy();
+      expect(result.current('some_rom.gba')).toBeTruthy();
     });
+
+    expect(emulatorRunSpy).toHaveBeenCalledOnce();
+    expect(emulatorRunSpy).toHaveBeenCalledWith(
+      '/data/games/some_rom.gba',
+      '/data/saves/custom_sav.sav'
+    );
 
     expect(emulatorRemapKeyBindingsSpy).toHaveBeenCalledOnce();
     expect(emulatorRemapKeyBindingsSpy).toHaveBeenCalledWith(
@@ -126,7 +170,57 @@ describe('useRunGame hook', () => {
 
     expect(addCallbacksSpy).toHaveBeenCalledOnce();
     expect(addCallbacksSpy).toHaveBeenCalledWith({
-      saveFileSystemOnInGameSave: true
+      saveFileSystemOnInGameSave: false,
+      fileSystemNotificationsEnabled: false
     });
+
+    expect(setCoreSettingsSpy).toHaveBeenCalledOnce();
+    expect(setCoreSettingsSpy).toHaveBeenCalledWith({
+      allowOpposingDirections: false,
+      audioBufferSize: 1024,
+      audioSampleRate: 48000,
+      audioSync: true,
+      frameSkip: 5,
+      rewindBufferCapacity: 1200,
+      rewindBufferInterval: 5,
+      rewindEnable: false,
+      threadedVideo: true,
+      videoSync: false
+    });
+  });
+
+  it('does not persist the game name when emulator is unavailable', () => {
+    const setIsRunningSpy = vi.fn();
+
+    vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+      setCanvas: vi.fn(),
+      canvas: null,
+      emulator: null
+    }));
+
+    vi.spyOn(addCallbacksHooks, 'useAddCallbacks').mockImplementation(() => ({
+      addCallbacks: vi.fn(),
+      addCallbacksAndSaveSettings: vi.fn(),
+      syncActionIfEnabled: vi.fn()
+    }));
+
+    vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
+      isRunning: false,
+      setIsRunning: setIsRunningSpy
+    }));
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+    const { result } = renderHookWithContext(() => useRunGame());
+
+    act(() => {
+      expect(result.current('some_rom.gba')).toBeFalsy();
+    });
+
+    expect(setIsRunningSpy).toHaveBeenCalledWith(false);
+    expect(setItemSpy).not.toHaveBeenCalledWith(
+      emulatorGameNameLocalStorageKey,
+      '"some_rom.gba"'
+    );
   });
 });

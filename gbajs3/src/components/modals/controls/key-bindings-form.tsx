@@ -1,7 +1,7 @@
 import { TextField } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
 import { Controller, useForm } from 'react-hook-form';
-import { styled } from 'styled-components';
 
 import { emulatorKeyBindingsLocalStorageKey } from '../../../context/emulator/consts.ts';
 import {
@@ -16,11 +16,10 @@ type KeyBindingsFormProps = {
   onAfterSubmit: () => void;
 };
 
-type KeyBindingInputProps = {
-  [gbaInput: string]: KeyBinding;
-};
+// key is the gba input, value is the keybinding itself
+type KeyBindingInputProps = Record<string, KeyBinding>;
 
-const StyledForm = styled.form`
+const StyledForm = styled('form')`
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -32,23 +31,25 @@ export const KeyBindingsForm = ({
 }: KeyBindingsFormProps) => {
   const { emulator } = useEmulatorContext();
   const { isRunning } = useRunningContext();
+  const [currentKeyBindings, setCurrentKeyBindings] = useLocalStorage<
+    KeyBinding[] | undefined
+  >(emulatorKeyBindingsLocalStorageKey);
+  const defaultKeyBindings = emulator?.defaultKeyBindings();
+  const renderedBindings = currentKeyBindings ?? defaultKeyBindings ?? [];
   const {
     handleSubmit,
     setValue,
     control,
     formState: { errors }
-  } = useForm<KeyBindingInputProps>();
-
-  const defaultKeyBindings = emulator?.defaultKeyBindings();
-
-  const [currentKeyBindings, setCurrentKeyBindings] = useLocalStorage<
-    KeyBinding[] | undefined
-  >(emulatorKeyBindingsLocalStorageKey);
+  } = useForm({
+    defaultValues: renderedBindings.reduce<KeyBindingInputProps>((acc, kb) => {
+      acc[kb.gbaInput] = kb;
+      return acc;
+    }, {})
+  });
 
   const onSubmit = (formData: KeyBindingInputProps) => {
-    const keyBindings = Object.entries(formData)
-      .filter(([, v]) => !!v)
-      .map(([, k]) => k);
+    const keyBindings = Object.values(formData);
 
     if (isRunning) emulator?.remapKeyBindings(keyBindings);
 
@@ -56,15 +57,13 @@ export const KeyBindingsForm = ({
     onAfterSubmit();
   };
 
-  const renderedBindings = currentKeyBindings ?? defaultKeyBindings;
-
   return (
     <StyledForm
       aria-label="Key Bindings Form"
       id={id}
       onSubmit={handleSubmit(onSubmit)}
     >
-      {renderedBindings?.map((keyBinding) => (
+      {renderedBindings.map((keyBinding) => (
         <Controller
           key={`gba_input_${keyBinding.gbaInput.toLowerCase()}`}
           control={control}
@@ -76,7 +75,7 @@ export const KeyBindingsForm = ({
                 value.key !== ' ' ||
                 'Space is reserved for accessibility requirements',
               noTab: (value) =>
-                value.key?.toLowerCase() !== 'tab' ||
+                value.key.toLowerCase() !== 'tab' ||
                 'Tab is reserved for accessibility requirements'
             }
           }}
@@ -97,7 +96,7 @@ export const KeyBindingsForm = ({
                 keyboardEvent.preventDefault();
               }}
               error={!!errors[keyBinding.gbaInput]}
-              helperText={errors?.[keyBinding.gbaInput]?.message}
+              helperText={errors[keyBinding.gbaInput]?.message}
             />
           )}
         />

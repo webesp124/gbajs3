@@ -1,7 +1,8 @@
-import { Button } from '@mui/material';
+import { Button, keyframes } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useId, useState } from 'react';
-import { styled, keyframes } from 'styled-components';
-import { useInterval } from 'usehooks-ts';
+
+import { useInterval } from '../../hooks/use-interval.ts';
 
 import type { ButtonProps } from '@mui/material';
 
@@ -37,7 +38,7 @@ const fill = keyframes`
   }
 `;
 
-const StyledSvg = styled.svg`
+const StyledSvg = styled('svg')`
   position: absolute;
   width: 24px;
   height: 24px;
@@ -53,7 +54,7 @@ const StyledSvg = styled.svg`
     ${scale} 0.12s ease-in-out 0.45s both;
 `;
 
-const CheckCircle = styled.circle`
+const CheckCircle = styled('circle')`
   stroke-dasharray: 166;
   stroke-dashoffset: 166;
   stroke-width: 5;
@@ -63,15 +64,15 @@ const CheckCircle = styled.circle`
   animation: ${stroke} 0.3s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 `;
 
-const CheckPath = styled.path`
+const CheckPath = styled('path')`
   transform-origin: 50% 50%;
   stroke-dasharray: 48;
   stroke-dashoffset: 48;
   animation: ${stroke} 0.15s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
 `;
 
-const CopyWrapper = styled.span<CopyWrapperProps>`
-  ${({ $isSuccessCheckVisible = false }) =>
+const CopyWrapper = styled('span')<CopyWrapperProps>`
+  ${({ $isSuccessCheckVisible }) =>
     $isSuccessCheckVisible && 'visibility: hidden;'}
 `;
 
@@ -85,10 +86,12 @@ export const CircleCheckButton = ({
   const labeledById = useId();
   const [isClicked, setIsClicked] = useState(false);
 
-  const showSuccessAnimation = !!showSuccess && isClicked;
+  const showSuccessAnimation = showSuccess && isClicked;
 
   useInterval(
-    () => setIsClicked(false),
+    () => {
+      setIsClicked(false);
+    },
     showSuccessAnimation ? msDuration : null
   );
 

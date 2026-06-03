@@ -1,152 +1,236 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite';
-import { coverageConfigDefaults } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+import react from '@vitejs/plugin-react-swc';
 import { visualizer } from 'rollup-plugin-visualizer';
+// eslint-disable-next-line import/no-unresolved
+import { defineConfig, type PluginOption } from 'vite';
+import { createHtmlPlugin } from 'vite-plugin-html';
+import { VitePWA } from 'vite-plugin-pwa';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
+// eslint-disable-next-line import/no-unresolved
+import { coverageConfigDefaults } from 'vitest/config';
 
-export default defineConfig({
-  base: './',
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['/img/favicon.ico'],
-      manifest: {
-        name: 'WifiBOY',
-        short_name: 'WifiBOY',
-        description: 'GBA emulator online in the Browser',
-        theme_color: '#979597',
-        background_color: '#212529',
-        icons: [
+// eslint-disable-next-line import/no-default-export
+export default defineConfig(({ mode }) => {
+  const withCOIServiceWorker = mode === 'with-coi-serviceworker';
+
+  return {
+    base: './',
+    plugins: [
+      react({
+        plugins: [
+          [
+            '@swc/plugin-emotion',
+            {
+              // items for component selectors with MUI+SWC
+              autoLabel: 'dev-only',
+              labelFormat: '[local]',
+              importMap: {
+                '@mui/material/styles': {
+                  styled: {
+                    canonicalImport: ['@emotion/styled', 'default'],
+                    styledBaseImport: ['@mui/material/styles', 'styled']
+                  }
+                }
+              }
+            }
+          ]
+        ]
+      }),
+      withCOIServiceWorker
+        ? [
+            createHtmlPlugin({
+              inject: {
+                tags: [
+                  {
+                    tag: 'script',
+                    attrs: { src: 'coi-sw.js' },
+                    injectTo: 'head-prepend'
+                  }
+                ]
+              }
+            })
+          ]
+        : [],
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['./img/favicon.ico'],
+        manifest: {
+          name: 'Gbajs3',
+          short_name: 'GJ3',
+          description: 'GBA emulator online in the Browser',
+          theme_color: '#121821',
+          background_color: '#121821',
+          icons: [
+            {
+              src: './img/icon-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: './img/icon-256x256.png',
+              sizes: '256x256',
+              type: 'image/png'
+            },
+            {
+              src: './img/icon-384x384.png',
+              sizes: '384x384',
+              type: 'image/png'
+            },
+            {
+              src: './img/icon-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: './img/maskable-icon-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: './img/maskable-icon-256x256.png',
+              sizes: '256x256',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: './img/maskable-icon-384x384.png',
+              sizes: '384x384',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: './img/maskable-icon-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
+            }
+          ],
+          screenshots: [
+            {
+              src: 'img/desktop.png',
+              sizes: '2054x1324',
+              type: 'image/png',
+              form_factor: 'wide',
+              label: 'Desktop Gbajs3'
+            },
+            {
+              src: 'img/mobile.png',
+              sizes: '1170x2532',
+              type: 'image/png',
+              form_factor: 'narrow',
+              label: 'Mobile Gbajs3'
+            }
+          ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,wasm}'],
+          navigateFallbackDenylist: [/^\/admin/]
+        },
+        ...(withCOIServiceWorker
+          ? {
+              injectRegister: null,
+              strategies: 'injectManifest',
+              srcDir: 'src/service-worker',
+              filename: 'coi-sw.ts',
+              injectManifest: {
+                injectionPoint: undefined
+              }
+            }
+          : {})
+      }),
+      viteStaticCopy({
+        targets: [
           {
-            src: 'img/icon-144x144.png',
-            sizes: '144x144',
-            type: 'image/png'
-          },
-          {
-            src: 'img/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'img/icon-256x256.png',
-            sizes: '256x256',
-            type: 'image/png'
-          },
-          {
-            src: 'img/icon-384x384.png',
-            sizes: '384x384',
-            type: 'image/png'
-          },
-          {
-            src: 'img/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'img/maskable-icon-144x144.png',
-            sizes: '144x144',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: 'img/maskable-icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: 'img/maskable-icon-256x256.png',
-            sizes: '256x256',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: 'img/maskable-icon-384x384.png',
-            sizes: '384x384',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: 'img/maskable-icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
-          }
-        ],
-        screenshots: [
-          {
-            src: 'img/desktop.png',
-            sizes: '2054x1324',
-            type: 'image/png',
-            form_factor: 'wide',
-            label: 'Desktop Gbajs3'
-          },
-          {
-            src: 'img/mobile.png',
-            sizes: '1170x2532',
-            type: 'image/png',
-            form_factor: 'narrow',
-            label: 'Mobile Gbajs3'
+            src: 'node_modules/@thenick775/mgba-wasm/dist/*.wasm.map',
+            dest: 'assets'
           }
         ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,wasm}']
+      }),
+      visualizer({ gzipSize: true }) as PluginOption
+    ],
+    optimizeDeps: {
+      exclude: ['@thenick775/mgba-wasm']
+    },
+    server: {
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Opener-Policy': 'same-origin'
       }
-    }),
-    visualizer({ gzipSize: true })
-  ],
-  optimizeDeps: {
-    exclude: ['@thenick775/mgba-wasm']
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          const vendorPrefix = 'vendor';
-          if (id.indexOf('node_modules') > -1) {
-            if (id.indexOf('@mui') > -1) {
-              // vendor mui
-              return vendorPrefix + '_@mui';
-            }
-
-            if (id.indexOf('@thenick775/mgba-wasm') > -1) {
-              // vendor mGBA
-              return vendorPrefix + '_mgba-wasm';
-            }
-
-            if (
-              id.indexOf('react-joyride') > -1 ||
-              id.indexOf('react-floater') > -1 ||
-              id.indexOf('popper.js') > -1
-            ) {
-              // vendor react joyride + large deps
-              return vendorPrefix + '_react-joyride';
-            }
-
-            return vendorPrefix;
+    },
+    build: {
+      sourcemap: true,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react',
+                test: /node_modules[\\/](react|react-dom|scheduler)([\\/]|$)/
+              },
+              {
+                name: 'emotion',
+                test: /node_modules[\\/]@emotion[\\/](react|styled)([\\/]|$)/
+              },
+              {
+                name: 'mui',
+                test: /node_modules[\\/]@mui[\\/]material([\\/]|$)/
+              },
+              {
+                name: 'mui-x',
+                test: /node_modules[\\/]@mui[\\/]x-tree-view([\\/]|$)/
+              },
+              {
+                name: 'mgba',
+                test: /node_modules[\\/]@thenick775[\\/]mgba-wasm([\\/]|$)/
+              },
+              {
+                name: 'onboarding',
+                test: /node_modules[\\/]react-ios-pwa-prompt-ts([\\/]|$)/
+              },
+              {
+                name: 'dnd',
+                test: /node_modules[\\/](react-draggable|react-dropzone|react-rnd)([\\/]|$)/
+              },
+              {
+                name: 'query',
+                test: /node_modules[\\/](?:@tanstack|zod)([\\/]|$)/
+              },
+              {
+                name: 'ui',
+                test: /node_modules[\\/](react-modal|react-hot-toast|react-spinners|react-animate-height|react-icons|react-error-boundary)([\\/]|$)/
+              },
+              {
+                name: 'hooks',
+                test: /node_modules[\\/](react-hook-form|@uidotdev[\\/]usehooks|jwt-decode|nanoid)([\\/]|$)/
+              },
+              {
+                name: 'zip',
+                test: /node_modules[\\/]@zip\.js[\\/]zip\.js([\\/]|$)/
+              }
+            ]
           }
         }
       }
+    },
+    test: {
+      globals: true,
+      restoreMocks: true,
+      environment: 'jsdom',
+      setupFiles: ['./test/setup.ts'],
+      coverage: {
+        provider: 'v8',
+        include: ['src'],
+        reporter: ['html', 'json-summary', 'json'],
+        exclude: [
+          ...coverageConfigDefaults.exclude,
+          'test/**',
+          'src/emulator/mgba/wasm/**',
+          '**/*.d.ts',
+          '**/*eslint*',
+          '**/service-worker/**',
+          '**/.DS_Store'
+        ]
+      }
     }
-  },
-  test: {
-    globals: true,
-    restoreMocks: true,
-    environment: 'jsdom',
-    setupFiles: ['./test/setup.ts', 'jest-styled-components'],
-    coverage: {
-      provider: 'v8',
-      include: ['src'],
-      exclude: [
-        ...coverageConfigDefaults.exclude,
-        'test/**',
-        'src/emulator/mgba/wasm/**',
-        '**/*.d.ts',
-        '**/*eslint*'
-      ]
-    }
-  }
+  };
 });

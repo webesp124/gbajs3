@@ -96,7 +96,7 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
   esp32IP,
   }) => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const {
     handleSubmit,
     setValue,
@@ -185,7 +185,7 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
         <Button form={uploadRomFormId} type="submit" variant="contained">
           Reflash Repro
         </Button>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>

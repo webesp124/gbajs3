@@ -1,6 +1,6 @@
+import { styled } from '@mui/material/styles';
 import { useEffect, useState, type ReactNode } from 'react';
 import AnimateHeight, { type Height } from 'react-animate-height';
-import { styled } from 'styled-components';
 
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
@@ -16,11 +16,11 @@ type ComponentWrapperProps = {
   $disabled: boolean;
 };
 
-const NavComponentWrapper = styled.li<ComponentWrapperProps>`
-  color: ${({ theme }) => theme.pureWhite};
+const NavComponentWrapper = styled('li')<ComponentWrapperProps>`
+  color: ${({ theme }) => theme.gbaThemeBlue};
   padding: 0 2px;
 
-  ${({ $disabled = false, theme }) =>
+  ${({ $disabled, theme }) =>
     $disabled &&
     `color: ${theme.disabledGray};
      pointer-events: none;
@@ -44,11 +44,11 @@ const HoverWrapper = styled(ButtonBase)`
   }
 `;
 
-const NavTitle = styled.span`
+const NavTitle = styled('span')`
   margin-left: 0.5rem;
 `;
 
-const ChildrenWrapper = styled.ul`
+const ChildrenWrapper = styled('ul')`
   padding-left: 2rem;
 `;
 

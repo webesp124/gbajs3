@@ -1,4 +1,8 @@
-import { styled } from 'styled-components';
+import { styled } from '@mui/material/styles';
+
+import { Copy } from './styled.tsx';
+
+import type { JSX } from 'react';
 
 type ErrorWithIconProps = {
   text: string;
@@ -6,14 +10,13 @@ type ErrorWithIconProps = {
   className?: string;
 };
 
-const ErrorWrapper = styled.div`
+const ErrorWrapper = styled('div')`
   display: flex;
   align-items: center;
   gap: 5px;
 `;
 
-const ErrorText = styled.p`
-  margin: 0;
+const ErrorText = styled(Copy)`
   color: ${({ theme }) => theme.errorRed};
 `;
 

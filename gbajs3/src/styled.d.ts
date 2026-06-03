@@ -1,19 +1,20 @@
-import 'styled-components';
+import '@mui/material/styles';
+
+import type { Theme } from '@mui/material/styles';
 
 declare module 'styled-components' {
-  export interface DefaultTheme {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- bridge MUI theme fields into styled-components
+  export interface DefaultTheme extends Theme {}
+}
+
+declare module '@mui/material/styles' {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- extending type
+  interface Theme {
     isLargerThanPhone: string;
     isMobileLandscape: string;
-    isMobilePortrait: string;
     isMobileWithUrlBar: string;
-    aliceBlue1: string;
-    aliceBlue2: string;
-    arcticAirBlue: string;
-    blackRussian: string;
-    blueCharcoal: string;
     checkMarkGreen: string;
     darkCharcoal: string;
-    darkGrayBlue: string;
     disabledGray: string;
     errorRed: string;
     gbaThemeBlue: string;
@@ -23,8 +24,103 @@ declare module 'styled-components' {
     pattensBlue: string;
     pureBlack: string;
     pureWhite: string;
-    darkGray: string;
     panelControlGray: string;
     panelBlueGray: string;
+    panelControlText: string;
+    panelSliderAccent: string;
+    // new canonical theme values
+    modalSurface: string;
+    modalSurfaceElevated: string;
+    modalBorder: string;
+    modalBorderStrong: string;
+    modalTextPrimary: string;
+    modalTextSecondary: string;
+    surfaceTextPrimary: string;
+    modalIconMuted: string;
+    modalHoverSurface: string;
+    modalDropzoneSurface: string;
+    modalSectionSurface: string;
+    modalSectionBorder: string;
+    modalListBorder: string;
+    modalListItemHoverSurface: string;
+    modalCloseButtonHoverSurface: string;
+    modalCloseButtonHoverBorder: string;
+    modalContainerSurface: string;
+    focusRingPrimary: string;
+    focusRingPrimarySoft: string;
+    menuBackdrop: string;
+    menuToggleFocusRing: string;
+    modalTabBorder: string;
+    errorOverlay: string;
+    virtualControlSurface: string;
+    virtualControlSurfaceStrong: string;
+    virtualControlBorderSubtle: string;
+    virtualControlInnerBorder: string;
+    virtualControlButtonSurface: string;
+    virtualControlButtonSurfacePill: string;
+    virtualControlShadow: string;
+    virtualControlPressedShadow: string;
+    virtualControlAccentBorder: string;
+    virtualControlAccentBorderStrong: string;
+    virtualControlAccentHalo: string;
+    virtualControlArrow: string;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- extending type
+  interface ThemeOptions {
+    isLargerThanPhone: string;
+    isMobileLandscape: string;
+    isMobileWithUrlBar: string;
+    checkMarkGreen: string;
+    darkCharcoal: string;
+    disabledGray: string;
+    errorRed: string;
+    gbaThemeBlue: string;
+    mediumBlack: string;
+    menuHighlight: string;
+    menuHover: string;
+    pattensBlue: string;
+    pureBlack: string;
+    pureWhite: string;
+    panelControlGray: string;
+    panelBlueGray: string;
+    panelControlText: string;
+    panelSliderAccent: string;
+    // new canonical theme values
+    modalSurface: string;
+    modalSurfaceElevated: string;
+    modalBorder: string;
+    modalBorderStrong: string;
+    modalTextPrimary: string;
+    modalTextSecondary: string;
+    surfaceTextPrimary: string;
+    modalIconMuted: string;
+    modalHoverSurface: string;
+    modalDropzoneSurface: string;
+    modalSectionSurface: string;
+    modalSectionBorder: string;
+    modalListBorder: string;
+    modalListItemHoverSurface: string;
+    modalCloseButtonHoverSurface: string;
+    modalCloseButtonHoverBorder: string;
+    modalContainerSurface: string;
+    focusRingPrimary: string;
+    focusRingPrimarySoft: string;
+    menuBackdrop: string;
+    menuToggleFocusRing: string;
+    modalTabBorder: string;
+    errorOverlay: string;
+    virtualControlSurface: string;
+    virtualControlSurfaceStrong: string;
+    virtualControlBorderSubtle: string;
+    virtualControlInnerBorder: string;
+    virtualControlButtonSurface: string;
+    virtualControlButtonSurfacePill: string;
+    virtualControlShadow: string;
+    virtualControlPressedShadow: string;
+    virtualControlAccentBorder: string;
+    virtualControlAccentBorderStrong: string;
+    virtualControlAccentHalo: string;
+    virtualControlArrow: string;
   }
 }

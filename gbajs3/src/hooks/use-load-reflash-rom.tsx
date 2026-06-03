@@ -24,13 +24,11 @@ export const useLoadReflashRom = () => {
 
       reader.onload = (e) => {
           if(e.target && e.target.result) {
-              let arrayBuffer = e.target.result;
-              if (typeof arrayBuffer === 'string') {
-                  // Convert string to ArrayBuffer
-                  const encoder = new TextEncoder();
-                  arrayBuffer = encoder.encode(arrayBuffer);
-              }
-              let romFile = new Uint8Array(arrayBuffer);
+              const result = e.target.result;
+              const romFile =
+                  typeof result === 'string'
+                      ? new TextEncoder().encode(result)
+                      : new Uint8Array(result);
 
               const xhr = new XMLHttpRequest();
               xhr.open('POST', `${fetchProps.esp32IP}/upload_rom_file?cartSize=${cartSize}`, true);
@@ -66,7 +64,7 @@ export const useLoadReflashRom = () => {
 
                   xhrVerify.onerror = () => reject('Failed to upload rom for verification'); // Handles network errors
 
-                  xhrVerify.send(romFile);
+                  xhrVerify.send(romFile as XMLHttpRequestBodyInit);
                   
                 } else {
                   reject('Failed to upload rom to cartridge');
@@ -75,7 +73,7 @@ export const useLoadReflashRom = () => {
 
               xhr.onerror = () => reject('Failed to upload rom to cartridge'); // Handles network errors
 
-              xhr.send(romFile);
+              xhr.send(romFile as XMLHttpRequestBodyInit);
           }
       };
       reader.readAsArrayBuffer(fetchProps.romFile);
@@ -91,4 +89,3 @@ export const useLoadReflashRom = () => {
 
   return { data, isLoading, error, execute, progress };
 };
-

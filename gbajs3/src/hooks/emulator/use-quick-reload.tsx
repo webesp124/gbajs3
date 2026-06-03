@@ -13,19 +13,13 @@ export const useQuickReload = () => {
     emulatorGameNameLocalStorageKey
   );
 
-  const quickReload = useCallback(() => {
-    if (isRunning) {
-      emulator?.quickReload();
-    } else if (emulator?.getCurrentGameName()) {
-      const isSuccessfulRun = runGame(
-        emulator.filePaths().gamePath + '/' + emulator.getCurrentGameName()
-      );
-      setIsRunning(!!isSuccessfulRun);
-    } else if (storedGameName) {
-      const isSuccessfulRun = runGame(storedGameName);
-      setIsRunning(!!isSuccessfulRun);
-    }
-  }, [emulator, isRunning, setIsRunning, runGame, storedGameName]);
+  const gameName = emulator?.getCurrentGameName() ?? storedGameName;
+  const isQuickReloadAvailable = !!emulator && (isRunning || !!gameName);
 
-  return quickReload;
+  const quickReload = useCallback(() => {
+    if (isRunning) emulator?.quickReload();
+    else if (gameName) setIsRunning(runGame(gameName));
+  }, [emulator, isRunning, setIsRunning, runGame, gameName]);
+
+  return { quickReload, isQuickReloadAvailable };
 };

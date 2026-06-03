@@ -6,6 +6,7 @@ import { UploadPublicExternalRomsModal } from './upload-public-external-roms.tsx
 import { testRomLocation } from '../../../test/mocks/handlers.ts';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
+import * as addCallbackHooks from '../../hooks/emulator/use-add-callbacks.tsx';
 import * as runGameHooks from '../../hooks/emulator/use-run-game.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
@@ -14,29 +15,37 @@ describe('<UploadPublicExternalRomsModal />', () => {
   it('uploads rom from external url', async () => {
     const runGameSpy = vi.fn(() => true);
     const onLoadOrDismissSpy = vi.fn();
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const uploadRomSpy: (file: File, cb?: () => void) => void = vi.fn(
-      (_file, cb) => cb && cb()
+      (_file: File, cb?: () => void) => cb?.()
     );
+    const syncActionIfEnabledSpy = vi.fn();
 
     const {
       useEmulatorContext: originalEmulator,
       useModalContext: originalModal
     } = await vi.importActual<typeof contextHooks>('../../hooks/context.tsx');
 
+    const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+      typeof addCallbackHooks
+    >('../../hooks/emulator/use-add-callbacks.tsx');
+
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...originalModal(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       ...originalEmulator(),
       emulator: {
         uploadRom: uploadRomSpy,
-        filePaths: () => ({
-          gamePath: '/games'
-        })
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
+    }));
+
+    vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+      ...originalCallbacks(),
+      syncActionIfEnabled: syncActionIfEnabledSpy
     }));
 
     vi.spyOn(runGameHooks, 'useRunGame').mockReturnValue(runGameSpy);
@@ -66,22 +75,20 @@ describe('<UploadPublicExternalRomsModal />', () => {
     );
 
     expect(uploadRomSpy).toHaveBeenCalledOnce();
-
+    expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
     expect(runGameSpy).toHaveBeenCalledOnce();
-    expect(runGameSpy).toHaveBeenCalledWith('/games/good_rom.gba');
+    expect(runGameSpy).toHaveBeenCalledWith('good_rom.gba');
 
     expect(onLoadOrDismissSpy).toHaveBeenCalledOnce();
     expect(onLoadOrDismissSpy).toHaveBeenCalledWith('loaded');
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-
-    expect(await screen.findByText('Upload complete!')).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 
   it('renders external rom error', async () => {
     const runGameSpy = vi.fn(() => true);
     const onLoadOrDismissSpy = vi.fn();
     const uploadRomSpy: (file: File, cb?: () => void) => void = vi.fn(
-      (_file, cb) => cb && cb()
+      (_file: File, cb?: () => void) => cb?.()
     );
 
     const { useEmulatorContext: originalEmulator } = await vi.importActual<
@@ -92,9 +99,7 @@ describe('<UploadPublicExternalRomsModal />', () => {
       ...originalEmulator(),
       emulator: {
         uploadRom: uploadRomSpy,
-        filePaths: () => ({
-          gamePath: '/games'
-        })
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
     }));
 
@@ -135,14 +140,14 @@ describe('<UploadPublicExternalRomsModal />', () => {
 
   it('temporarily dismisses modal', async () => {
     const onLoadOrDismissSpy = vi.fn();
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(
@@ -161,19 +166,19 @@ describe('<UploadPublicExternalRomsModal />', () => {
 
     expect(onLoadOrDismissSpy).toHaveBeenCalledOnce();
     expect(onLoadOrDismissSpy).toHaveBeenCalledWith('temporarily-dismissed');
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 
   it('closes modal using the permanently dismiss button', async () => {
     const onLoadOrDismissSpy = vi.fn();
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(
@@ -193,6 +198,6 @@ describe('<UploadPublicExternalRomsModal />', () => {
     // marks rom as skipped
     expect(onLoadOrDismissSpy).toHaveBeenCalledOnce();
     expect(onLoadOrDismissSpy).toHaveBeenCalledWith('skipped');
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

@@ -1,7 +1,11 @@
+import jwt from 'jsonwebtoken';
 import { HttpResponse, delay, http } from 'msw';
 
 export const gbaServerLocationPlaceholder = 'https://server_location.test';
 export const testRomLocation = 'https://rom_location.test';
+
+const generateMockJwt = () =>
+  jwt.sign({}, 'test-fake-key', { expiresIn: '1s' });
 
 export const handlers = [
   http.post(`${gbaServerLocationPlaceholder}/api/tokens/refresh`, () => {
@@ -23,7 +27,7 @@ export const handlers = [
       const romName = url.searchParams.get('rom');
 
       if (romName) {
-        await delay();
+        await delay(100);
 
         return new HttpResponse(`test ${romName} rom`, {
           headers: {
@@ -47,7 +51,7 @@ export const handlers = [
       const saveName = url.searchParams.get('save');
 
       if (saveName) {
-        await delay();
+        await delay(100);
 
         return new HttpResponse(`test ${saveName} save`, {
           headers: {
@@ -71,10 +75,10 @@ export const handlers = [
         data.username?.startsWith('valid') &&
         data.password?.startsWith('valid');
 
-      await delay();
+      await delay(100);
 
       if (isValidUser) {
-        return HttpResponse.json('some token', {
+        return HttpResponse.json(generateMockJwt(), {
           status: 200
         });
       } else {
@@ -90,9 +94,9 @@ export const handlers = [
       const rom = formData.get('rom') as File;
       const romName = rom.name;
 
-      await delay();
+      await delay(100);
 
-      return new HttpResponse(null, { status: romName == '400' ? 400 : 200 });
+      return new HttpResponse(null, { status: romName === '400' ? 400 : 200 });
     }
   ),
 
@@ -103,14 +107,14 @@ export const handlers = [
       const save = formData.get('save') as File;
       const saveName = save.name;
 
-      await delay();
+      await delay(100);
 
-      return new HttpResponse(null, { status: saveName == '400' ? 400 : 200 });
+      return new HttpResponse(null, { status: saveName === '400' ? 400 : 200 });
     }
   ),
 
   http.get(`${testRomLocation}/good_rom.gba`, async () => {
-    await delay();
+    await delay(100);
 
     return new HttpResponse(`test external rom`, {
       headers: {
@@ -120,7 +124,7 @@ export const handlers = [
   }),
 
   http.get(`${testRomLocation}/bad_rom.gba`, async () => {
-    await delay();
+    await delay(100);
 
     return new HttpResponse(null, { status: 400 });
   })

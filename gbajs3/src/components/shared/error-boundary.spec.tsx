@@ -1,16 +1,28 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppErrorBoundary } from './error-boundary.tsx';
+import { renderWithContext } from '../../../test/render-with-context.tsx';
 
 const ThrowError = () => {
   throw new Error('A test error');
 };
 
+const ThrowEmptyError = () => {
+  const e = new Error();
+  e.stack = undefined;
+  throw e;
+};
+
+const ThrowNonErrorObject = () => {
+  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  throw 'A test error';
+};
+
 describe('<AppErrorBoundary/>', () => {
-  it('renders children', async () => {
-    render(
+  it('renders children', () => {
+    renderWithContext(
       <AppErrorBoundary>
         <p>Everything is fine</p>
       </AppErrorBoundary>
@@ -19,9 +31,11 @@ describe('<AppErrorBoundary/>', () => {
   });
 
   it('renders fallback on uncaught error', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
 
-    render(
+    renderWithContext(
       <AppErrorBoundary>
         <ThrowError />
         <p>Everything is fine</p>
@@ -36,11 +50,13 @@ describe('<AppErrorBoundary/>', () => {
 
 describe('fallbackRender', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
   });
 
   it('renders styled fallback', () => {
-    render(
+    renderWithContext(
       <AppErrorBoundary>
         <ThrowError />
       </AppErrorBoundary>
@@ -59,11 +75,16 @@ describe('fallbackRender', () => {
     expect(screen.getByText('Copy trace')).toBeVisible();
     expect(screen.getByText('Create issue')).toBeVisible();
     expect(screen.getByText('Dismiss and reset')).toBeVisible();
+
+    expect(screen.getByTestId('fallback-renderer')).toMatchSnapshot();
   });
 
-  it('copies clipboard text', async () => {
+  it('copies error stack clipboard', async () => {
     const user = userEvent.setup();
-    render(
+
+    const writeTextSpy = vi.spyOn(window.navigator.clipboard, 'writeText');
+
+    renderWithContext(
       <AppErrorBoundary>
         <ThrowError />
       </AppErrorBoundary>
@@ -73,7 +94,44 @@ describe('fallbackRender', () => {
 
     await user.click(screen.getByText('Copy trace'));
 
-    const copiedText = await window.navigator.clipboard.readText();
-    expect(copiedText).toContain('Error: A test error\n    at');
+    expect(writeTextSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Error: A test error\n    at')
+    );
+  });
+
+  it('copies error stack clipboard text fallback', async () => {
+    const user = userEvent.setup();
+
+    const writeTextSpy = vi.spyOn(window.navigator.clipboard, 'writeText');
+
+    renderWithContext(
+      <AppErrorBoundary>
+        <ThrowEmptyError />
+      </AppErrorBoundary>
+    );
+
+    expect(screen.getByText('Copy trace')).toBeVisible();
+
+    await user.click(screen.getByText('Copy trace'));
+
+    expect(writeTextSpy).toHaveBeenCalledWith('Error had empty stack');
+  });
+
+  it('copies clipboard text fallback', async () => {
+    const user = userEvent.setup();
+
+    const writeTextSpy = vi.spyOn(window.navigator.clipboard, 'writeText');
+
+    renderWithContext(
+      <AppErrorBoundary>
+        <ThrowNonErrorObject />
+      </AppErrorBoundary>
+    );
+
+    expect(screen.getByText('Copy trace')).toBeVisible();
+
+    await user.click(screen.getByText('Copy trace'));
+
+    expect(writeTextSpy).toHaveBeenCalledWith('No stack available');
   });
 });

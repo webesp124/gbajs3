@@ -3,38 +3,35 @@ import { userEvent } from '@testing-library/user-event';
 import * as toast from 'react-hot-toast';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { saveStateSlotLocalStorageKey } from './consts.tsx';
+import { saveStateSlotsLocalStorageKey } from './consts.tsx';
 import { VirtualControls } from './virtual-controls.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import { GbaDarkTheme } from '../../context/theme/theme.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
+import * as addCallbackHooks from '../../hooks/emulator/use-add-callbacks.tsx';
 import * as quickReloadHooks from '../../hooks/emulator/use-quick-reload.tsx';
-import { UploadSaveToServerModal } from '../modals/upload-save-to-server.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
-const mockProps = {
-  additionalData: {},
-  esp32IP: '192.168.1.1',
-};
-
 describe('<VirtualControls />', () => {
   beforeEach(async () => {
-    const { useLayoutContext: original } = await vi.importActual<
+    const { useInitialBoundsContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
-    vi.spyOn(contextHooks, 'useLayoutContext').mockImplementation(() => ({
-      ...original(),
-      layouts: {
-        ...original().layouts,
-        controlPanel: { initialBounds: { left: 0, bottom: 0 } as DOMRect }
-      }
-    }));
+    vi.spyOn(contextHooks, 'useInitialBoundsContext').mockImplementation(
+      () => ({
+        ...original(),
+        initialBounds: {
+          controlPanel: { left: 0, bottom: 0 } as DOMRect,
+          screen: { left: 0, bottom: 0 } as DOMRect
+        }
+      })
+    );
   });
 
   it('renders opad and default virtual controls on mobile', () => {
-    renderWithContext(<VirtualControls {...mockProps} />);
+    renderWithContext(<VirtualControls />);
 
     expect(screen.getByLabelText('A Button')).toBeVisible();
     expect(screen.getByLabelText('B Button')).toBeVisible();
@@ -49,15 +46,25 @@ describe('<VirtualControls />', () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
       matches: query === GbaDarkTheme.isLargerThanPhone,
       media: '',
-      addListener: () => {},
-      removeListener: () => {},
-      onchange: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
+      addListener: () => {
+        /* empty */
+      },
+      removeListener: () => {
+        /* empty */
+      },
+      onchange: () => {
+        /* empty */
+      },
+      addEventListener: () => {
+        /* empty */
+      },
+      removeEventListener: () => {
+        /* empty */
+      },
       dispatchEvent: () => true
     }));
 
-    renderWithContext(<VirtualControls {...mockProps} />);
+    renderWithContext(<VirtualControls />);
 
     expect(screen.queryByLabelText('A Button')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('B Button')).not.toBeInTheDocument();
@@ -73,15 +80,25 @@ describe('<VirtualControls />', () => {
       vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
         matches: query === GbaDarkTheme.isLargerThanPhone,
         media: '',
-        addListener: () => {},
-        removeListener: () => {},
-        onchange: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
+        addListener: () => {
+          /* empty */
+        },
+        removeListener: () => {
+          /* empty */
+        },
+        onchange: () => {
+          /* empty */
+        },
+        addEventListener: () => {
+          /* empty */
+        },
+        removeEventListener: () => {
+          /* empty */
+        },
         dispatchEvent: () => true
       }));
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       expect(
         screen.queryByLabelText('Quickreload Button')
@@ -97,6 +114,15 @@ describe('<VirtualControls />', () => {
       ).not.toBeInTheDocument();
     });
 
+    it('renders utility virtual controls as disabled while emulator is loading', () => {
+      renderWithContext(<VirtualControls />);
+
+      expect(screen.getByLabelText('Quickreload Button')).toBeDisabled();
+      expect(screen.getByLabelText('Uploadsave Button')).toBeDisabled();
+      expect(screen.getByLabelText('Loadstate Button')).toBeDisabled();
+      expect(screen.getByLabelText('Savestate Button')).toBeDisabled();
+    });
+
     it('quick reloads game', async () => {
       const quickReloadSpy: () => void = vi.fn();
       const { useEmulatorContext: original } = await vi.importActual<
@@ -106,17 +132,19 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          getCurrentGameName: () => 'some_rom.gba'
+          getCurrentGameName: () => 'some_rom.gba',
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
-      vi.spyOn(quickReloadHooks, 'useQuickReload').mockReturnValue(
-        quickReloadSpy
-      );
+      vi.spyOn(quickReloadHooks, 'useQuickReload').mockImplementation(() => ({
+        quickReload: quickReloadSpy,
+        isQuickReloadAvailable: true
+      }));
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Quickreload Button'));
 
@@ -133,32 +161,34 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          getCurrentGameName: () => undefined
+          getCurrentGameName: () => undefined,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
-      vi.spyOn(quickReloadHooks, 'useQuickReload').mockReturnValue(
-        quickReloadSpy
-      );
+      vi.spyOn(quickReloadHooks, 'useQuickReload').mockImplementation(() => ({
+        quickReload: quickReloadSpy,
+        isQuickReloadAvailable: false
+      }));
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Quickreload Button'));
 
       expect(quickReloadSpy).toHaveBeenCalledOnce();
       expect(toastErrorSpy).toHaveBeenCalledWith(
         'Load a game to quick reload',
-        { id: expect.anything() }
+        { id: expect.any(String) }
       );
     });
 
     it('upload save opens modal if authenticated and running a game', async () => {
-      const setIsModalOpenSpy = vi.fn();
-      const setModalContextSpy = vi.fn();
+      const openModalSpy = vi.fn();
       const {
         useAuthContext: originalAuth,
+        useEmulatorContext: originalEmulator,
         useModalContext: originalContext,
         useRunningContext: originalRunning
       } = await vi.importActual<typeof contextHooks>('../../hooks/context.tsx');
@@ -173,48 +203,60 @@ describe('<VirtualControls />', () => {
         isRunning: true
       }));
 
-      vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-        ...originalContext(),
-        setModalContent: setModalContextSpy,
-        setIsModalOpen: setIsModalOpenSpy
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...originalEmulator(),
+        emulator: {
+          getCurrentAutoSaveStatePath: () => null,
+          getCurrentGameName: () => 'some_rom.gba'
+        } as GBAEmulator
       }));
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
+        ...originalContext(),
+        openModal: openModalSpy
+      }));
+
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Uploadsave Button'));
 
-      expect(setModalContextSpy).toHaveBeenCalledWith(
-        <UploadSaveToServerModal />
-      );
-      expect(setIsModalOpenSpy).toHaveBeenCalledWith(true);
+      expect(openModalSpy).toHaveBeenCalledWith({
+        type: 'uploadSaveToServer'
+      });
     });
 
     it('upload save renders error toast', async () => {
-      const setIsModalOpenSpy = vi.fn();
-      const setModalContextSpy = vi.fn();
+      const openModalSpy = vi.fn();
 
-      const { useModalContext: original } = await vi.importActual<
-        typeof contextHooks
-      >('../../hooks/context.tsx');
+      const {
+        useModalContext: original,
+        useEmulatorContext: originalEmulator
+      } = await vi.importActual<typeof contextHooks>('../../hooks/context.tsx');
 
       vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
         ...original(),
-        setModalContent: setModalContextSpy,
-        setIsModalOpen: setIsModalOpenSpy
+        openModal: openModalSpy
+      }));
+
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...originalEmulator(),
+        emulator: {
+          getCurrentAutoSaveStatePath: () => null,
+          getCurrentGameName: () => undefined
+        } as GBAEmulator
       }));
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Uploadsave Button'));
 
       expect(toastErrorSpy).toHaveBeenCalledWith(
         'Please log in and load a game',
-        { id: expect.anything() }
+        { id: expect.any(String) }
       );
-      expect(setModalContextSpy).not.toHaveBeenCalled();
-      expect(setIsModalOpenSpy).not.toHaveBeenCalled();
+      expect(openModalSpy).not.toHaveBeenCalled();
     });
 
     it('loads save state', async () => {
@@ -226,22 +268,24 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          loadSaveState: loadSaveStateSpy
+          loadSaveState: loadSaveStateSpy,
+          getCurrentGameName: () => 'some_rom.gba',
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
       const toastSuccessSpy = vi.spyOn(toast.default, 'success');
 
-      localStorage.setItem(saveStateSlotLocalStorageKey, '2');
+      localStorage.setItem(saveStateSlotsLocalStorageKey, '{"some_rom.gba":2}');
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Loadstate Button'));
 
       expect(loadSaveStateSpy).toHaveBeenCalledOnce();
       expect(loadSaveStateSpy).toHaveBeenCalledWith(2);
       expect(toastSuccessSpy).toHaveBeenCalledWith('Loaded slot: 2', {
-        id: expect.anything()
+        id: expect.any(String)
       });
     });
 
@@ -254,27 +298,27 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          loadSaveState: loadSaveStateSpy
+          loadSaveState: loadSaveStateSpy,
+          getCurrentGameName: () => 'some_rom.gba',
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      localStorage.setItem(saveStateSlotLocalStorageKey, '2');
-
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Loadstate Button'));
 
       expect(loadSaveStateSpy).toHaveBeenCalledOnce();
-      expect(loadSaveStateSpy).toHaveBeenCalledWith(2);
-      expect(toastErrorSpy).toHaveBeenCalledWith('Failed to load slot: 2', {
-        id: expect.anything()
+      expect(loadSaveStateSpy).toHaveBeenCalledWith(0);
+      expect(toastErrorSpy).toHaveBeenCalledWith('Failed to load slot: 0', {
+        id: expect.any(String)
       });
     });
 
-    it('creates save state', async () => {
-      const createSaveStateSpy: (slot: number) => boolean = vi.fn(() => true);
+    it('load save state renders no game toast', async () => {
+      const loadSaveStateSpy: (slot: number) => boolean = vi.fn(() => false);
       const { useEmulatorContext: original } = await vi.importActual<
         typeof contextHooks
       >('../../hooks/context.tsx');
@@ -282,26 +326,106 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          createSaveState: createSaveStateSpy
+          loadSaveState: loadSaveStateSpy,
+          getCurrentGameName: () => undefined,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
+      }));
+
+      const toastErrorSpy = vi.spyOn(toast.default, 'error');
+
+      renderWithContext(<VirtualControls />);
+
+      await userEvent.click(screen.getByLabelText('Loadstate Button'));
+
+      expect(loadSaveStateSpy).not.toHaveBeenCalled();
+      expect(toastErrorSpy).toHaveBeenCalledWith(
+        'Load a game to load state slots',
+        {
+          id: expect.any(String)
+        }
+      );
+    });
+
+    it('creates save state', async () => {
+      const createSaveStateSpy: (slot: number) => boolean = vi.fn(() => true);
+      const syncActionIfEnabledSpy = vi.fn();
+      const { useEmulatorContext: original } = await vi.importActual<
+        typeof contextHooks
+      >('../../hooks/context.tsx');
+      const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+        typeof addCallbackHooks
+      >('../../hooks/emulator/use-add-callbacks.tsx');
+
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...original(),
+        emulator: {
+          createSaveState: createSaveStateSpy,
+          getCurrentGameName: () => 'some_rom.gba',
+          getCurrentAutoSaveStatePath: () => null
+        } as GBAEmulator
+      }));
+
+      vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+        ...originalCallbacks(),
+        syncActionIfEnabled: syncActionIfEnabledSpy
       }));
 
       const toastSuccessSpy = vi.spyOn(toast.default, 'success');
 
-      localStorage.setItem(saveStateSlotLocalStorageKey, '2');
+      localStorage.setItem(saveStateSlotsLocalStorageKey, '{"some_rom.gba":2}');
 
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Savestate Button'));
 
       expect(createSaveStateSpy).toHaveBeenCalledOnce();
       expect(createSaveStateSpy).toHaveBeenCalledWith(2);
+      expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
       expect(toastSuccessSpy).toHaveBeenCalledWith('Saved slot: 2', {
-        id: expect.anything()
+        id: expect.any(String)
       });
     });
 
     it('create save state renders error toast', async () => {
+      const createSaveStateSpy: (slot: number) => boolean = vi.fn(() => false);
+      const syncActionIfEnabledSpy = vi.fn();
+      const { useEmulatorContext: original } = await vi.importActual<
+        typeof contextHooks
+      >('../../hooks/context.tsx');
+      const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+        typeof addCallbackHooks
+      >('../../hooks/emulator/use-add-callbacks.tsx');
+
+      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+        ...original(),
+        emulator: {
+          createSaveState: createSaveStateSpy,
+          getCurrentGameName: () => 'some_rom.gba',
+          getCurrentAutoSaveStatePath: () => null
+        } as GBAEmulator
+      }));
+
+      vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+        ...originalCallbacks(),
+        syncActionIfEnabled: syncActionIfEnabledSpy
+      }));
+
+      const toastErrorSpy = vi.spyOn(toast.default, 'error');
+
+      renderWithContext(<VirtualControls />);
+
+      await userEvent.click(screen.getByLabelText('Savestate Button'));
+
+      expect(createSaveStateSpy).toHaveBeenCalledOnce();
+      expect(createSaveStateSpy).toHaveBeenCalledWith(0);
+      expect(syncActionIfEnabledSpy).not.toHaveBeenCalled();
+      expect(toastErrorSpy).toHaveBeenCalledWith('Failed to save slot: 0', {
+        id: expect.any(String)
+      });
+    });
+
+    it('create save state renders no game toast', async () => {
       const createSaveStateSpy: (slot: number) => boolean = vi.fn(() => false);
       const { useEmulatorContext: original } = await vi.importActual<
         typeof contextHooks
@@ -310,23 +434,25 @@ describe('<VirtualControls />', () => {
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         ...original(),
         emulator: {
-          createSaveState: createSaveStateSpy
+          createSaveState: createSaveStateSpy,
+          getCurrentGameName: () => undefined,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
       const toastErrorSpy = vi.spyOn(toast.default, 'error');
 
-      localStorage.setItem(saveStateSlotLocalStorageKey, '2');
-
-      renderWithContext(<VirtualControls {...mockProps} />);
+      renderWithContext(<VirtualControls />);
 
       await userEvent.click(screen.getByLabelText('Savestate Button'));
 
-      expect(createSaveStateSpy).toHaveBeenCalledOnce();
-      expect(createSaveStateSpy).toHaveBeenCalledWith(2);
-      expect(toastErrorSpy).toHaveBeenCalledWith('Failed to save slot: 2', {
-        id: expect.anything()
-      });
+      expect(createSaveStateSpy).not.toHaveBeenCalled();
+      expect(toastErrorSpy).toHaveBeenCalledWith(
+        'Load a game to save state slots',
+        {
+          id: expect.any(String)
+        }
+      );
     });
   });
 });

@@ -5,20 +5,22 @@ import {
   useAuthContext,
   useDragContext,
   useEmulatorContext,
+  useInitialBoundsContext,
   useLayoutContext,
   useModalContext,
   useResizeContext,
   useRunningContext
 } from './context.tsx';
-import { AuthContext } from '../context/auth/auth.tsx';
-import { DragContext } from '../context/emulator/drag.tsx';
-import { EmulatorContext } from '../context/emulator/emulator.tsx';
-import { ResizeContext } from '../context/emulator/resize.tsx';
-import { RunningContext } from '../context/emulator/running.tsx';
-import { LayoutContext } from '../context/layout/layout.tsx';
-import { ModalContext } from '../context/modal/modal.tsx';
+import { AuthContext } from '../context/auth/auth-context.tsx';
+import { DragContext } from '../context/emulator/contexts/drag-context.tsx';
+import { EmulatorContext } from '../context/emulator/contexts/emulator-context.tsx';
+import { ResizeContext } from '../context/emulator/contexts/resize-context.tsx';
+import { RunningContext } from '../context/emulator/contexts/running-context.tsx';
+import { InitialBoundsContext } from '../context/initial-bounds/initial-bounds-context.tsx';
+import { LayoutContext } from '../context/layout/layout-context.tsx';
+import { ModalContext } from '../context/modal/modal-context.tsx';
 
-import type * as authContextExports from '../context/auth/auth.tsx';
+import type * as authContextExports from '../context/auth/auth-context.tsx';
 
 describe('useContext hooks', () => {
   beforeEach(() => {
@@ -27,6 +29,7 @@ describe('useContext hooks', () => {
 
   const contextHooks = [
     [useAuthContext, AuthContext.displayName],
+    [useInitialBoundsContext, InitialBoundsContext.displayName],
     [useLayoutContext, LayoutContext.displayName],
     [useModalContext, ModalContext.displayName],
     [useEmulatorContext, EmulatorContext.displayName],
@@ -39,7 +42,9 @@ describe('useContext hooks', () => {
     'throws error when used outside of the proper provider',
     (contextHook, contextName) => {
       // silence console errors as they are expected
-      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {
+        /* empty */
+      });
 
       expect(() => {
         renderHook(() => contextHook());
@@ -51,12 +56,14 @@ describe('useContext hooks', () => {
 
   it('throws error with default message if no context display name', async () => {
     // silence console errors as they are expected
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
 
-    vi.doMock('../context/auth/auth.tsx', async () => {
+    vi.doMock('../context/auth/auth-context.tsx', async () => {
       const { AuthContext: original, ...rest } = await vi.importActual<
         typeof authContextExports
-      >('../context/auth/auth.tsx');
+      >('../context/auth/auth-context.tsx');
 
       return {
         ...rest,

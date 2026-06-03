@@ -5,11 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { LoadSaveModal } from './load-save.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
+import * as addCallbackHooks from '../../hooks/emulator/use-add-callbacks.tsx';
 import * as listSaveHooks from '../../hooks/use-list-saves.tsx';
 import * as loadSaveHooks from '../../hooks/use-load-save.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
+import type { SaveListResponse } from '../../hooks/use-list-saves.tsx';
+import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 
 describe('<LoadSaveModal />', () => {
   it('renders with list of saves from the server', async () => {
@@ -21,19 +23,26 @@ describe('<LoadSaveModal />', () => {
 
   it('loads save from the server', async () => {
     const uploadSaveOrSaveStateSpy: (file: File, cb?: () => void) => void =
-      vi.fn((_file, cb) => cb && cb());
+      vi.fn((_file: File, cb?: () => void) => cb?.());
+    const syncActionIfEnabledSpy = vi.fn();
     const { useEmulatorContext: originalEmulator } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
+    const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+      typeof addCallbackHooks
+    >('../../hooks/emulator/use-add-callbacks.tsx');
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       ...originalEmulator(),
       emulator: {
         uploadSaveOrSaveState: uploadSaveOrSaveStateSpy,
-        filePaths: () => ({
-          savePath: '/saves'
-        })
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
+    }));
+
+    vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+      ...originalCallbacks(),
+      syncActionIfEnabled: syncActionIfEnabledSpy
     }));
 
     renderWithContext(<LoadSaveModal />);
@@ -49,15 +58,15 @@ describe('<LoadSaveModal />', () => {
     await waitForElementToBeRemoved(screen.queryByText(/Loading save:/));
 
     expect(uploadSaveOrSaveStateSpy).toHaveBeenCalledOnce();
+    expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
   });
 
   it('renders message when there are no saves', () => {
     vi.spyOn(listSaveHooks, 'useListSaves').mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: undefined,
-      execute: vi.fn()
-    });
+      data: [] as string[],
+      isPending: false,
+      error: null
+    } as UseQueryResult<SaveListResponse>);
 
     renderWithContext(<LoadSaveModal />);
 
@@ -71,10 +80,9 @@ describe('<LoadSaveModal />', () => {
   it('renders error message failure to list saves', () => {
     vi.spyOn(listSaveHooks, 'useListSaves').mockReturnValue({
       data: undefined,
-      isLoading: false,
-      error: 'some error',
-      execute: vi.fn()
-    });
+      isPending: false,
+      error: new Error('Fetch failed')
+    } as UseQueryResult<SaveListResponse>);
 
     renderWithContext(<LoadSaveModal />);
 
@@ -83,11 +91,10 @@ describe('<LoadSaveModal />', () => {
 
   it('renders error message failure to load save', () => {
     vi.spyOn(loadSaveHooks, 'useLoadSave').mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: 'some error',
-      execute: vi.fn()
-    });
+      data: undefined,
+      isPending: false,
+      error: new Error('some error')
+    } as UseMutationResult<File, Error, loadSaveHooks.LoadSaveProps>);
 
     renderWithContext(<LoadSaveModal />);
 
@@ -95,14 +102,14 @@ describe('<LoadSaveModal />', () => {
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<LoadSaveModal />);
@@ -112,47 +119,6 @@ describe('<LoadSaveModal />', () => {
     expect(closeButton).toBeInTheDocument();
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<LoadSaveModal />);
-
-    expect(
-      await screen.findByText(
-        'Use this area to load save files from the server. Once the list has loaded, click a row to load the save.'
-      )
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('You may load multiple save files in a row!')
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText(
-        'Use this area to load save files from the server. Once the list has loaded, click a row to load the save.'
-      )
-    ).toBeVisible();
-    expect(
-      screen.getByText('You may load multiple save files in a row!')
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

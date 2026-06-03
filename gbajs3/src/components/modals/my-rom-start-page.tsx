@@ -27,7 +27,7 @@ type RomLoadingIndicatorProps = {
   progress: number;
 };
 
-type MyRomStartPageProps = {
+export type MyRomStartPageProps = {
   additionalData: any;
   setAdditionalData: (data: any) => void;
   gameData: any;
@@ -153,7 +153,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   }) => {
   
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
 
   const {
@@ -196,7 +196,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           emulator?.filePaths().gamePath + '/' + externalRomFile.name
         );
         if (hasSucceeded) {
-          setIsModalOpen(false);
+          closeModal();
           if(!isLargerThanPhone)
             setIsSideMenuExpanded(false);
         }
@@ -207,7 +207,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     shouldUploadExternalRom,
     externalRomFile,
     emulator,
-    setIsModalOpen,
+    closeModal,
     runGame
   ]);
 
@@ -281,7 +281,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     if(localRoms && localRoms.includes(romName)){
       console.log("rom exists locally");
       runGame(emulator?.filePaths().gamePath + '/' + romName);
-      setIsModalOpen(false);
+      closeModal();
       setIsLoading(false);
       if(!isLargerThanPhone)
         setIsSideMenuExpanded(false);
@@ -447,12 +447,12 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                   alt={`${additionalData.fullName} Cover`}
                 />
                 {gameData && gameData.is_gba && checksum1000String != additionalData.checksum1000 && (
-                  <Box mt={0} display="flex" flexDirection="column" alignItems="center">
+                  <Box sx={{ mt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Alert severity="error" variant="outlined" sx={{ width: '100%', maxWidth: 400, paddingTop: 0, paddingBottom: 0, fontSize: 28, "& .MuiAlert-icon": {
                           fontSize: 28,
                           paddingTop: "12px",
                         }, }}>
-                      <Typography variant="subtitle1" color="error" fontWeight="medium">
+                      <Typography variant="subtitle1" color="error" sx={{ fontWeight: 'medium' }}>
                         Checksum Mismatch
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -470,12 +470,12 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                   src={"./img/cover_img_missing.jpeg"}
                   alt={"Cover missing Image"}
                 />
-                <Box mt={0} display="flex" flexDirection="column" alignItems="center">
+                <Box sx={{ mt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Alert severity="error" variant="outlined" sx={{ width: '100%', maxWidth: 400, paddingTop: 0, paddingBottom: 0, fontSize: 28, "& .MuiAlert-icon": {
                           fontSize: 28,
                           paddingTop: "12px",
                         }, }}>
-                      <Typography variant="subtitle1" color="error" fontWeight="medium">
+                      <Typography variant="subtitle1" color="error" sx={{ fontWeight: 'medium' }}>
                         ROM Information Not Found
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -639,7 +639,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
           <Button
             variant="outlined"
             style={{ padding: '10px 20px 10px 20px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '5px' }}
-            onClick={() => setIsModalOpen(false)}
+            onClick={closeModal}
           >
             Close
           </Button>

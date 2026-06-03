@@ -2,6 +2,13 @@ name: Build Gbajs3
 
 on:
   workflow_call:
+    inputs:
+      upload_coverage:
+        type: boolean
+        default: false
+      compare_to_master:
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -12,15 +19,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: gbajs3
           sparse-checkout-cone-mode: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20.12.1
+          node-version: 24.14.0
 
       - name: Install dependencies
         run: |
@@ -34,6 +41,36 @@ jobs:
         run: |
           npm run lint
 
-      - name: Test
+      - name: Test/Coverage
         run: |
-          npm run test
+          npm run coverage -- --test-timeout=10000
+
+      - name: Upload Visualizer Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundle-stats
+          path: ./gbajs3/stats.html
+
+      - name: Download master baseline coverage artifact
+        if: ${{ inputs.compare_to_master }}
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          branch: master
+          event: push
+          workflow_conclusion: success
+          name: gbajs3-coverage
+          path: coverage-main
+
+      - name: Upload coverage artifact
+        if: ${{ inputs.upload_coverage }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: gbajs3-coverage
+          path: ./gbajs3/coverage/**
+
+      - name: Generate coverage report
+        uses: davelosert/vitest-coverage-report-action@v2.9.3
+        with:
+          working-directory: ./gbajs3
+          threshold-icons: "{0: '🔴', 70: '🟠', 85: '🟢'}"
+          json-summary-compare-path: ${{ inputs.compare_to_master && '../coverage-main/coverage-summary.json' || '' }}

@@ -1,0 +1,30 @@
+name: Close stale issues, PRs, and discussions
+
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  issues: write
+  pull-requests: write
+  discussions: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          stale-issue-message: 'This issue is stale because it has been open three weeks with no activity. Remove stale label or comment, otherwise this will close in 7 days.'
+          stale-pr-message: 'This pr is stale because it has been open three weeks with no activity. Remove stale label or comment, otherwise this will close in 7 days.'
+          days-before-stale: 21
+          exempt-issue-labels: 'enhancement,bug'
+
+      - uses: thenick775/stalesweeper@main
+        with:
+          message: 'This discussion has been closed due to inactivity, feel free to reopen if your problem has not been resolved.'
+          days-before-close: '28'
+          close-unanswered: 'true'
+          exempt-labels: 'enhancement,bug'

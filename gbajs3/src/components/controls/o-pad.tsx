@@ -1,3 +1,4 @@
+import { styled } from '@mui/material/styles';
 import {
   useCallback,
   useEffect,
@@ -6,7 +7,6 @@ import {
   type PointerEvent
 } from 'react';
 import Draggable from 'react-draggable';
-import { styled } from 'styled-components';
 
 import {
   useDragContext,
@@ -42,54 +42,71 @@ type KeyState = {
   RIGHT?: number;
 };
 
-const BackgroundContainer = styled.section<BackgroundContainerProps>`
+const BackgroundContainer = styled('section', {
+  shouldForwardProp: (propName) => propName !== '$areItemsDraggable'
+})<BackgroundContainerProps>`
   position: absolute;
-  background-color: red;
   border-radius: 50%;
   width: 12rem;
   height: 12rem;
-  background: ${({ theme }) => theme.pureBlack};
+  background: ${({ theme }) => theme.virtualControlSurface};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  backdrop-filter: blur(6px);
   border-color: ${({ $areItemsDraggable = false, theme }) =>
-    $areItemsDraggable ? theme.gbaThemeBlue : 'rgba(255, 255, 255, 0.9)'};
+    $areItemsDraggable ? theme.gbaThemeBlue : theme.virtualControlBorderSubtle};
   border-style: ${({ $areItemsDraggable = false }) =>
     $areItemsDraggable ? 'dashed' : 'solid'};
   border-width: 2px;
+  box-shadow: ${({ theme }) => theme.virtualControlShadow};
   z-index: 12;
 
-  ${({ $initialPosition = { top: '0', left: '0' } }) =>
-    `
-    top: ${$initialPosition.top};
-    left: ${$initialPosition.left};
-    `};
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    border: 1px solid ${({ theme }) => theme.virtualControlInnerBorder};
+  }
+
+  @media ${({ theme }) => theme.isMobileLandscape} {
+    background-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
 `;
 
-const CenterKnob = styled.div<CenterKnobProps>`
+const CenterKnob = styled('div')<CenterKnobProps>`
   position: absolute;
   height: 4rem;
   width: 4rem;
-  border: 2px solid ${({ theme }) => theme.gbaThemeBlue};
+  border: 1px solid ${({ theme }) => theme.virtualControlAccentBorderStrong};
   border-radius: 50%;
-  background-color: ${({ theme }) => theme.pureBlack};
-  transition: ${({ $isControlled = false }) =>
+  background: ${({ theme }) => theme.virtualControlSurfaceStrong};
+  box-shadow: ${({ theme }) => theme.virtualControlPressedShadow};
+  transition: ${({ $isControlled }) =>
     $isControlled ? `transform 0.3s ease-in-out` : `none`};
 
   &:before {
     position: absolute;
     content: '';
-    top: -0.8rem;
-    left: -0.8rem;
-    right: -0.8rem;
-    bottom: -0.8rem;
-    border: 0.8rem solid ${({ theme }) => theme.gbaThemeBlue}50;
+    top: -0.55rem;
+    left: -0.55rem;
+    right: -0.55rem;
+    bottom: -0.55rem;
+    border: 0.55rem solid ${({ theme }) => theme.virtualControlAccentHalo};
     border-radius: 50%;
+  }
+
+  @media ${({ theme }) => theme.isMobileLandscape} {
+    background-color: transparent;
+    box-shadow: none;
   }
 `;
 
-const DirectionArrow = styled.div`
+const DirectionArrow = styled('div')`
   width: 0;
   height: 0;
   border-style: solid;
@@ -97,37 +114,37 @@ const DirectionArrow = styled.div`
 `;
 
 const UpArrow = styled(DirectionArrow)`
-  border-width: 0 15px 25px 15px;
-  border-color: transparent transparent ${({ theme }) => theme.pureWhite}
-    transparent;
-  top: 10px;
+  border-width: 0 12px 18px 12px;
+  border-color: transparent transparent
+    ${({ theme }) => theme.virtualControlArrow} transparent;
+  top: 16px;
 `;
 
 const DownArrow = styled(DirectionArrow)`
-  border-width: 25px 15px 0 15px;
-  border-color: ${({ theme }) => theme.pureWhite} transparent transparent
-    transparent;
-  bottom: 10px;
+  border-width: 18px 12px 0 12px;
+  border-color: ${({ theme }) => theme.virtualControlArrow} transparent
+    transparent transparent;
+  bottom: 16px;
 `;
 
 const LeftArrow = styled(DirectionArrow)`
-  border-width: 15px 25px 15px 0;
-  border-color: transparent ${({ theme }) => theme.pureWhite} transparent
-    transparent;
-  left: 10px;
+  border-width: 12px 18px 12px 0;
+  border-color: transparent ${({ theme }) => theme.virtualControlArrow}
+    transparent transparent;
+  left: 16px;
 `;
 
 const RightArrow = styled(DirectionArrow)`
-  border-width: 15px 0 15px 25px;
+  border-width: 12px 0 12px 18px;
   border-color: transparent transparent transparent
-    ${({ theme }) => theme.pureWhite};
-  right: 10px;
+    ${({ theme }) => theme.virtualControlArrow};
+  right: 16px;
 `;
 
 export const OPad = ({ initialPosition }: OPadProps) => {
   const { emulator } = useEmulatorContext();
   const { areItemsDraggable } = useDragContext();
-  const { layouts, setLayout } = useLayoutContext();
+  const { getLayout, setLayout } = useLayoutContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isControlled, setIsControlled] = useState(true);
   const containerDragRef = useRef<HTMLDivElement>(null);
@@ -142,24 +159,20 @@ export const OPad = ({ initialPosition }: OPadProps) => {
     });
   }, [isKeyDown, emulator]);
 
-  const pressEmulatorArrow = useCallback(
-    (keyId: string, pointerId: number) =>
-      setIsKeyDown((prevState) => ({ ...prevState, [keyId]: pointerId })),
-    []
-  );
+  const pressEmulatorArrow = useCallback((keyId: string, pointerId: number) => {
+    setIsKeyDown((prevState) => ({ ...prevState, [keyId]: pointerId }));
+  }, []);
 
-  const unpressEmulatorArrow = useCallback(
-    (pointerId: number) =>
-      setIsKeyDown((prevState) =>
-        Object.fromEntries(
-          Object.entries(prevState).map(([key, value]) => [
-            key,
-            value === pointerId ? undefined : value
-          ])
-        )
-      ),
-    []
-  );
+  const unpressEmulatorArrow = useCallback((pointerId: number) => {
+    setIsKeyDown((prevState) =>
+      Object.fromEntries(
+        Object.entries(prevState).map(([key, value]) => [
+          key,
+          value === pointerId ? undefined : value
+        ])
+      )
+    );
+  }, []);
 
   const getKeyId = ({ x, y }: Position) => {
     // Rotate the x and y axis 45 degrees,
@@ -211,7 +224,7 @@ export const OPad = ({ initialPosition }: OPadProps) => {
 
       const keyId = getKeyId({ x, y });
 
-      if (keyId && !isKeyDown[keyId as keyof typeof isKeyDown]) {
+      if (keyId && !isKeyDown[keyId]) {
         unpressEmulatorArrow(event.pointerId);
         pressEmulatorArrow(keyId, event.pointerId);
       }
@@ -247,28 +260,38 @@ export const OPad = ({ initialPosition }: OPadProps) => {
     unpressEmulatorArrow(event.pointerId);
   };
 
-  const dragPosition = layouts?.oPad?.position ?? { x: 0, y: 0 };
+  const layout = getLayout('oPad');
+  const dragPosition = layout?.position ?? { x: 0, y: 0 };
+
+  const pointerEvents = !areItemsDraggable
+    ? {
+        onPointerDown: handlePointerDown,
+        onPointerMove: handlePointerMove,
+        onPointerUp: resetPosition,
+        onPointerCancel: resetPosition,
+        onPointerOut: resetPosition,
+        onPointerLeave: resetPosition
+      }
+    : undefined;
 
   return (
     <Draggable
       nodeRef={containerDragRef}
       disabled={!areItemsDraggable}
       position={dragPosition}
-      onStop={(_, data) =>
-        setLayout('oPad', { position: { x: data.x, y: data.y } })
-      }
+      onStop={(_, data) => {
+        setLayout('oPad', { position: { x: data.x, y: data.y } });
+      }}
     >
       <BackgroundContainer
         aria-label="O-Pad"
         ref={containerDragRef}
-        $initialPosition={initialPosition}
+        style={{
+          top: initialPosition?.top ?? '0',
+          left: initialPosition?.left ?? '0'
+        }}
         $areItemsDraggable={areItemsDraggable}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={resetPosition}
-        onPointerCancel={resetPosition}
-        onPointerOut={resetPosition}
-        onPointerLeave={resetPosition}
+        {...pointerEvents}
       >
         <Draggable disabled nodeRef={knobDragRef} position={position}>
           <CenterKnob ref={knobDragRef} $isControlled={isControlled} />

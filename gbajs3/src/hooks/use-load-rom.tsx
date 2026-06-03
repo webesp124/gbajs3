@@ -1,21 +1,21 @@
-import { useCallback } from 'react';
+import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
 
 import { useAuthContext } from './context.tsx';
-import { useAsyncData } from './use-async-data.tsx';
 
-type LoadRomProps = {
+export type LoadRomProps = {
   romName: string;
 };
 
-export const useLoadRom = () => {
+export const useLoadRom = (
+  options?: UseMutationOptions<File, Error, LoadRomProps>
+) => {
   const apiLocation = import.meta.env.VITE_GBA_SERVER_LOCATION;
   const { accessToken } = useAuthContext();
 
-  const executeLoadRom = useCallback(
-    async (fetchProps?: LoadRomProps) => {
-      const url = `${apiLocation}/api/rom/download?rom=${
-        fetchProps?.romName ?? ''
-      }`;
+  return useMutation<File, Error, LoadRomProps>({
+    mutationKey: ['loadRom', accessToken],
+    mutationFn: async (fetchProps) => {
+      const url = `${apiLocation}/api/rom/download?rom=${fetchProps.romName}`;
       const options: RequestInit = {
         method: 'GET',
         headers: {
@@ -31,17 +31,10 @@ export const useLoadRom = () => {
       }
 
       const blob = await res.blob();
-      const file = new File([blob], fetchProps?.romName ?? '');
+      const file = new File([blob], fetchProps.romName);
 
       return file;
     },
-    [apiLocation, accessToken]
-  );
-
-  const { data, isLoading, error, execute } = useAsyncData({
-    fetchFn: executeLoadRom,
-    clearDataOnLoad: true
+    ...options
   });
-
-  return { data, isLoading, error, execute };
 };

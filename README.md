@@ -1,12 +1,29 @@
 # gbajs3 -- A Browser Based Game Boy Advance Emulator
 
+<div>
+  <a href="https://github.com/thenick775/gbajs3/releases">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/thenick775/gbajs3">
+  </a>
+  <a href="https://github.com/thenick775/gbajs3/actions">
+    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/thenick775/gbajs3/protected.yml">
+  </a>
+  <a href="https://github.com/thenick775/gbajs3/wiki">
+    <img alt="WIKI" src="https://img.shields.io/badge/docs-WIKI-blue">
+  </a>
+  <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+  <a href="https://github.com/thenick775/gbajs3#contributors"><img alt="All Contributors" src="https://img.shields.io/github/all-contributors/thenick775/gbajs3?color=ee8449"></a>
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
+</div>
+
+<br/>
+
 This project is a Game Boy Advance emulator that is freely licensed and works in any modern browser without plugins.
 
 It began as a re-skin of the [gbajs2](https://github.com/andychase/gbajs2) fork by andychase, but now supports the [mGBA wasm](https://github.com/thenick775/mgba/tree/feature/wasm) core through the use of emscripten, for a feature rich user experience.
 
 This project was driven specifically by a need to play modern GBA rom hacks outside of desktop applications, without side loading or building through xcode. It is designed as an all-in-one mono repo containing the backend services and frontend services.
 
-Use it online! <https://gba.nicholas-vancise.dev>
+[Try it online!](<https://gba.nicholas-vancise.dev?romURL=https://raw.githubusercontent.com/vbaemulator/GBA-Roms/main/Pokemon%20-%20Ruby%20Version%20(USA%2C%20Europe)%20(Rev%202).zip>)
 
 Do not attempt to log into the server unless you are the server owner or an approved user, your IP may be banned.
 
@@ -14,25 +31,31 @@ Do not attempt to log into the server unless you are the server owner or an appr
 
 - Golang server for logged-in user support
 - Nginx server for gbajs3 content
-- Fast Forward
-- Re-mappable Keyboard Bindings
-- Virtual Controls (Desktop/Mobile)
+- Fast Forward support
+- Slowdown support
+- Re-mappable keyboard bindings
+- Virtual controls (Desktop/Mobile)
 - Movable desktop canvas and controls
+- Control profiles
 - Mobile UI support
-- Offline PWA Support
+- Offline PWA support
 - Save state support
+- Auto save state support
 - Cheat code support
-- Core Support
-  - mGBA support (wasm based)
+- Soft patch support
+- Rewind support
+- Threading support
+- Core support
+  - mGBA (wasm based)
 - Admin UI
 - Postgres support
 - Persistent file system utilizing IndexedDB
-- Interactive Product Tour
-- Load public rom file from query string
+- Load public rom files from query string
+- Full import/export support
 
 ## Existing Feature List
 
-- Both cores support realtime clock
+- All cores support realtime clock
 - For additional mGBA features and information:
   - [compatibility list](https://wiki.gbatemp.net/wiki/MGBA)
   - [mGBA wasm fork Readme](https://github.com/thenick775/mgba/tree/feature/wasm)
@@ -44,17 +67,23 @@ Do not attempt to log into the server unless you are the server owner or an appr
 - Server enhancements
   - request an account feature suite
   - s3 backed file storage
-- SkyEmu secondary core (tentative)
+- Additional core support
+  - NanoBoyAdvance (secondary core)
+  - SkyEmu (secondary core)
 
 ## Sample Screenshots
 
 - Example Desktop
 
-<img src="./readme-graphics/gbajs3-desktop-v3.png">
+<img src="./readme-graphics/gbajs3-desktop-v6.png">
 
 - Example Mobile
 
-<img src="./readme-graphics/gbajs3-mobile-portrait-v3.png" width="400px">
+<img src="./readme-graphics/gbajs3-mobile-portrait-v6.png" width="400px">
+
+<img src="./readme-graphics/gbajs3-mobile-landscape-v3.png">
+
+All control positions can be modified if the default layouts do not suit your device!
 
 - Example Admin
 
@@ -63,6 +92,7 @@ Do not attempt to log into the server unless you are the server owner or an appr
 ## Getting Started
 
 - Local builds require [docker](https://www.docker.com)
+  - today, the project is only compatible with [docker compose v2](https://docs.docker.com/compose/releases/migrate/) and above
 
 - Run the bootstrap script and follow the interactive prompts:
 
@@ -71,11 +101,9 @@ Do not attempt to log into the server unless you are the server owner or an appr
   ```
 
 - The bootstrap script will do the following:
-
   - copy env files from the examples in all directories
   - create default local directories
-    - note: the database mount directory will be created by the container with the correct permissions
-  - generate a local test ssl certificate pair
+  - generate a local test ssl certificate pair with prompting from OpenSSL (if installed)
 
 - This script will also generate a top level `.env` file of the following format, merging all service specific env files and additional docker config:
 
@@ -112,21 +140,36 @@ Do not attempt to log into the server unless you are the server owner or an appr
 
   Leaving all default values in place will work for local development.
 
-- If your developing on a mac, you will need to share the bind mount location(s) manually, and ensure they have the correct permissions
+- If your developing on a mac, you will need to share the database bind mount location(s) manually, and ensure they have the correct permissions
 
   These settings are located in `Settings -> Resources -> File Sharing`
 
-- Build and run the docker containers:
+- Build and run the docker containers using compose:
 
   ```
   docker compose up;
   ```
 
+- Build and run the docker containers using swarm:
+
+  ```
+  # swarm does not build images by default
+  docker compose build;
+  # add all images to the stack except shepherd for local dev
+  docker stack deploy -c docker-compose.swarm.yaml -c ./auth/docker-compose.yaml -c ./admin/docker-compose.yaml -c ./postgres/docker-compose.yaml -c ./gbajs3/docker-compose.yaml gbajs3;
+  ```
+
 - Once docker has created the containers, the web server will be available at https://localhost
 
 - The Admin UI can be found at https://localhost/admin
+  - The default admin user credentials from the provided sample database dump are:
 
-  - The default password for all admin users is `admin`, **please log in to the admin portal and change the default passwords immediately**
+  ```
+  username: admin
+  password: admin
+  ```
+
+  **please modify the database dump or log in to the admin portal and change the default username/password immediately in hosted installations**
 
 - Golang api swagger UI can be found at https://localhost/api/documentation/
 
@@ -135,6 +178,37 @@ Do not attempt to log into the server unless you are the server owner or an appr
 ## Contributing
 
 Feel free to open discussions, issues, and pull requests. Contributions are welcome!
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://nicholas-vancise.dev/"><img src="https://avatars.githubusercontent.com/u/40526638?v=4?s=100" width="100px;" alt="Nicholas VanCise"/><br /><sub><b>Nicholas VanCise</b></sub></a><br /><a href="#maintenance-thenick775" title="Maintenance">🚧</a> <a href="https://github.com/thenick775/gbajs3/commits?author=thenick775" title="Code">💻</a> <a href="https://github.com/thenick775/gbajs3/pulls?q=is%3Apr+reviewed-by%3Athenick775" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/gutenye"><img src="https://avatars.githubusercontent.com/u/377544?v=4?s=100" width="100px;" alt="Guten"/><br /><sub><b>Guten</b></sub></a><br /><a href="https://github.com/thenick775/gbajs3/commits?author=gutenye" title="Code">💻</a> <a href="https://github.com/thenick775/gbajs3/issues?q=author%3Agutenye" title="Bug reports">🐛</a> <a href="#ideas-gutenye" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sonht-0555"><img src="https://avatars.githubusercontent.com/u/26568422?v=4?s=100" width="100px;" alt="Son Hoang Tuan"/><br /><sub><b>Son Hoang Tuan</b></sub></a><br /><a href="https://github.com/thenick775/gbajs3/issues?q=author%3Asonht-0555" title="Bug reports">🐛</a> <a href="#ideas-sonht-0555" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/hunter1026"><img src="https://avatars.githubusercontent.com/u/122758962?v=4?s=100" width="100px;" alt="hunter1026"/><br /><sub><b>hunter1026</b></sub></a><br /><a href="#ideas-hunter1026" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/0dt483e0"><img src="https://avatars.githubusercontent.com/u/161086929?v=4?s=100" width="100px;" alt="0dt483e0"/><br /><sub><b>0dt483e0</b></sub></a><br /><a href="#ideas-0dt483e0" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/henry753951"><img src="https://avatars.githubusercontent.com/u/31657781?v=4?s=100" width="100px;" alt="Henry753951"/><br /><sub><b>Henry753951</b></sub></a><br /><a href="#ideas-henry753951" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Dhy19971"><img src="https://avatars.githubusercontent.com/u/54805023?v=4?s=100" width="100px;" alt="Dhy19971"/><br /><sub><b>Dhy19971</b></sub></a><br /><a href="#ideas-Dhy19971" title="Ideas, Planning, & Feedback">🤔</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/KobeOne2"><img src="https://avatars.githubusercontent.com/u/173476135?v=4?s=100" width="100px;" alt="KobeOne2"/><br /><sub><b>KobeOne2</b></sub></a><br /><a href="#ideas-KobeOne2" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/evennss"><img src="https://avatars.githubusercontent.com/u/241830523?v=4?s=100" width="100px;" alt="evennss"/><br /><sub><b>evennss</b></sub></a><br /><a href="https://github.com/thenick775/gbajs3/issues?q=author%3Aevennss" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/heze01"><img src="https://avatars.githubusercontent.com/u/34407097?v=4?s=100" width="100px;" alt="heze01"/><br /><sub><b>heze01</b></sub></a><br /><a href="https://github.com/thenick775/gbajs3/commits?author=heze01" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/dedwardstech"><img src="https://avatars.githubusercontent.com/u/50801476?v=4?s=100" width="100px;" alt="dedwardstech"/><br /><sub><b>dedwardstech</b></sub></a><br /><a href="https://github.com/thenick775/gbajs3/issues?q=author%3Adedwardstech" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/pstarter27"><img src="https://avatars.githubusercontent.com/u/282081053?v=4?s=100" width="100px;" alt="pstarter27"/><br /><sub><b>pstarter27</b></sub></a><br /><a href="#ideas-pstarter27" title="Ideas, Planning, & Feedback">🤔</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ## License
 
@@ -150,7 +224,7 @@ Original work by andychase. Repo: (gbajs2 base)
 https://github.com/andychase/gbajs2
 Copyright © 2020, Andrew Chase
 
-Copyright © 2022 - 2023, Nicholas VanCise
+Copyright © 2022 - 2025, Nicholas VanCise
 
 All rights reserved.
 

@@ -1,18 +1,16 @@
 import { Button } from '@mui/material';
-import { useCallback, useId, useState } from 'react';
-import { styled } from 'styled-components';
+import { styled } from '@mui/material/styles';
+import { useCallback, useEffect, useState } from 'react';
 
 import { EmulatorFileSystem } from './file-system/emulator-file-system.tsx';
-import { FileSystemOptionsForm } from './file-system/file-system-options-form.tsx';
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
+import { useFileStat } from '../../hooks/emulator/use-file-stat.tsx';
 import { CircleCheckButton } from '../shared/circle-check-button.tsx';
+import { downloadBlob } from './file-utilities/blob.ts';
 
 import type { FileNode } from '../../emulator/mgba/mgba-emulator.tsx';
 
@@ -23,100 +21,61 @@ const FlexModalBody = styled(ModalBody)`
 `;
 
 export const FileSystemModal = () => {
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
+  const { syncActionIfEnabled } = useAddCallbacks();
   const [allFiles, setAllFiles] = useState<FileNode | undefined>();
-  const baseId = useId();
 
   const deleteFile = useCallback(
-    (path: string) => {
+    async (path: string) => {
       emulator?.deleteFile(path);
       setAllFiles(emulator?.listAllFiles());
+      await syncActionIfEnabled();
     },
-    [emulator]
+    [emulator, syncActionIfEnabled]
   );
+
+  const autoSaveStatePath = emulator?.getCurrentAutoSaveStatePath();
+  const { modifiedTime } = useFileStat(autoSaveStatePath);
+
+  // the only flow that can force the file system to change without user interaction after the modal
+  // is open is the auto save state timer, if the modified time of the current auto save state has
+  // changed, we should refresh the file system view
+  useEffect(() => {
+    setAllFiles(emulator?.listAllFiles());
+  }, [emulator, modifiedTime]);
 
   const downloadFile = (path: string) => {
     const fileName = path.split('/').pop();
     const file = emulator?.getFile(path);
 
     if (file && fileName) {
-      const fileDownload = new Blob([file], {
+      const fileDownload = new Blob([file.slice()], {
         type: 'data:application/octet-stream'
       });
 
-      const link = document.createElement('a');
-      link.download = fileName;
-      link.href = URL.createObjectURL(fileDownload);
-      link.click();
-      link.remove();
+      downloadBlob(fileName, fileDownload);
     }
   };
 
   const renderedFiles = allFiles ?? emulator?.listAllFiles();
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>
-            Use this area to view your current file tree, download files, and
-            delete files from the tree.
-          </p>
-          <p>
-            Use the <i>plus</i> and <i>minus</i> icons to open and close file
-            tree branches!
-          </p>
-        </>
-      ),
-      target: `#${CSS.escape(`${baseId}--emulator-file-system`)}`
-    },
-    {
-      content: (
-        <p>
-          Click the <i>Options</i> label to adjust and save settings related to
-          the file system.
-        </p>
-      ),
-      target: `#${CSS.escape(`${baseId}--file-system-options`)}`
-    },
-    {
-      content: (
-        <p>
-          Use the <i>SAVE FILE SYSTEM</i> button to persist all of your files to
-          your device!
-        </p>
-      ),
-      target: `#${CSS.escape(`${baseId}--save-file-system-button`)}`
-    }
-  ];
 
   return (
     <>
       <ModalHeader title="File System" />
       <FlexModalBody>
         <EmulatorFileSystem
-          id={`${baseId}--emulator-file-system`}
           allFiles={renderedFiles}
           deleteFile={deleteFile}
           downloadFile={downloadFile}
         />
-        <FileSystemOptionsForm id={`${baseId}--file-system-options`} />
       </FlexModalBody>
       <ModalFooter>
-        <CircleCheckButton
-          copy="Save File System"
-          id={`${baseId}--save-file-system-button`}
-          onClick={emulator?.fsSync}
-        />
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <CircleCheckButton copy="Save File System" onClick={emulator?.fsSync} />
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedFileSystemTour"
-      />
     </>
   );
 };

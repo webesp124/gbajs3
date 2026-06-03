@@ -1,27 +1,34 @@
-import { useCallback } from 'react';
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { z } from 'zod';
 
-import { useAsyncData } from './use-async-data.tsx';
+const TokenSchema = z.string();
 
-export const useRefreshAccessToken = ({ loadOnMount = false } = {}) => {
-  const apiLocation = import.meta.env.VITE_GBA_SERVER_LOCATION;
+export const refreshAccessTokenQueryKey = 'refreshAccessToken';
 
-  const executeRefresh = useCallback(async () => {
-    const url = `${apiLocation}/api/tokens/refresh`;
-    const options: RequestInit = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    };
+const apiLocation = import.meta.env.VITE_GBA_SERVER_LOCATION;
 
-    const res = await fetch(url, options);
-    return res.json();
-  }, [apiLocation]);
+export const useRefreshAccessToken = (
+  options?: Omit<UseQueryOptions<string | null>, 'queryKey'>
+) => {
+  return useQuery<string | null>({
+    queryKey: [refreshAccessTokenQueryKey],
+    queryFn: async () => {
+      const url = `${apiLocation}/api/tokens/refresh`;
+      const options: RequestInit = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      };
 
-  const { data, isLoading, error, clearError, execute } = useAsyncData({
-    fetchFn: executeRefresh,
-    clearDataOnLoad: true,
-    loadOnMount
+      const res = await fetch(url, options);
+
+      if (!res.ok) {
+        throw new Error(`Received unexpected status code: ${res.status}`);
+      }
+
+      return TokenSchema.parse(await res.json());
+    },
+    enabled: !!apiLocation,
+    ...options
   });
-
-  return { data, isLoading, error, clearError, execute };
 };

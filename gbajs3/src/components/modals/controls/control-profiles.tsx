@@ -1,15 +1,18 @@
 import { IconButton, TextField } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
 import { nanoid } from 'nanoid';
 import { useState } from 'react';
 import { BiTrash, BiEdit, BiSave } from 'react-icons/bi';
-import { styled } from 'styled-components';
 
-import { useLayoutContext } from '../../../hooks/context.tsx';
+import {
+  useInitialBoundsContext,
+  useLayoutContext
+} from '../../../hooks/context.tsx';
 import { virtualControlProfilesLocalStorageKey } from '../../controls/consts.tsx';
 import { CenteredText, StyledBiPlus } from '../../shared/styled.tsx';
 
-import type { Layouts } from '../../../context/layout/layout.tsx';
+import type { Layouts } from '../../../context/layout/layout-context.tsx';
 import type { IconButtonProps } from '@mui/material';
 import type { ReactNode } from 'react';
 
@@ -38,40 +41,34 @@ type EditableProfileLoadButtonProps = {
   onSubmit: (name: string) => void;
 };
 
-const StyledLi = styled.li`
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: auto 32px;
-  gap: 10px;
-
-  color: ${({ theme }) => theme.blueCharcoal};
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: 1px solid rgba(0, 0, 0, 0.125);
+const StyledLi = styled('li')`
+  margin: 0;
 `;
 
-const ProfilesList = styled.ul`
-  list-style-type: none;
+const ProfilesList = styled('ul')`
+  list-style: none;
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
 
-  & > ${StyledLi}:first-child {
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-  }
+  background: ${({ theme }) => theme.modalSurfaceElevated};
+  border: 1px solid ${({ theme }) => theme.modalListBorder};
+  border-radius: 10px;
+  overflow: hidden;
 
-  & > ${StyledLi}:last-child {
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-  }
-
-  & > ${StyledLi}:not(:first-child) {
-    border-top-width: 0;
+  & > ${StyledLi} + ${StyledLi} {
+    border-top: 1px solid ${({ theme }) => theme.modalListBorder};
   }
 `;
 
-const StyledCiCircleRemove = styled(BiTrash)`
+const RowGrid = styled('div')`
+  display: grid;
+  grid-template-columns: 1fr 36px;
+  align-items: center;
+`;
+
+const StyledBiTrash = styled(BiTrash)`
   height: 100%;
   width: 20px;
 `;
@@ -86,25 +83,61 @@ const StyledBiSave = styled(BiSave)`
   width: 20px;
 `;
 
-const LoadProfileButton = styled.button`
-  padding: 0.5rem 0.5rem;
+const LoadProfileButton = styled('button')`
   width: 100%;
-  color: ${({ theme }) => theme.blueCharcoal};
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: none;
+  padding: 0.875rem 1rem;
+  color: ${({ theme }) => theme.modalTextPrimary};
+  background: transparent;
+  border: 0;
   text-align: left;
-  font-size: 16px;
-  height: 32px;
+  font: inherit;
+  line-height: 1.35;
+  overflow: hidden;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.darkGrayBlue};
-    background-color: ${({ theme }) => theme.aliceBlue1};
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+  }
+
+  &:focus-visible {
+    outline: none;
+    position: relative;
+    z-index: 1;
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+    box-shadow:
+      inset 0 0 0 1px ${({ theme }) => theme.gbaThemeBlue},
+      0 0 0 2px ${({ theme }) => theme.focusRingPrimarySoft};
+  }
+
+  &:active {
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
   }
 `;
 
-const FlexContainer = styled.div`
+const FlexContainer = styled('div')`
   display: flex;
-  gap: 10px;
+  gap: 0;
+  min-width: 0;
+  align-items: center;
+`;
+
+const EditField = styled(TextField)`
+  width: 100%;
+
+  & .MuiInputBase-root {
+    color: ${({ theme }) => theme.modalTextPrimary};
+  }
+
+  & .MuiInputBase-input {
+    padding: 0.875rem 1rem;
+  }
+`;
+
+const EmptyState = styled(CenteredText)`
+  padding: 1rem;
+  color: ${({ theme }) => theme.modalTextSecondary};
 `;
 
 const StatefulIconButton = ({
@@ -113,9 +146,7 @@ const StatefulIconButton = ({
   falsyIcon,
   ...rest
 }: StatefulIconButtonProps) => (
-  <IconButton sx={{ padding: 0 }} {...rest}>
-    {condition ? truthyIcon : falsyIcon}
-  </IconButton>
+  <IconButton {...rest}>{condition ? truthyIcon : falsyIcon}</IconButton>
 );
 
 const EditableProfileLoadButton = ({
@@ -135,20 +166,18 @@ const EditableProfileLoadButton = ({
   return (
     <FlexContainer>
       {isEditing ? (
-        <TextField
+        <EditField
           variant="standard"
-          sx={{
-            width: '100%',
-            '& .MuiInputBase-input': {
-              paddingLeft: '8px'
-            }
-          }}
           error={!storedName}
           value={storedName}
-          onChange={(e) => setStoredName(e.target.value)}
+          onChange={(e) => {
+            setStoredName(e.target.value);
+          }}
         />
       ) : (
-        <LoadProfileButton onClick={loadProfile}>{name}</LoadProfileButton>
+        <LoadProfileButton onClick={loadProfile} title={name}>
+          {name}
+        </LoadProfileButton>
       )}
       <StatefulIconButton
         condition={isEditing}
@@ -156,7 +185,9 @@ const EditableProfileLoadButton = ({
         falsyIcon={<StyledBiEdit />}
         aria-label={`${isEditing ? 'Save' : 'Edit'} ${name}'s name`}
         type="submit"
-        onClick={() => submitNameChange(storedName)}
+        onClick={() => {
+          submitNameChange(storedName);
+        }}
       />
     </FlexContainer>
   );
@@ -167,6 +198,7 @@ export const ControlProfiles = ({ id }: ControlProfilesProps) => {
     VirtualControlProfiles | undefined
   >(virtualControlProfilesLocalStorageKey);
   const { layouts, setLayouts } = useLayoutContext();
+  const { clearInitialBounds } = useInitialBoundsContext();
 
   const addProfile = () => {
     setVirtualControlProfiles((prevState) => [
@@ -180,10 +212,15 @@ export const ControlProfiles = ({ id }: ControlProfilesProps) => {
     ]);
   };
 
+  const loadProfile = (layouts: Layouts) => {
+    setLayouts(layouts);
+    clearInitialBounds();
+  };
+
   const updateProfile = (id: string, updatedName: string) => {
     setVirtualControlProfiles((prevState) =>
       prevState?.map((profile) => {
-        if (profile.id == id)
+        if (profile.id === id)
           return {
             ...profile,
             name: updatedName
@@ -203,34 +240,43 @@ export const ControlProfiles = ({ id }: ControlProfilesProps) => {
   return (
     <>
       <ProfilesList id={id} aria-label="Profiles List">
-        {virtualControlProfiles?.map?.(
+        {virtualControlProfiles?.map(
           (profile: VirtualControlProfile, idx: number) => (
             <StyledLi key={`${profile.name}_${idx}_action_list_item`}>
-              <EditableProfileLoadButton
-                name={profile.name}
-                loadProfile={() => setLayouts(profile.layouts)}
-                onSubmit={(name) => updateProfile(profile.id, name)}
-              />
-              <IconButton
-                aria-label={`Delete ${profile.name}`}
-                sx={{ padding: 0 }}
-                onClick={() => deleteProfile(profile.id)}
-              >
-                <StyledCiCircleRemove />
-              </IconButton>
+              <RowGrid>
+                <EditableProfileLoadButton
+                  name={profile.name}
+                  loadProfile={() => {
+                    loadProfile(profile.layouts);
+                  }}
+                  onSubmit={(name) => {
+                    updateProfile(profile.id, name);
+                  }}
+                />
+                <IconButton
+                  aria-label={`Delete ${profile.name}`}
+                  onClick={() => {
+                    deleteProfile(profile.id);
+                  }}
+                >
+                  <StyledBiTrash />
+                </IconButton>
+              </RowGrid>
             </StyledLi>
           )
         )}
         {!virtualControlProfiles?.length && (
-          <li>
-            <CenteredText>No control profiles</CenteredText>
-          </li>
+          <StyledLi>
+            <EmptyState>No control profiles</EmptyState>
+          </StyledLi>
         )}
       </ProfilesList>
       <IconButton
-        aria-label={`Create New Profile`}
+        aria-label="Create New Profile"
         sx={{ padding: 0 }}
-        onClick={() => addProfile()}
+        onClick={() => {
+          addProfile();
+        }}
       >
         <StyledBiPlus />
       </IconButton>

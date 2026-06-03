@@ -1,21 +1,25 @@
 import { useMediaQuery } from '@mui/material';
-import { useCallback } from 'react';
+import { useTheme, styled } from '@mui/material/styles';
+import { useCallback, useRef } from 'react';
 import { Rnd, type Props as RndProps } from 'react-rnd';
-import { styled, useTheme } from 'styled-components';
+import { BeatLoader } from 'react-spinners';
 
 import {
   useDragContext,
   useEmulatorContext,
+  useInitialBoundsContext,
   useLayoutContext,
   useResizeContext
 } from '../../hooks/context.tsx';
 import { NavigationMenuWidth } from '../navigation-menu/consts.tsx';
 import { GripperHandle } from '../shared/gripper-handle.tsx';
 
+type ScreenWrapperProps = RndProps & { $areItemsDraggable: boolean };
+
 const defaultGBACanvasWidth = 240;
 const defaultGBACanvasHeight = 160;
 
-const RenderCanvas = styled.canvas`
+const RenderCanvas = styled('canvas')`
   background-color: ${({ theme }) => theme.pureBlack};
   image-rendering: -webkit-optimize-contrast;
   image-rendering: -moz-crisp-edges;
@@ -30,9 +34,10 @@ const RenderCanvas = styled.canvas`
   image-rendering: pixelated;
 `;
 
-const ScreenWrapper = styled(Rnd)<RndProps>`
+const ScreenWrapper = styled(Rnd, {
+  shouldForwardProp: (propName) => propName !== '$areItemsDraggable'
+})<ScreenWrapperProps>`
   background-color: ${({ theme }) => theme.pureBlack};
-  border: solid 1px ${({ theme }) => theme.pureBlack};
   overflow: visible;
   width: 100dvw;
   height: calc(100dvw * 2 / 3);
@@ -44,6 +49,44 @@ const ScreenWrapper = styled(Rnd)<RndProps>`
     );
     height: 85dvh;
   }
+
+  @media ${({ theme }) => theme.isMobileLandscape} {
+    width: calc(100dvh * (3 / 2));
+    height: 100dvh;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    margin: 2px;
+    pointer-events: none;
+    border: 2px dashed ${({ theme }) => theme.gbaThemeBlue};
+    visibility: ${({ $areItemsDraggable }) =>
+      $areItemsDraggable ? 'visible' : 'hidden'};
+  }
+`;
+
+const LoadingCoreBadge = styled('div')`
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  animation: emulator-loading-badge-fade-in 120ms ease forwards;
+  animation-delay: 150ms;
+
+  @keyframes emulator-loading-badge-fade-in {
+    to {
+      opacity: 1;
+    }
+  }
 `;
 
 // overrides rnd styles to fallback to css
@@ -54,39 +97,64 @@ const defaultSize = {
 
 export const Screen = () => {
   const theme = useTheme();
-  const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
-  const { setCanvas } = useEmulatorContext();
+  const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone, {
+    noSsr: true
+  });
+  const isMobileLandscape = useMediaQuery(theme.isMobileLandscape, {
+    noSsr: true
+  });
+  const { emulator, canvas, setCanvas } = useEmulatorContext();
   const { areItemsDraggable } = useDragContext();
   const { areItemsResizable } = useResizeContext();
-  const { layouts, setLayout, hasSetLayout } = useLayoutContext();
+  const { getLayout, setLayout } = useLayoutContext();
+  const { initialBounds, setInitialBound } = useInitialBoundsContext();
   const screenWrapperXStart = isLargerThanPhone ? NavigationMenuWidth + 10 : 0;
-  const screenWrapperYStart = isLargerThanPhone ? 15 : 0;
+  const screenWrapperYStart = isLargerThanPhone && !isMobileLandscape ? 15 : 0;
+  const rndRef = useRef<Rnd | null>(null);
+
+  const screenLayout = getLayout('screen');
 
   const refUpdateDefaultPosition = useCallback(
     (node: Rnd | null) => {
-      if (!hasSetLayout) {
-        node?.resizableElement?.current?.style?.removeProperty('width');
-        node?.resizableElement?.current?.style?.removeProperty('height');
+      if (!screenLayout?.size) {
+        node?.resizableElement.current?.style.removeProperty('width');
+        node?.resizableElement.current?.style.removeProperty('height');
       }
 
-      if (!layouts?.screen?.initialBounds && node)
-        setLayout('screen', {
-          initialBounds: node.resizableElement.current?.getBoundingClientRect()
-        });
+      if (!initialBounds?.screen && node)
+        setInitialBound(
+          'screen',
+          node.resizableElement.current?.getBoundingClientRect()
+        );
+
+      rndRef.current = node;
     },
-    [hasSetLayout, layouts, setLayout]
+    [initialBounds?.screen, setInitialBound, screenLayout?.size]
   );
 
   const refSetCanvas = useCallback(
-    (node: HTMLCanvasElement | null) => setCanvas(node),
+    (node: HTMLCanvasElement | null) => {
+      setCanvas(node);
+    },
     [setCanvas]
   );
 
-  const position = layouts?.screen?.position ?? {
-    x: screenWrapperXStart,
-    y: screenWrapperYStart
-  };
-  const size = layouts?.screen?.size ?? defaultSize;
+  const currentDimensions =
+    rndRef.current?.resizableElement.current?.getBoundingClientRect();
+  const width = currentDimensions?.width ?? 0;
+  const height = currentDimensions?.height ?? 0;
+  const position =
+    screenLayout?.position ??
+    (isMobileLandscape
+      ? {
+          x: Math.floor(document.documentElement.clientWidth / 2 - width / 2),
+          y: Math.floor(document.documentElement.clientHeight / 2 - height / 2)
+        }
+      : {
+          x: screenWrapperXStart,
+          y: screenWrapperYStart
+        });
+  const size = screenLayout?.size ?? defaultSize;
 
   return (
     <ScreenWrapper
@@ -108,8 +176,22 @@ export const Screen = () => {
       }}
       position={position}
       size={size}
+      onDragStart={() => {
+        if (!screenLayout?.originalBounds)
+          setLayout('screen', {
+            originalBounds:
+              rndRef.current?.resizableElement.current?.getBoundingClientRect()
+          });
+      }}
       onDragStop={(_, data) => {
         setLayout('screen', { position: { x: data.x, y: data.y } });
+      }}
+      onResizeStart={() => {
+        if (!screenLayout?.originalBounds)
+          setLayout('screen', {
+            originalBounds:
+              rndRef.current?.resizableElement.current?.getBoundingClientRect()
+          });
       }}
       onResizeStop={(_1, _2, ref, _3, position) => {
         setLayout('screen', {
@@ -117,6 +199,7 @@ export const Screen = () => {
           position: { ...position }
         });
       }}
+      $areItemsDraggable={areItemsDraggable}
     >
       <RenderCanvas
         data-testid="screen-wrapper:render-canvas"
@@ -124,6 +207,11 @@ export const Screen = () => {
         width={defaultGBACanvasWidth}
         height={defaultGBACanvasHeight}
       />
+      {!!canvas && !emulator && (
+        <LoadingCoreBadge aria-label="Emulator loading">
+          <BeatLoader color={theme.gbaThemeBlue} margin={3} size={7} />
+        </LoadingCoreBadge>
+      )}
     </ScreenWrapper>
   );
 };

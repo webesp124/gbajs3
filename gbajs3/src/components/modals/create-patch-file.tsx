@@ -15,7 +15,7 @@ import { GameSelectionTable } from './game-selection-table.tsx';
 import * as CRC32 from "crc-32";
 
 export const CreatePatchFileModal = () => {
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
 
   const fields = [
@@ -78,13 +78,12 @@ export const CreatePatchFileModal = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             if(e.target && e.target.result) {
-                let arrayBuffer = e.target.result;
-                if (typeof arrayBuffer === 'string') {
-                    // Convert string to ArrayBuffer
-                    const encoder = new TextEncoder();
-                    arrayBuffer = encoder.encode(arrayBuffer);
-                }
-                setPatchedRomFileData(new Uint8Array(arrayBuffer));
+                const result = e.target.result;
+                const bytes =
+                    typeof result === 'string'
+                        ? new TextEncoder().encode(result)
+                        : new Uint8Array(result);
+                setPatchedRomFileData(bytes);
             }
         };
         reader.readAsArrayBuffer(file);
@@ -182,7 +181,7 @@ export const CreatePatchFileModal = () => {
 
         setFormValues((prevValues) => ({
             ...prevValues,
-            cartSize: emulator?.getStatRoms?.(path).size
+            cartSize: String(emulator?.getStatRoms?.(path).size ?? '')
         }));
 
         const regex = /_([A-Z0-9]{1,4})_([A-Z0-9]{1,8})\./;
@@ -240,7 +239,7 @@ export const CreatePatchFileModal = () => {
 
         console.log("Patch Checksum: " + checksum)
 
-        const blob = new Blob([buffer], { type: 'application/octet-stream' });
+        const blob = new Blob([buffer as BlobPart], { type: 'application/octet-stream' });
 
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
@@ -305,7 +304,7 @@ export const CreatePatchFileModal = () => {
           id={`${baseId}--create-patch-button-button`}
           onClick={() => createPatchFile()}
         />
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>

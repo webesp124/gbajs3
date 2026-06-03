@@ -217,7 +217,7 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
 
             xhrVerify.onerror = () => reject('Failed to upload save for verification'); // Handles network errors
 
-            xhrVerify.send(save);
+            xhrVerify.send(save as XMLHttpRequestBodyInit);
           } else {
             reject('Failed to upload save to cartridge'); // Rejects the promise on failure
           }
@@ -225,7 +225,7 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
 
         xhr.onerror = () => reject('Failed to upload save to cartridge'); // Handles network errors
 
-        xhr.send(save);
+        xhr.send(save as XMLHttpRequestBodyInit);
       });
 
       // Display the toast with the promise
@@ -247,7 +247,7 @@ const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: s
 }
 
 // Custom patching function in TypeScript
-async function applyCustomPatch(fetchProps: any, fileData: ArrayBuffer): Promise<File> {
+async function applyCustomPatch(fetchProps: any, fileData: Uint8Array): Promise<File> {
   // Helper function to parse the patch file
   async function parseTransformedChanges(url: string): Promise<{ changes: any[], checksumChanges: number }> {
       const response = await fetch(url + "?updated=123456789d01");
@@ -346,7 +346,7 @@ async function applyCustomPatch(fetchProps: any, fileData: ArrayBuffer): Promise
       }
 
       const patchedData = await applyTransformedChanges(sourceData, changes);
-      const patchedFile = new File([patchedData], fetchProps.fullName ?? fetchProps.fileName ?? "patched_file.gba");
+      const patchedFile = new File([patchedData as BlobPart], fetchProps.fullName ?? fetchProps.fileName ?? "patched_file.gba");
       return patchedFile;
   } catch (error: any) {
       console.error("Failed to apply custom patch:", error);

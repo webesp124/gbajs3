@@ -1,172 +1,206 @@
-import { act } from 'react';
+import { act } from '@testing-library/react';
+import * as toast from 'react-hot-toast';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useAddCallbacks } from './use-add-callbacks.tsx';
 import { renderHookWithContext } from '../../../test/render-hook-with-context.tsx';
-import { emulatorCoreCallbacksLocalStorageKey } from '../../context/emulator/consts.ts';
+import { emulatorSettingsLocalStorageKey } from '../../context/emulator/consts.ts';
 import * as contextHooks from '../../hooks/context.tsx';
 
 import type { CoreCallbackOptions } from './use-add-callbacks.tsx';
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
+type Expected = {
+  saveDataUpdatedCallback: (() => void) | null;
+  autoSaveStateLoadedCallback: (() => void) | null;
+  autoSaveStateCapturedCallback: (() => void) | null;
+};
+
+type TestCase = [label: string, input: CoreCallbackOptions, expected: Expected];
+
+const addCallbacksTestCases: TestCase[] = [
+  [
+    'only saveFileSystemOnInGameSave enabled',
+    {
+      saveFileSystemOnInGameSave: true,
+      fileSystemNotificationsEnabled: false,
+      autoSaveStateLoadNotificationEnabled: false,
+      autoSaveStateCaptureNotificationEnabled: false
+    },
+    {
+      saveDataUpdatedCallback: expect.anything(),
+      autoSaveStateLoadedCallback: null,
+      autoSaveStateCapturedCallback: null
+    }
+  ],
+  [
+    'only fileSystemNotificationsEnabled enabled',
+    {
+      saveFileSystemOnInGameSave: false,
+      fileSystemNotificationsEnabled: true,
+      autoSaveStateLoadNotificationEnabled: false,
+      autoSaveStateCaptureNotificationEnabled: false
+    },
+    {
+      saveDataUpdatedCallback: null,
+      autoSaveStateLoadedCallback: null,
+      autoSaveStateCapturedCallback: null
+    }
+  ],
+  [
+    'only autoSaveStateLoadNotificationEnabled enabled',
+    {
+      saveFileSystemOnInGameSave: false,
+      fileSystemNotificationsEnabled: false,
+      autoSaveStateLoadNotificationEnabled: true,
+      autoSaveStateCaptureNotificationEnabled: false
+    },
+    {
+      saveDataUpdatedCallback: null,
+      autoSaveStateLoadedCallback: expect.anything(),
+      autoSaveStateCapturedCallback: null
+    }
+  ],
+  [
+    'only autoSaveStateCaptureNotificationEnabled enabled',
+    {
+      saveFileSystemOnInGameSave: false,
+      fileSystemNotificationsEnabled: false,
+      autoSaveStateLoadNotificationEnabled: false,
+      autoSaveStateCaptureNotificationEnabled: true
+    },
+    {
+      saveDataUpdatedCallback: null,
+      autoSaveStateLoadedCallback: null,
+      autoSaveStateCapturedCallback: expect.anything()
+    }
+  ],
+  [
+    'all flags disabled (clears all callbacks)',
+    {
+      saveFileSystemOnInGameSave: false,
+      fileSystemNotificationsEnabled: false,
+      autoSaveStateLoadNotificationEnabled: false,
+      autoSaveStateCaptureNotificationEnabled: false
+    },
+    {
+      saveDataUpdatedCallback: null,
+      autoSaveStateLoadedCallback: null,
+      autoSaveStateCapturedCallback: null
+    }
+  ]
+];
+
 describe('useAddCallbacks hook', () => {
   describe('addCallbacks', () => {
-    it('adds saveDataUpdatedCallback to emulator', () => {
-      const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
-        vi.fn();
+    it.each(addCallbacksTestCases)(
+      'emulator callbacks: %s',
+      (_, input, expected) => {
+        const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
+          vi.fn();
 
-      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
-        setCanvas: vi.fn(),
-        canvas: null,
-        emulator: {
-          addCoreCallbacks: emulatorAddCoreCallbacksSpy
-        } as GBAEmulator
-      }));
+        vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+          setCanvas: vi.fn(),
+          canvas: null,
+          emulator: {
+            addCoreCallbacks: emulatorAddCoreCallbacksSpy,
+            getCurrentAutoSaveStatePath: () => null
+          } as GBAEmulator
+        }));
 
-      const { result } = renderHookWithContext(() => useAddCallbacks());
+        const { result } = renderHookWithContext(() => useAddCallbacks());
 
-      act(() => {
-        result.current.addCallbacks({ saveFileSystemOnInGameSave: true });
-      });
+        act(() => result.current.addCallbacks(input));
 
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledOnce();
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledWith({
-        saveDataUpdatedCallback: expect.anything()
-      });
-    });
-
-    it('clears saveDataUpdatedCallback', () => {
-      const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
-        vi.fn();
-
-      vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
-        setCanvas: vi.fn(),
-        canvas: null,
-        emulator: {
-          addCoreCallbacks: emulatorAddCoreCallbacksSpy
-        } as GBAEmulator
-      }));
-
-      const { result } = renderHookWithContext(() => useAddCallbacks());
-
-      act(() => {
-        result.current.addCallbacks({ saveFileSystemOnInGameSave: false });
-      });
-
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledOnce();
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledWith({
-        saveDataUpdatedCallback: null
-      });
-    });
+        expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledOnce();
+        expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledWith(expected);
+      }
+    );
   });
 
-  describe('addCallbacksAndSaveSettings', () => {
-    it('persists args to storage and adds callbacks if emulator is running', () => {
-      const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
-        vi.fn();
+  describe('syncActionIfEnabled', () => {
+    it('should sync files and toast when options are enabled', async () => {
+      const emulatorFSSyncSpy: () => void = vi.fn();
 
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         setCanvas: vi.fn(),
         canvas: null,
         emulator: {
-          addCoreCallbacks: emulatorAddCoreCallbacksSpy
+          fsSync: emulatorFSSyncSpy,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
-      vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
-        isRunning: true,
-        setIsRunning: vi.fn()
-      }));
+      const toastSuccessSpy = vi.spyOn(toast.default, 'success');
 
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+      localStorage.setItem(
+        emulatorSettingsLocalStorageKey,
+        '{"saveFileSystemOnCreateUpdateDelete":true,"fileSystemNotificationsEnabled":true}'
+      );
 
       const { result } = renderHookWithContext(() => useAddCallbacks());
 
-      act(() => {
-        result.current.addCallbacksAndSaveSettings({
-          saveFileSystemOnInGameSave: true,
-          notificationsEnabled: true
-        });
-      });
+      await act(() => result.current.syncActionIfEnabled());
 
-      expect(setItemSpy).toHaveBeenCalledWith(
-        emulatorCoreCallbacksLocalStorageKey,
-        '{"saveFileSystemOnInGameSave":true,"notificationsEnabled":true}'
-      );
-
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledOnce();
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledWith({
-        saveDataUpdatedCallback: expect.anything()
+      expect(emulatorFSSyncSpy).toHaveBeenCalledOnce();
+      expect(toastSuccessSpy).toHaveBeenCalledOnce();
+      expect(toastSuccessSpy).toHaveBeenCalledWith('Saved File System', {
+        id: expect.any(String)
       });
     });
 
-    it('persists args to storage and clears callbacks if emulator is running', () => {
-      const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
-        vi.fn();
+    it('should only sync files', async () => {
+      const emulatorFSSyncSpy: () => void = vi.fn();
 
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         setCanvas: vi.fn(),
         canvas: null,
         emulator: {
-          addCoreCallbacks: emulatorAddCoreCallbacksSpy
+          fsSync: emulatorFSSyncSpy,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
-      vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
-        isRunning: true,
-        setIsRunning: vi.fn()
-      }));
+      const toastSuccessSpy = vi.spyOn(toast.default, 'success');
 
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+      localStorage.setItem(
+        emulatorSettingsLocalStorageKey,
+        '{"saveFileSystemOnCreateUpdateDelete":true,"fileSystemNotificationsEnabled":false}'
+      );
 
       const { result } = renderHookWithContext(() => useAddCallbacks());
 
-      act(() => {
-        result.current.addCallbacksAndSaveSettings({
-          saveFileSystemOnInGameSave: false
-        });
-      });
+      await act(() => result.current.syncActionIfEnabled());
 
-      expect(setItemSpy).toHaveBeenCalledWith(
-        emulatorCoreCallbacksLocalStorageKey,
-        '{"saveFileSystemOnInGameSave":false}'
-      );
-
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledOnce();
-      expect(emulatorAddCoreCallbacksSpy).toHaveBeenCalledWith({
-        saveDataUpdatedCallback: null
-      });
+      expect(emulatorFSSyncSpy).toHaveBeenCalledOnce();
+      expect(toastSuccessSpy).not.toHaveBeenCalled();
     });
 
-    it('persists args to storage and does not call emulator if not running', () => {
-      const emulatorAddCoreCallbacksSpy: (f: CoreCallbackOptions) => void =
-        vi.fn();
+    it('should noop if file system save is disabled', async () => {
+      const emulatorFSSyncSpy: () => void = vi.fn();
 
       vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
         setCanvas: vi.fn(),
         canvas: null,
         emulator: {
-          addCoreCallbacks: emulatorAddCoreCallbacksSpy
+          fsSync: emulatorFSSyncSpy,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       }));
 
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+      const toastSuccessSpy = vi.spyOn(toast.default, 'success');
+
+      localStorage.setItem(
+        emulatorSettingsLocalStorageKey,
+        '{"saveFileSystemOnCreateUpdateDelete":false,"fileSystemNotificationsEnabled":true}'
+      );
 
       const { result } = renderHookWithContext(() => useAddCallbacks());
 
-      act(() => {
-        result.current.addCallbacksAndSaveSettings({
-          saveFileSystemOnInGameSave: true,
-          notificationsEnabled: true
-        });
-      });
+      await act(() => result.current.syncActionIfEnabled());
 
-      expect(setItemSpy).toHaveBeenCalledWith(
-        emulatorCoreCallbacksLocalStorageKey,
-        '{"saveFileSystemOnInGameSave":true,"notificationsEnabled":true}'
-      );
-
-      expect(emulatorAddCoreCallbacksSpy).not.toHaveBeenCalled();
+      expect(emulatorFSSyncSpy).not.toHaveBeenCalled();
+      expect(toastSuccessSpy).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { styled } from 'styled-components';
+import { styled } from '@mui/material/styles';
 
 import { ButtonBase } from '../shared/custom-button-base.tsx';
 
@@ -25,13 +25,13 @@ type NavLeafButtonProps = {
   $withPadding: boolean;
 };
 
-const NavLeafWrapper = styled.li<LeafWrapperProps>`
+const NavLeafWrapper = styled('li')<LeafWrapperProps>`
   cursor: pointer;
   color: ${({ theme }) => theme.pureWhite};
   list-style-type: none;
   padding: 0 2px;
 
-  ${({ $disabled = false, theme }) =>
+  ${({ $disabled, theme }) =>
     $disabled &&
     `color: ${theme.disabledGray};
      pointer-events: none;
@@ -51,33 +51,31 @@ const NavLeafButton = styled(ButtonBase)<NavLeafButtonProps>`
   height: 100%;
   margin: 0;
 
-  padding: 0.5rem
-    ${({ $withPadding = false }) => ($withPadding ? '1rem' : '0.5rem')};
+  padding: 0.5rem ${({ $withPadding }) => ($withPadding ? '1rem' : '0.5rem')};
 
   text-align: inherit;
   width: 100%;
   cursor: pointer;
 `;
 
-const NavTitle = styled.span`
+const NavTitle = styled('span')`
   margin-left: 0.5rem;
 `;
 
-const NavLink = styled.a<NavLinkProps>`
+const NavLink = styled('a')<NavLinkProps>`
   display: block;
   text-decoration: none;
   color: unset;
   outline-offset: 0;
 
-  padding: 0.5rem
-    ${({ $withPadding = false }) => ($withPadding ? '1rem' : '0.5rem')};
+  padding: 0.5rem ${({ $withPadding }) => ($withPadding ? '1rem' : '0.5rem')};
 `;
 
 export const NavLeaf = ({
   title,
   icon,
-  onClick = undefined,
-  $link = undefined,
+  onClick,
+  $link,
   $disabled = false,
   $withPadding = false
 }: NavLeafProps) => {

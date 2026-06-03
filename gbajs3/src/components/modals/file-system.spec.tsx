@@ -3,9 +3,10 @@ import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FileSystemModal } from './file-system.tsx';
+import * as blobUtilities from './file-utilities/blob.ts';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
+import * as addCallbackHooks from '../../hooks/emulator/use-add-callbacks.tsx';
 
 import type {
   FileNode,
@@ -40,7 +41,8 @@ describe('<FileSystemModal />', () => {
       return {
         ...original(),
         emulator: {
-          listAllFiles: () => defaultFSData
+          listAllFiles: () => defaultFSData,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       };
     });
@@ -49,8 +51,6 @@ describe('<FileSystemModal />', () => {
 
     // emulator file system
     expect(screen.getByLabelText('File System')).toBeVisible();
-    // file system options
-    expect(screen.getByRole('button', { name: 'Options' })).toBeVisible();
     // action buttons
     expect(
       screen.getByRole('button', { name: 'Save File System' })
@@ -60,20 +60,31 @@ describe('<FileSystemModal />', () => {
 
   it('deletes file from the tree', async () => {
     const deleteFileSpy: (p: string) => void = vi.fn();
+    const syncActionIfEnabledSpy = vi.fn();
     const listAllFilesSpy = vi.fn(() => defaultFSData);
     const { useEmulatorContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
+    const { useAddCallbacks: originalCallbacks } = await vi.importActual<
+      typeof addCallbackHooks
+    >('../../hooks/emulator/use-add-callbacks.tsx');
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => {
       return {
         ...original(),
         emulator: {
-          listAllFiles: listAllFilesSpy as () => FileNode,
-          deleteFile: deleteFileSpy
+          ...original().emulator,
+          listAllFiles: listAllFilesSpy,
+          deleteFile: deleteFileSpy,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       };
     });
+
+    vi.spyOn(addCallbackHooks, 'useAddCallbacks').mockImplementation(() => ({
+      ...originalCallbacks(),
+      syncActionIfEnabled: syncActionIfEnabledSpy
+    }));
 
     renderWithContext(<FileSystemModal />);
 
@@ -85,30 +96,27 @@ describe('<FileSystemModal />', () => {
     expect(deleteFileSpy).toHaveBeenCalledOnce();
     expect(deleteFileSpy).toHaveBeenCalledWith('/data/games/rom1.gba');
     expect(listAllFilesSpy).toHaveBeenCalledOnce();
+    expect(syncActionIfEnabledSpy).toHaveBeenCalledOnce();
   });
 
   it('downloads file from the tree', async () => {
     const getFileSpy: (p: string) => Uint8Array = vi.fn(() =>
       new TextEncoder().encode('Some state file contents')
     );
+    const downloadBlobSpy = vi
+      .spyOn(blobUtilities, 'downloadBlob')
+      .mockImplementation(() => new Blob());
     const { useEmulatorContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
-
-    // unimplemented in jsdom
-    URL.createObjectURL = vi.fn(() => 'object_url:some_rom.sav');
-    // mock to assert click and prevent navigation (unimplemented)
-    const anchorClickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockReturnValue();
-    const anchorRemoveSpy = vi.spyOn(HTMLAnchorElement.prototype, 'remove');
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => {
       return {
         ...original(),
         emulator: {
           listAllFiles: () => defaultFSData,
-          getFile: getFileSpy
+          getFile: getFileSpy,
+          getCurrentAutoSaveStatePath: () => null
         } as GBAEmulator
       };
     });
@@ -121,9 +129,8 @@ describe('<FileSystemModal />', () => {
     expect(getFileSpy).toHaveBeenCalledOnce();
     expect(getFileSpy).toHaveBeenCalledWith('/data/games/rom1.gba');
 
-    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.anything());
-    expect(anchorClickSpy).toHaveBeenCalledOnce();
-    expect(anchorRemoveSpy).toHaveBeenCalledOnce();
+    expect(downloadBlobSpy).toHaveBeenCalledOnce();
+    expect(downloadBlobSpy).toHaveBeenCalledWith('rom1.gba', expect.any(Blob));
   });
 
   it('saves file system', async () => {
@@ -136,7 +143,8 @@ describe('<FileSystemModal />', () => {
       ...original(),
       emulator: {
         listAllFiles: () => defaultFSData,
-        fsSync: emulatorFSSyncSpy
+        fsSync: emulatorFSSyncSpy,
+        getCurrentAutoSaveStatePath: () => null
       } as GBAEmulator
     }));
 
@@ -154,14 +162,14 @@ describe('<FileSystemModal />', () => {
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<FileSystemModal />);
@@ -171,75 +179,6 @@ describe('<FileSystemModal />', () => {
     expect(closeButton).toBeInTheDocument();
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const {
-      useModalContext: originalModal,
-      useEmulatorContext: originalEmulator
-    } = await vi.importActual<typeof contextHooks>('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => {
-      return {
-        ...originalEmulator(),
-        emulator: {
-          listAllFiles: () => defaultFSData
-        } as GBAEmulator
-      };
-    });
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...originalModal(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<FileSystemModal />);
-
-    expect(
-      await screen.findByText(
-        'Use this area to view your current file tree, download files, and delete files from the tree.'
-      )
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText(
-        'Use this area to view your current file tree, download files, and delete files from the tree.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.nodeName === 'P' &&
-          element?.textContent ===
-            'Click the Options label to adjust and save settings related to the file system.'
-      )
-    ).toBeVisible();
-
-    // advance tour
-    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.nodeName === 'P' &&
-          element?.textContent ===
-            'Use the SAVE FILE SYSTEM button to persist all of your files to your device!'
-      )
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

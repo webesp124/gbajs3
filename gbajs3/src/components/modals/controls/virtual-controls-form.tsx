@@ -1,7 +1,7 @@
 import { useMediaQuery } from '@mui/material';
+import { useTheme, styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { styled, useTheme } from 'styled-components';
 
 import { virtualControlsLocalStorageKey } from '../../controls/consts.tsx';
 import { ManagedCheckbox } from '../../shared/managed-checkbox.tsx';
@@ -23,7 +23,7 @@ export type AreVirtualControlsEnabledProps = {
 
 type ControlsInputProps = AreVirtualControlsEnabledProps;
 
-const StyledForm = styled.form`
+const StyledForm = styled('form')`
   display: flex;
   flex-direction: column;
 `;
@@ -38,10 +38,12 @@ export const VirtualControlsForm = ({
     );
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
+  const isMobileLandscape = useMediaQuery(theme.isMobileLandscape);
 
   const shouldShowVirtualControl = (virtualControlEnabled?: boolean) => {
     return (
-      (virtualControlEnabled === undefined && !isLargerThanPhone) ||
+      (virtualControlEnabled === undefined &&
+        (!isLargerThanPhone || isMobileLandscape)) ||
       !!virtualControlEnabled
     );
   };
@@ -60,7 +62,7 @@ export const VirtualControlsForm = ({
     }
   });
 
-  const onSubmit: SubmitHandler<ControlsInputProps> = async (formData) => {
+  const onSubmit: SubmitHandler<ControlsInputProps> = (formData) => {
     setAreVirtualControlsEnabled((prevState) => ({
       ...prevState,
       ...formData

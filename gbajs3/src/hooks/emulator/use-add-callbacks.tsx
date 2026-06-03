@@ -1,13 +1,22 @@
 import { useLocalStorage } from '@uidotdev/usehooks';
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
+import toast from 'react-hot-toast';
 
-import { emulatorCoreCallbacksLocalStorageKey } from '../../context/emulator/consts.ts';
-import { useRunningContext, useEmulatorContext } from '../context.tsx';
-import { uploadSaveToCartridge } from '../../components/modals/util-rom.tsx';
+import { emulatorSettingsLocalStorageKey } from '../../context/emulator/consts.ts';
+import { useEmulatorContext } from '../context.tsx';
+import { useFileStat } from './use-file-stat.tsx';
+
+import type { EmulatorSettings } from '../../components/modals/emulator-settings.tsx';
 
 export type CoreCallbackOptions = {
   saveFileSystemOnInGameSave: boolean;
-  notificationsEnabled?: boolean;
+  autoSaveStateLoadNotificationEnabled: boolean;
+  autoSaveStateCaptureNotificationEnabled: boolean;
+  fileSystemNotificationsEnabled: boolean;
+};
+
+type SyncActionIfEnabledProps = {
+  withToast?: boolean;
 };
 
 // return a function or null based on a condition, null clears the callback in
@@ -16,61 +25,73 @@ const optionalFunc = (condition: boolean, func: () => void) =>
   condition ? func : null;
 
 export const useAddCallbacks = () => {
-  const { isRunning } = useRunningContext();
   const { emulator } = useEmulatorContext();
-  const [, setFileSystemOptions] = useLocalStorage<
-    CoreCallbackOptions | undefined
-  >(emulatorCoreCallbacksLocalStorageKey);
+  const [emulatorSettings] = useLocalStorage<EmulatorSettings | undefined>(
+    emulatorSettingsLocalStorageKey
+  );
+  const autoSaveStatePath = emulator?.getCurrentAutoSaveStatePath();
+  const { trigger } = useFileStat(autoSaveStatePath);
+  const savedFileSystemToastId = useId();
+  const autoSaveStateLoadedToastId = useId();
+  const autoSaveStateCapturedToastId = useId();
 
-  // Callback that saves the current save data with a custom name
-  const saveDataUpdatedCallback = () => {
-    console.log("saving main save file");
-    const currentSave = emulator?.getCurrentSave?.();
-    
-    if (currentSave && window.currentCartridgeSaveName) {
-      console.log("saving main save file 2");
-      console.log(window.currentCartridgeSaveName);
-      // Rename and save the current save data
-      const renamedSaveFile = new File([currentSave], window.currentCartridgeSaveName);
-      emulator?.uploadSaveOrSaveState?.(renamedSaveFile);
-      setTimeout(function() { emulator?.fsSync?.(); }, 400);
-    } else {
-      console.warn("Failed to retrieve current save data or missing cartridge save name.");
-    }
-  };
+  const syncActionIfEnabled = useCallback(
+    async ({ withToast = true }: SyncActionIfEnabledProps = {}) => {
+      if (emulatorSettings?.saveFileSystemOnCreateUpdateDelete) {
+        await emulator?.fsSync();
+        if (emulatorSettings.fileSystemNotificationsEnabled && withToast)
+          toast.success('Saved File System', { id: savedFileSystemToastId });
+      }
+    },
+    [
+      emulatorSettings?.saveFileSystemOnCreateUpdateDelete,
+      emulatorSettings?.fileSystemNotificationsEnabled,
+      emulator,
+      savedFileSystemToastId
+    ]
+  );
 
   const addCallbacks = useCallback(
     (options: CoreCallbackOptions) =>
       emulator?.addCoreCallbacks({
-        saveDataUpdatedCallback: () => {
-          // Always run saveDataUpdatedCallback for saving the current data
-          saveDataUpdatedCallback();
-  
-          // Run additional optional callback if conditions are met
-          optionalFunc(
-            options.saveFileSystemOnInGameSave,
-            () => {
-              if (window.additionalData && window.esp32IP) {
-                uploadSaveToCartridge(window.additionalData, emulator, window.esp32IP);
-              }
-            }
-          )?.();
-        }
+        saveDataUpdatedCallback: optionalFunc(
+          options.saveFileSystemOnInGameSave,
+          async () => {
+            await emulator.fsSync();
+            if (options.fileSystemNotificationsEnabled)
+              toast.success('Saved File System', {
+                id: savedFileSystemToastId
+              });
+          }
+        ),
+        autoSaveStateLoadedCallback: optionalFunc(
+          options.autoSaveStateLoadNotificationEnabled,
+          () =>
+            toast.success('Auto save state loaded', {
+              id: autoSaveStateLoadedToastId
+            })
+        ),
+        autoSaveStateCapturedCallback: optionalFunc(
+          options.autoSaveStateCaptureNotificationEnabled,
+          () => {
+            toast.success('Auto save state captured', {
+              id: autoSaveStateCapturedToastId
+            });
+            trigger();
+          }
+        )
       }),
-    [emulator]
+    [
+      autoSaveStateCapturedToastId,
+      autoSaveStateLoadedToastId,
+      emulator,
+      savedFileSystemToastId,
+      trigger
+    ]
   );
 
-  const addCallbacksAndSaveSettings = useCallback(
-    (options: CoreCallbackOptions) => {
-      setFileSystemOptions((prevState) => ({
-        ...prevState,
-        ...options
-      }));
-
-      if (isRunning) addCallbacks(options);
-    },
-    [addCallbacks, isRunning, setFileSystemOptions]
-  );
-
-  return { addCallbacks, addCallbacksAndSaveSettings };
+  return {
+    addCallbacks,
+    syncActionIfEnabled
+  };
 };

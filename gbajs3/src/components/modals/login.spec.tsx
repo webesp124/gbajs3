@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { LoginModal } from './login.tsx';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
 
 describe('<LoginModal />', () => {
   it('renders login form', () => {
@@ -17,21 +16,19 @@ describe('<LoginModal />', () => {
   });
 
   it('logs user into the server and closes modal', async () => {
-    const setIsModalOpenSpy = vi.fn();
-    const setAccessTokenSpy = vi.fn();
-    const setAccessTokenSourceSpy = vi.fn();
+    const closeModalSpy = vi.fn();
+    const setLoginTokenSpy = vi.fn();
     const { useModalContext: originalModal, useAuthContext: originalAuth } =
       await vi.importActual<typeof contextHooks>('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...originalModal(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     vi.spyOn(contextHooks, 'useAuthContext').mockImplementation(() => ({
       ...originalAuth(),
-      setAccessToken: setAccessTokenSpy,
-      setAccessTokenSource: setAccessTokenSourceSpy
+      setLoginToken: setLoginTokenSpy
     }));
 
     renderWithContext(<LoginModal />);
@@ -47,13 +44,13 @@ describe('<LoginModal />', () => {
 
     await waitForElementToBeRemoved(screen.queryByTestId('login-spinner'));
 
-    expect(setAccessTokenSpy).toHaveBeenCalledOnce();
-    expect(setAccessTokenSourceSpy).toHaveBeenCalledOnce();
-    expect(setIsModalOpenSpy).toHaveBeenCalledOnce();
+    expect(setLoginTokenSpy).toHaveBeenCalledOnce();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
 
-    expect(setAccessTokenSpy).toHaveBeenCalledWith('some token');
-    expect(setAccessTokenSourceSpy).toHaveBeenCalledWith('login');
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
+    expect(setLoginTokenSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^.+$/)
+    );
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 
   it('renders form validation errors', async () => {
@@ -79,14 +76,14 @@ describe('<LoginModal />', () => {
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<LoginModal />);
@@ -96,41 +93,6 @@ describe('<LoginModal />', () => {
     expect(closeButton).toBeInTheDocument();
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<LoginModal />);
-
-    expect(
-      await screen.findByText(
-        'Use this form to login for premium features if you have a registered account.'
-      )
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText(
-        'Use this form to login for premium features if you have a registered account.'
-      )
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

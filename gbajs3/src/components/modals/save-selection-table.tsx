@@ -43,7 +43,7 @@ export const SaveSelectionTable: React.FC<SaveSelectionTableProps> = ({ gameData
             const saveFile = emulator?.getFile?.("/data/saves/" + save);
 
             if (saveFile) {
-                const renamedFile = new File([saveFile], saveName);
+                const renamedFile = new File([saveFile as BlobPart], saveName);
 
                 emulator?.uploadSaveOrSaveState?.(renamedFile);
             } else {
@@ -87,7 +87,10 @@ export const SaveSelectionTable: React.FC<SaveSelectionTableProps> = ({ gameData
         if (file) handleFileUpload(file);
     };
 
-    const localSaves = emulator?.listSaves?.().filter(save => save.includes(gameData.cartID + "_" + checksum1000String)) || [];
+    const localSaves =
+        emulator?.listSaves?.().filter((save: string) =>
+            save.includes(gameData.cartID + "_" + checksum1000String)
+        ) || [];
 
     useEffect(() => {
         if(!window.hasRun){
@@ -138,7 +141,7 @@ export const SaveSelectionTable: React.FC<SaveSelectionTableProps> = ({ gameData
                             </TableRow>
                         )}
                         {localSaves.length > 0 && (
-                            localSaves.map((save, index) => (
+                            localSaves.map((save: string, index: number) => (
                                 <TableRow key={index}>
                                     <TableCell>
                                         <Checkbox
@@ -166,7 +169,7 @@ export const SaveSelectionTable: React.FC<SaveSelectionTableProps> = ({ gameData
                     </TableBody>
                 </Table>
             </TableContainer>
-            <Box mt={2} p={2} border="1px dashed grey" margin="0 auto" textAlign="center" onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
+            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', margin: '0 auto', textAlign: 'center' }} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
                 <Typography>Drag & Drop Save File Here or Select a File</Typography>
                 <Button variant="contained" component="label" sx={{ mt: 1 }}>
                     Select Save File

@@ -3,9 +3,9 @@ import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DownloadSaveModal } from './download-save.tsx';
+import * as blobUtilities from './file-utilities/blob.ts';
 import { renderWithContext } from '../../../test/render-with-context.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
-import { productTourLocalStorageKey } from '../product-tour/consts.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
 
@@ -18,6 +18,11 @@ describe('<DownloadSaveModal />', () => {
         'Remember to save in game before downloading your save file!'
       )
     ).toBeVisible();
+    expect(
+      screen.getByRole('checkbox', {
+        name: /Truncate save \(128 KiB\)/i
+      })
+    ).not.toBeChecked();
   });
 
   it('renders error if there is no current save or save name', async () => {
@@ -48,13 +53,9 @@ describe('<DownloadSaveModal />', () => {
     const { useEmulatorContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
-    // unimplemented in jsdom
-    URL.createObjectURL = vi.fn(() => 'object_url:some_rom.sav');
-    // mock to assert click and prevent navigation (unimplemented)
-    const anchorClickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockReturnValue();
-    const anchorRemoveSpy = vi.spyOn(HTMLAnchorElement.prototype, 'remove');
+    const downloadBlobSpy = vi
+      .spyOn(blobUtilities, 'downloadBlob')
+      .mockImplementation(() => new Blob());
 
     vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
       ...original(),
@@ -71,20 +72,54 @@ describe('<DownloadSaveModal />', () => {
     const downloadButton = screen.getByText('Download', { selector: 'button' });
     await userEvent.click(downloadButton);
 
-    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.anything());
-    expect(anchorClickSpy).toHaveBeenCalledOnce();
-    expect(anchorRemoveSpy).toHaveBeenCalledOnce();
+    expect(downloadBlobSpy).toHaveBeenCalledOnce();
+    expect(downloadBlobSpy).toHaveBeenCalledWith(
+      'some_rom.sav',
+      expect.any(Blob)
+    );
+  });
+
+  it('downloads a truncated save when requested', async () => {
+    const { useEmulatorContext: original } = await vi.importActual<
+      typeof contextHooks
+    >('../../hooks/context.tsx');
+    const downloadBlobSpy = vi
+      .spyOn(blobUtilities, 'downloadBlob')
+      .mockImplementation(() => new Blob());
+    const getCurrentSaveTruncated = vi.fn(() =>
+      new TextEncoder().encode('Some truncated sav file contents')
+    );
+    const getCurrentSave = vi.fn(() => new TextEncoder().encode('raw save'));
+
+    vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
+      ...original(),
+      emulator: {
+        ...original().emulator,
+        getCurrentSave,
+        getCurrentSaveTruncated: getCurrentSaveTruncated,
+        getCurrentSaveName: () => 'some_rom.sav'
+      } as GBAEmulator
+    }));
+
+    renderWithContext(<DownloadSaveModal />);
+
+    await userEvent.click(screen.getByText('Truncate save (128 KiB)'));
+    await userEvent.click(screen.getByText('Download', { selector: 'button' }));
+
+    expect(getCurrentSaveTruncated).toHaveBeenCalledWith(131072);
+    expect(getCurrentSave).not.toHaveBeenCalled();
+    expect(downloadBlobSpy).toHaveBeenCalledOnce();
   });
 
   it('closes modal using the close button', async () => {
-    const setIsModalOpenSpy = vi.fn();
+    const closeModalSpy = vi.fn();
     const { useModalContext: original } = await vi.importActual<
       typeof contextHooks
     >('../../hooks/context.tsx');
 
     vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
       ...original(),
-      setIsModalOpen: setIsModalOpenSpy
+      closeModal: closeModalSpy
     }));
 
     renderWithContext(<DownloadSaveModal />);
@@ -93,45 +128,6 @@ describe('<DownloadSaveModal />', () => {
     const closeButton = screen.getByText('Close', { selector: 'button' });
     await userEvent.click(closeButton);
 
-    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
-  });
-
-  it('renders tour steps', async () => {
-    const { useModalContext: original } = await vi.importActual<
-      typeof contextHooks
-    >('../../hooks/context.tsx');
-
-    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-      ...original(),
-      isModalOpen: true
-    }));
-
-    localStorage.setItem(
-      productTourLocalStorageKey,
-      '{"hasCompletedProductTourIntro":"finished"}'
-    );
-
-    renderWithContext(<DownloadSaveModal />);
-
-    expect(
-      await screen.findByText(
-        'Use this button to download your current save file.'
-      )
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Remember to save in game before downloading!')
-    ).toBeInTheDocument();
-
-    // click joyride floater
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Open the dialog' })
-    );
-
-    expect(
-      screen.getByText('Use this button to download your current save file.')
-    ).toBeVisible();
-    expect(
-      screen.getByText('Remember to save in game before downloading!')
-    ).toBeVisible();
+    expect(closeModalSpy).toHaveBeenCalledOnce();
   });
 });

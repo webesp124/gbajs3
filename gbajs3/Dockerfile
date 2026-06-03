@@ -1,16 +1,20 @@
 # first stage - builder
-FROM node:20.12.1-alpine3.19 AS builder
+FROM node:24.14.0-alpine3.23 AS builder
 WORKDIR /app
 COPY . /app
 
 ARG CLIENT_HOST
+ARG RELEASE_VERSION
 ENV VITE_GBA_SERVER_LOCATION=${CLIENT_HOST}
+ENV VITE_GBA_RELEASE_VERSION=${RELEASE_VERSION}
 
-RUN npm install
-RUN npm run build
+RUN npm install && npm run build
 
 # second stage, server
 FROM nginx:stable-alpine
+
+LABEL org.opencontainers.image.source https://github.com/thenick775/gbajs3
+
 COPY ./docker/nginx.conf.template /etc/nginx/templates/nginx.conf.template
 
 # copy build

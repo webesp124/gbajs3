@@ -4,15 +4,16 @@ import {
   AccordionSummary,
   Button
 } from '@mui/material';
-import { useEffect, useId, useState } from 'react';
+import { useTheme, styled } from '@mui/material/styles';
+import { useId, useState } from 'react';
 import { BiError } from 'react-icons/bi';
 import { FaArrowDown } from 'react-icons/fa';
-import { styled, useTheme } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
 import { useRunGame } from '../../hooks/emulator/use-run-game.tsx';
 import { useLoadExternalRom } from '../../hooks/use-load-external-rom.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
@@ -20,21 +21,18 @@ import {
   LoadingIndicator,
   PacmanIndicator
 } from '../shared/loading-indicator.tsx';
-import { CenteredTextContainer } from '../shared/styled.tsx';
+import { Copy } from '../shared/styled.tsx';
 
 import type { PublicRomUploadStatus } from '../../hooks/use-show-load-public-roms.tsx';
 
-type UploadPublicExternalRomsModalProps = {
+export type UploadPublicExternalRomsModalProps = {
   url: URL;
   onLoadOrDismiss: (statusMsg: PublicRomUploadStatus) => void;
 };
 
-const LinkBreakWord = styled.a`
+const LinkBreakWord = styled('a')`
   word-break: break-all;
-`;
-
-const Copy = styled.p`
-  margin: 0;
+  color: ${({ theme }) => theme.pureWhite};
 `;
 
 const URLDisplay = ({ url }: { url: URL }) => {
@@ -57,50 +55,39 @@ export const UploadPublicExternalRomsModal = ({
   onLoadOrDismiss
 }: UploadPublicExternalRomsModalProps) => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
-  const [hasCompletedUpload, setHasCompletedUpload] = useState(false);
   const [currentRomURL, setCurrentRomURL] = useState<string | null>(null);
   const uploadRomButtonId = useId();
   const runGame = useRunGame();
-
+  const { syncActionIfEnabled } = useAddCallbacks();
   const {
-    data: externalRomFile,
-    isLoading: isExternalRomLoading,
+    isPending: isExternalRomLoading,
     error: externalRomLoadError,
-    execute: executeLoadExternalRom
-  } = useLoadExternalRom();
-
-  useEffect(() => {
-    if (!isExternalRomLoading && externalRomFile && currentRomURL) {
-      const runCallback = () => {
-        const hasSucceeded = runGame(
-          emulator?.filePaths().gamePath + '/' + externalRomFile.name
-        );
+    mutate: executeLoadExternalRom
+  } = useLoadExternalRom({
+    onSuccess: (file) => {
+      const runCallback = async () => {
+        await syncActionIfEnabled();
+        const hasSucceeded = runGame(file.name);
         if (hasSucceeded) {
           onLoadOrDismiss('loaded');
-          setIsModalOpen(false);
+          closeModal();
         }
       };
-      emulator?.uploadRom(externalRomFile, runCallback);
+
+      emulator?.uploadRom(file, runCallback);
       setCurrentRomURL(null);
-      setHasCompletedUpload(true);
     }
-  }, [
-    onLoadOrDismiss,
-    runGame,
-    currentRomURL,
-    emulator,
-    externalRomFile,
-    isExternalRomLoading,
-    setIsModalOpen
-  ]);
+  });
 
   return (
     <>
       <ModalHeader
         title="Upload Public Rom"
-        onClose={() => onLoadOrDismiss('temporarily-dismissed')}
+        onClose={() => {
+          onLoadOrDismiss('temporarily-dismissed');
+        }}
       />
       <ModalBody>
         <LoadingIndicator
@@ -109,13 +96,9 @@ export const UploadPublicExternalRomsModal = ({
           indicator={<PacmanIndicator />}
           loadingCopy="Loading rom from url:"
         >
-          {!hasCompletedUpload && (
-            <>
-              <p>A public rom URL has been shared with you.</p>
-              <p>You can load it using the upload button!</p>
-              <p>Make sure you trust the provider before uploading:</p>
-            </>
-          )}
+          <p>A public rom URL has been shared with you.</p>
+          <p>You can load it using the upload button!</p>
+          <p>Make sure you trust the provider before uploading:</p>
           <URLDisplay url={url} />
           {!!externalRomLoadError && (
             <ErrorWithIcon
@@ -123,16 +106,12 @@ export const UploadPublicExternalRomsModal = ({
               text="Loading rom from URL has failed"
             />
           )}
-          {hasCompletedUpload && (
-            <CenteredTextContainer>
-              <p>Upload complete!</p>
-            </CenteredTextContainer>
-          )}
         </LoadingIndicator>
       </ModalBody>
       <ModalFooter>
         <Button
           id={uploadRomButtonId}
+          disabled={isExternalRomLoading}
           onClick={() => {
             setCurrentRomURL(url.href);
             executeLoadExternalRom({ url: url });
@@ -146,7 +125,7 @@ export const UploadPublicExternalRomsModal = ({
           variant="outlined"
           onClick={() => {
             onLoadOrDismiss(externalRomLoadError ? 'skipped-error' : 'skipped');
-            setIsModalOpen(false);
+            closeModal();
           }}
         >
           Don't ask again

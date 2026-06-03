@@ -1,99 +1,92 @@
 import { Button } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useId } from 'react';
-import { styled } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
 import { useRunGame } from '../../hooks/emulator/use-run-game.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
 import { CenteredText } from '../shared/styled.tsx';
 
-const LoadRomButton = styled.button`
-  padding: 0.5rem 1rem;
+const StyledLi = styled('li')`
+  margin: 0;
+`;
+
+const LoadRomButton = styled('button')`
   width: 100%;
-  color: ${({ theme }) => theme.blueCharcoal};
-  text-decoration: none;
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: 1px solid rgba(0, 0, 0, 0.125);
+  display: block;
+  padding: 0.875rem 1rem;
   text-align: left;
+  cursor: pointer;
+  color: ${({ theme }) => theme.modalTextPrimary};
+  background-color: transparent;
+  border: 0;
+  font: inherit;
+  line-height: 1.35;
+  overflow: hidden;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.darkGrayBlue};
-    background-color: ${({ theme }) => theme.aliceBlue1};
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+  }
+
+  &:focus-visible {
+    outline: none;
+    position: relative;
+    z-index: 1;
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.gbaThemeBlue};
+  }
+
+  &:active {
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
   }
 `;
 
-const StyledLi = styled.li`
-  cursor: pointer;
-`;
-
-const RomList = styled.ul`
-  list-style-type: none;
+const RomList = styled('ul')`
+  list-style: none;
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
 
-  & > ${StyledLi}:first-child > ${LoadRomButton} {
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-  }
+  background: ${({ theme }) => theme.modalSurfaceElevated};
+  border: 1px solid ${({ theme }) => theme.modalListBorder};
+  border-radius: 10px;
+  overflow: hidden;
 
-  & > ${StyledLi}:last-child > ${LoadRomButton} {
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-  }
-
-  & > ${StyledLi}:not(:first-child) > ${LoadRomButton} {
-    border-top-width: 0;
+  & > ${StyledLi} + ${StyledLi} {
+    border-top: 1px solid ${({ theme }) => theme.modalListBorder};
   }
 `;
 
+const EmptyState = styled(CenteredText)`
+  padding: 1rem;
+  color: ${({ theme }) => theme.modalTextSecondary};
+`;
+
 export const LoadLocalRomModal = () => {
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
   const romListId = useId();
   const runGame = useRunGame();
-  const ignorePaths = ['.', '..'];
-  const localRoms = emulator
-    ?.listRoms?.()
-    ?.filter((romName) => !ignorePaths.includes(romName));
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>
-            Use this area to load local roms that have been saved to your
-            device.
-          </p>
-          <p>Tap the name of your rom file and your game will boot!</p>
-          <p>
-            To persist roms and other files, use the <i>File System</i> menu
-            item.
-          </p>
-        </>
-      ),
-      target: `#${CSS.escape(romListId)}`
-    }
-  ];
+  const localRoms = emulator?.listRoms();
 
   return (
     <>
       <ModalHeader title="Load Local Rom" />
       <ModalBody>
         <RomList id={romListId}>
-          {localRoms?.map?.((romName: string, idx: number) => (
+          {localRoms?.map((romName: string, idx: number) => (
             <StyledLi key={`${romName}_${idx}`}>
               <LoadRomButton
                 onClick={() => {
-                  runGame(emulator?.filePaths().gamePath + '/' + romName);
-                  setIsModalOpen(false);
+                  runGame(romName);
+                  closeModal();
                 }}
               >
                 {romName}
@@ -101,23 +94,19 @@ export const LoadLocalRomModal = () => {
             </StyledLi>
           ))}
           {!localRoms?.length && (
-            <li>
-              <CenteredText>
+            <StyledLi>
+              <EmptyState>
                 No local roms, load a game and save your file system
-              </CenteredText>
-            </li>
+              </EmptyState>
+            </StyledLi>
           )}
         </RomList>
       </ModalBody>
       <ModalFooter>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedLoadLocalRomTour"
-      />
     </>
   );
 };

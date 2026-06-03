@@ -5,7 +5,7 @@ env_directories=("." "./postgres" "./gbajs3" "./auth" "./admin")
 echo "Do you want to reset all bootstrap actions?"
 echo "This will permanently remove:"
 echo "- all .env files"
-echo "- all default directories (excluding database mount)"
+echo "- all default directories (including database mount)"
 echo "- default certificates"
 
 read -r -p "(y/n) " REPLY
@@ -21,10 +21,10 @@ if [[ $REPLY == "y" || $REPLY == "Y" ]]; then
     exit 1
   fi
 
-  for dir in "$ROM_PATH" "$SAVE_PATH" "$CERT_DIR"; do
+  for dir in "$ROM_PATH" "$SAVE_PATH" "$CERT_DIR" "$PG_DATA_LOCATION"; do
     if [ -d "$dir" ]; then
       rm -r "$dir" &&
-        echo "Deleted $dir"
+        echo "Deleted directory $dir"
     else
       echo "Directory $dir does not exist."
     fi
@@ -39,6 +39,13 @@ if [[ $REPLY == "y" || $REPLY == "Y" ]]; then
       echo "Env file $dir/.env does not exist."
     fi
   done
+
+  if [[ -f "./.env.swarm" ]]; then
+    rm "./.env.swarm" &&
+      echo "Deleted ./.env.swarm in ."
+  else
+    echo ".env.swarm does not exist"
+  fi
 else
   echo "Operation cancelled."
 fi

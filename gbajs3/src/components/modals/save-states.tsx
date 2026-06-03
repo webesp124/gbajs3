@@ -1,253 +1,327 @@
-import { Button, IconButton, TextField } from '@mui/material';
+import { Button, Collapse, IconButton } from '@mui/material';
+import { useTheme, styled } from '@mui/material/styles';
 import { useLocalStorage } from '@uidotdev/usehooks';
-import { useCallback, useEffect, useId, useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useCallback, useMemo, useState } from 'react';
 import { BiError, BiTrash } from 'react-icons/bi';
-import { styled, useTheme } from 'styled-components';
+import { FaRegEye } from 'react-icons/fa';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
-import { saveStateSlotLocalStorageKey } from '../controls/consts.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
-import { CircleCheckButton } from '../shared/circle-check-button.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
+import { useFileStat } from '../../hooks/emulator/use-file-stat.tsx';
+import { saveStateSlotsLocalStorageKey } from '../controls/consts.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
+import { NumberInput } from '../shared/number-input.tsx';
 import { CenteredText, StyledBiPlus } from '../shared/styled.tsx';
 
-type InputProps = {
-  saveStateSlot: number;
+export type CurrentSaveStateSlots = Record<string, number>;
+
+type SaveStateListItemProps = {
+  key: string;
+  saveStateName: string;
+  previewDataUrl?: string;
+  isSaveStatePreviewSelected: boolean;
+  onSaveStatePreviewSelected: () => void;
+  onClick?: () => void;
+  onDelete: () => void;
 };
 
-const LoadSaveStateButton = styled.button`
-  padding: 0.5rem 0.5rem;
+const LoadSaveStateButton = styled('button')`
   width: 100%;
-  color: ${({ theme }) => theme.blueCharcoal};
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: none;
+  padding: 0.875rem 1rem;
   text-align: left;
+  cursor: pointer;
+  color: ${({ theme }) => theme.modalTextPrimary};
+  background: transparent;
+  border: 0;
+  font: inherit;
+  line-height: 1.35;
+  overflow: hidden;
+
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.darkGrayBlue};
-    background-color: ${({ theme }) => theme.aliceBlue1};
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+  }
+
+  &:focus-visible {
+    outline: none;
+    position: relative;
+    z-index: 1;
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
+    box-shadow:
+      inset 0 0 0 1px ${({ theme }) => theme.gbaThemeBlue},
+      0 0 0 2px ${({ theme }) => theme.focusRingPrimarySoft};
+  }
+
+  &:active {
+    background-color: ${({ theme }) => theme.modalListItemHoverSurface};
   }
 `;
 
-const StyledLi = styled.li`
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: auto 32px;
-  gap: 10px;
-
-  color: ${({ theme }) => theme.blueCharcoal};
-  background-color: ${({ theme }) => theme.pureWhite};
-  border: 1px solid rgba(0, 0, 0, 0.125);
+const StyledLi = styled('li')`
+  margin: 0;
 `;
 
-const SaveStatesList = styled.ul`
-  list-style-type: none;
+const ButtonGrid = styled('div')`
+  display: grid;
+  grid-template-columns: 1fr 36px 36px;
+  align-items: center;
+`;
+
+const SaveStatesList = styled('ul')`
+  list-style: none;
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
 
-  & > ${StyledLi}:first-child {
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-  }
+  background: ${({ theme }) => theme.modalSurfaceElevated};
+  border: 1px solid ${({ theme }) => theme.modalListBorder};
+  border-radius: 10px;
+  overflow: hidden;
 
-  & > ${StyledLi}:last-child {
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-  }
-
-  & > ${StyledLi}:not(:first-child) {
-    border-top-width: 0;
+  & > ${StyledLi} + ${StyledLi} {
+    border-top: 1px solid ${({ theme }) => theme.modalListBorder};
   }
 `;
 
-const StyledCiCircleRemove = styled(BiTrash)`
-  height: 100%;
-  width: 20px;
+const StyledBiTrash = styled(BiTrash)`
+  width: 18px;
+  height: 18px;
 `;
 
-const StyledForm = styled.form`
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.pattensBlue};
+const StyledFaRegEye = styled(FaRegEye)`
+  width: 18px;
+  height: 18px;
+`;
+
+const StateSlotContainer = styled('div')`
+  border-bottom: 1px solid ${({ theme }) => theme.modalListBorder};
   margin-bottom: 16px;
   padding-bottom: 16px;
 `;
 
+const SaveStatePreview = styled('img')`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: pixelated;
+  background: ${({ theme }) => theme.modalSurface};
+`;
+
+const EmptyState = styled(CenteredText)`
+  padding: 1rem;
+  color: ${({ theme }) => theme.modalTextSecondary};
+`;
+
+const uint8ArrayToBase64DataUrl = (binary?: Uint8Array) =>
+  binary?.length
+    ? `data:image/png;base64,${btoa(
+        Array.from(binary, (b) => String.fromCharCode(b)).join('')
+      )}`
+    : undefined;
+
+const parseSaveStateSlot = (saveStateName: string) => {
+  const ext = saveStateName.split('.').pop();
+  const slotString = ext?.replace('ss', '');
+
+  if (!slotString) return null;
+
+  const slot = parseInt(slotString);
+
+  return !isNaN(slot) ? slot : null;
+};
+
+const SaveStateListItem = ({
+  saveStateName,
+  previewDataUrl,
+  isSaveStatePreviewSelected,
+  onSaveStatePreviewSelected,
+  onClick,
+  onDelete
+}: SaveStateListItemProps) => (
+  <StyledLi>
+    <ButtonGrid>
+      <LoadSaveStateButton onClick={onClick} title={saveStateName}>
+        {saveStateName}
+      </LoadSaveStateButton>
+      <IconButton
+        aria-label={`${
+          isSaveStatePreviewSelected ? 'Close' : 'View'
+        } ${saveStateName}`}
+        onClick={onSaveStatePreviewSelected}
+      >
+        <StyledFaRegEye />
+      </IconButton>
+      <IconButton aria-label={`Delete ${saveStateName}`} onClick={onDelete}>
+        <StyledBiTrash />
+      </IconButton>
+    </ButtonGrid>
+    <Collapse in={isSaveStatePreviewSelected}>
+      <SaveStatePreview src={previewDataUrl} alt={`${saveStateName} Preview`} />
+    </Collapse>
+  </StyledLi>
+);
+
 export const SaveStatesModal = () => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
   const [currentSaveStates, setCurrentSaveStates] = useState<
     string[] | undefined
-  >();
+  >(emulator?.listCurrentSaveStates);
   const [saveStateError, setSaveStateError] = useState<string | null>(null);
-  const [currentSlot, setCurrentSlot] = useLocalStorage(
-    saveStateSlotLocalStorageKey,
-    0
-  );
-  const baseId = useId();
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitSuccessful }
-  } = useForm<InputProps>({
-    defaultValues: {
-      saveStateSlot: currentSlot
-    }
-  });
+  const [currentSlots, setCurrentSlots] =
+    useLocalStorage<CurrentSaveStateSlots>(saveStateSlotsLocalStorageKey, {});
+  const { syncActionIfEnabled } = useAddCallbacks();
+  const [currentSaveStatePreview, setCurrentSaveStatePreview] = useState<
+    string | null
+  >(null);
 
   const refreshSaveStates = useCallback(() => {
-    const saveStatesList = emulator
-      ?.listSaveStates()
-      ?.filter((ss) => ss !== '.' && ss !== '..');
-
+    const saveStatesList = emulator?.listCurrentSaveStates();
     setCurrentSaveStates(saveStatesList);
   }, [emulator]);
 
-  useEffect(() => {
-    setValue('saveStateSlot', currentSlot);
-  }, [currentSlot, setValue]);
+  const saveStateImageUrls = useMemo(
+    () =>
+      currentSaveStates
+        ?.map((saveState) => {
+          const binary = emulator?.getSaveState(saveState);
+          return uint8ArrayToBase64DataUrl(binary);
+        })
+        .filter((url): url is string => url !== undefined),
+    [emulator, currentSaveStates]
+  );
 
-  const onSubmit: SubmitHandler<InputProps> = async (formData) => {
-    setCurrentSlot(formData.saveStateSlot);
+  const currentGameName = emulator?.getCurrentGameName();
+  const currentSaveStateSlot = currentGameName
+    ? (currentSlots[currentGameName] ?? 0)
+    : 0;
+
+  const setCurrentSaveStateSlot = (slot: number) => {
+    if (currentGameName)
+      setCurrentSlots((prevState) => ({
+        ...prevState,
+        [currentGameName]: slot
+      }));
   };
 
-  const renderedSaveStates =
-    currentSaveStates ??
-    emulator?.listSaveStates()?.filter((ss) => ss !== '.' && ss !== '..');
+  const autoSaveStateData = emulator?.getAutoSaveState();
+  const autoSaveStateNameWithoutPath = autoSaveStateData?.autoSaveStateName
+    .split('/')
+    .pop();
+  const autoSaveStateImage = uint8ArrayToBase64DataUrl(autoSaveStateData?.data);
 
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <p>
-          Use this input and button to manually update the current save state
-          slot in use.
-        </p>
-      ),
-      placementBeacon: 'bottom-end',
-      target: `#${CSS.escape(`${baseId}--save-state-slot-form`)}`
-    },
-    {
-      content: (
-        <p>
-          Tap a row to load a save state, or use the trash can icon to delete a
-          save state.
-        </p>
-      ),
-      placementBeacon: 'bottom-end',
-      target: `#${CSS.escape(`${baseId}--save-state-list`)}`
-    },
-    {
-      content: (
-        <p>
-          Use the <i>plus</i> button to add a new save state. This will
-          automatically increase the current save state number!
-        </p>
-      ),
-      placementBeacon: 'bottom-end',
-      target: `#${CSS.escape(`${baseId}--add-state-button`)}`
-    }
-  ];
+  const autoSaveStatePath = emulator?.getCurrentAutoSaveStatePath();
+  const { trigger } = useFileStat(autoSaveStatePath);
+
+  const toggleCurrentSaveStatePreview = (saveStateName: string) => {
+    setCurrentSaveStatePreview(
+      currentSaveStatePreview === saveStateName ? null : saveStateName
+    );
+  };
 
   return (
     <>
       <ModalHeader title="Manage Save States" />
       <ModalBody>
-        <StyledForm
-          id={`${baseId}--save-state-slot-form`}
-          onSubmit={handleSubmit(onSubmit)}
-        >
-          <TextField
+        <StateSlotContainer>
+          <NumberInput
             label="Current Save State Slot"
-            type="number"
-            InputLabelProps={{
-              shrink: true
+            size="small"
+            min={0}
+            value={currentSaveStateSlot}
+            slotProps={{
+              inputLabel: { shrink: true },
+              input: {
+                onChange: (p) => {
+                  setCurrentSaveStateSlot(Number(p.target.value));
+                }
+              }
             }}
-            size="small"
-            error={!!errors?.saveStateSlot}
-            helperText={errors?.saveStateSlot?.message}
-            {...register('saveStateSlot', {
-              required: { value: true, message: 'Slot is required' },
-              min: { value: 0, message: 'Slot must be >= 0' },
-              valueAsNumber: true
-            })}
+            sx={{ width: '100%' }}
           />
-          <CircleCheckButton
-            copy="Update Slot"
-            showSuccess={isSubmitSuccessful}
-            size="small"
-            type="submit"
-            sx={{ maxHeight: '40px' }}
-          />
-        </StyledForm>
-
-        <SaveStatesList id={`${baseId}--save-state-list`}>
-          {renderedSaveStates?.map?.((saveState: string, idx: number) => (
-            <StyledLi key={`${saveState}_${idx}`}>
-              <LoadSaveStateButton
-                onClick={() => {
-                  const ext = saveState.split('.').pop();
-                  const slotString = ext?.replace('ss', '');
-                  if (slotString) {
-                    const slot = parseInt(slotString);
-                    const hasLoadedSaveState = emulator?.loadSaveState(slot);
-                    if (hasLoadedSaveState) {
-                      setCurrentSlot(slot);
-                      setSaveStateError(null);
-                    } else {
-                      setSaveStateError('Failed to load save state');
-                    }
+        </StateSlotContainer>
+        <SaveStatesList>
+          {autoSaveStateNameWithoutPath && (
+            <SaveStateListItem
+              key={autoSaveStateNameWithoutPath}
+              saveStateName={autoSaveStateNameWithoutPath}
+              previewDataUrl={autoSaveStateImage}
+              isSaveStatePreviewSelected={
+                currentSaveStatePreview === autoSaveStateNameWithoutPath
+              }
+              onSaveStatePreviewSelected={() => {
+                toggleCurrentSaveStatePreview(autoSaveStateNameWithoutPath);
+              }}
+              onClick={emulator?.loadAutoSaveState}
+              onDelete={() => {
+                if (autoSaveStateData?.autoSaveStateName) {
+                  emulator?.deleteFile(autoSaveStateData.autoSaveStateName);
+                  trigger();
+                }
+              }}
+            />
+          )}
+          {currentSaveStates?.map((saveState: string, idx: number) => (
+            <SaveStateListItem
+              key={`${saveState}_${idx}`}
+              saveStateName={saveState}
+              previewDataUrl={saveStateImageUrls?.[idx]}
+              isSaveStatePreviewSelected={currentSaveStatePreview === saveState}
+              onSaveStatePreviewSelected={() => {
+                toggleCurrentSaveStatePreview(saveState);
+              }}
+              onClick={() => {
+                const slot = parseSaveStateSlot(saveState);
+                if (slot !== null) {
+                  const hasLoadedSaveState = emulator?.loadSaveState(slot);
+                  if (hasLoadedSaveState && currentGameName) {
+                    setCurrentSlots((prevState) => ({
+                      ...prevState,
+                      [currentGameName]: slot
+                    }));
+                    setSaveStateError(null);
+                  } else {
+                    setSaveStateError('Failed to load save state');
                   }
-                }}
-              >
-                {saveState}
-              </LoadSaveStateButton>
-              <IconButton
-                aria-label={`Delete ${saveState}`}
-                sx={{ padding: 0 }}
-                onClick={() => {
-                  const ext = saveState.split('.').pop();
-                  const slotString = ext?.replace('ss', '');
-                  if (slotString) {
-                    const slot = parseInt(slotString);
-                    emulator?.deleteSaveState(slot);
-                    refreshSaveStates();
-                  }
-                }}
-              >
-                <StyledCiCircleRemove />
-              </IconButton>
-            </StyledLi>
+                }
+              }}
+              onDelete={async () => {
+                const slot = parseSaveStateSlot(saveState);
+                if (slot !== null) {
+                  emulator?.deleteSaveState(slot);
+                  refreshSaveStates();
+                  await syncActionIfEnabled();
+                }
+              }}
+            />
           ))}
-          {!renderedSaveStates?.length && (
-            <li>
-              <CenteredText>No save states</CenteredText>
-            </li>
+          {!autoSaveStateNameWithoutPath && !currentSaveStates?.length && (
+            <StyledLi>
+              <EmptyState>No save states</EmptyState>
+            </StyledLi>
           )}
         </SaveStatesList>
         <IconButton
-          id={`${baseId}--add-state-button`}
-          aria-label={`Create new save state`}
+          aria-label="Create new save state"
           sx={{ padding: 0 }}
-          onClick={() => {
-            const hasCreatedSaveState = emulator?.createSaveState(
-              currentSlot + 1
-            );
+          onClick={async () => {
+            const nextSaveStateSlot = currentSaveStateSlot + 1;
+            const hasCreatedSaveState =
+              emulator?.createSaveState(nextSaveStateSlot);
             if (hasCreatedSaveState) {
               refreshSaveStates();
-              setCurrentSlot((prevState) => prevState + 1);
+              setCurrentSaveStateSlot(nextSaveStateSlot);
               setSaveStateError(null);
+              await syncActionIfEnabled();
             } else {
               setSaveStateError('Failed to create save state');
             }
@@ -263,14 +337,10 @@ export const SaveStatesModal = () => {
         )}
       </ModalBody>
       <ModalFooter>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedSaveStatesTour"
-      />
     </>
   );
 };

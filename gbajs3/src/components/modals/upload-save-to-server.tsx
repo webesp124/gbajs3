@@ -1,17 +1,13 @@
 import { Button } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useId } from 'react';
 import { BiError } from 'react-icons/bi';
-import { useTheme } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
 import { ModalHeader } from './modal-header.tsx';
 import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
 import { useUpLoadSave } from '../../hooks/use-upload-save.tsx';
-import {
-  EmbeddedProductTour,
-  type TourSteps
-} from '../product-tour/embedded-product-tour.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { PacmanIndicator } from '../shared/loading-indicator.tsx';
 import { CenteredText } from '../shared/styled.tsx';
@@ -64,28 +60,15 @@ const DynamicBody = ({
 
 export const UploadSaveToServerModal = () => {
   const theme = useTheme();
-  const { setIsModalOpen } = useModalContext();
+  const { closeModal } = useModalContext();
   const { emulator } = useEmulatorContext();
   const uploadSaveToServerButtonId = useId();
   const {
     data,
-    isLoading,
+    isPending: isLoading,
     error,
-    execute: executeUploadSave
+    mutate: executeUploadSave
   } = useUpLoadSave();
-
-  const tourSteps: TourSteps = [
-    {
-      content: (
-        <>
-          <p>Use this button to upload your current save file to the server.</p>
-          <p>Remember to save in game before uploading!</p>
-        </>
-      ),
-      placement: 'right',
-      target: `#${CSS.escape(uploadSaveToServerButtonId)}`
-    }
-  ];
 
   return (
     <>
@@ -106,22 +89,19 @@ export const UploadSaveToServerModal = () => {
             const saveName = emulator?.getCurrentSaveName();
 
             if (saveFileBytes && saveName) {
-              const saveFileBlob = new Blob([saveFileBytes]);
+              const saveFileBlob = new Blob([saveFileBytes.slice()]);
               const saveFile = new File([saveFileBlob], saveName);
+
               executeUploadSave({ saveFile });
             }
           }}
         >
           Upload
         </Button>
-        <Button variant="outlined" onClick={() => setIsModalOpen(false)}>
+        <Button variant="outlined" onClick={closeModal}>
           Close
         </Button>
       </ModalFooter>
-      <EmbeddedProductTour
-        steps={tourSteps}
-        completedProductTourStepName="hasCompletedUploadSaveToServerTour"
-      />
     </>
   );
 };

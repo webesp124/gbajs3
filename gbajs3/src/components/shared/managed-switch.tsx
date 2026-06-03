@@ -1,5 +1,4 @@
 import { Switch, FormControlLabel, type SwitchProps } from '@mui/material';
-import React from 'react';
 
 type ManagedSwitchProps = {
   label: string;
@@ -9,10 +8,13 @@ type ManagedSwitchProps = {
 // Shared managed switch component with label
 // Params: takes in label, switch props,
 //         and a watcher indicating the current value
-export const ManagedSwitch = React.forwardRef<
-  HTMLButtonElement,
-  ManagedSwitchProps
->(({ id, label, watcher, ...rest }, ref) => (
+export const ManagedSwitch = ({
+  id,
+  label,
+  watcher,
+  ref,
+  ...rest
+}: ManagedSwitchProps) => (
   <FormControlLabel
     data-testid="managed-switch:label"
     id={id}
@@ -20,4 +22,4 @@ export const ManagedSwitch = React.forwardRef<
     label={label}
     style={{ margin: 0 }}
   />
-));
+);
