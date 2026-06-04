@@ -198,9 +198,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   useEffect(() => {
     if (shouldUploadExternalRom) {
       const runCallback = () => {
-        const hasSucceeded = runGame(
-          emulator?.filePaths().gamePath + '/' + externalRomFile.name
-        );
+        const hasSucceeded = runGame(externalRomFile.name);
         if (hasSucceeded) {
           closeModal();
           if(!isLargerThanPhone)
@@ -296,7 +294,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     console.log(localRoms);
     if(localRoms && localRoms.includes(romName)){
       console.log("rom exists locally");
-      runGame(emulator?.filePaths().gamePath + '/' + romName);
+      runGame(romName);
       closeModal();
       setIsLoading(false);
       if(!isLargerThanPhone)
