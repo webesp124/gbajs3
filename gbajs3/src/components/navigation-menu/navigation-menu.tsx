@@ -183,7 +183,7 @@ export const NavigationMenu = ({
   setAdditionalData = () => {},
   gameData = null,
   setGameData = () => {},
-  esp32IP = 'http://192.168.1.3',
+  esp32IP = 'https://192.168.1.3',
   setEsp32IP = () => {}
 }: NavigationMenuProps) => {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);

@@ -63,7 +63,7 @@ interface VirtualControlsProps {
 
 export const VirtualControls = ({
   additionalData = null,
-  esp32IP = 'http://192.168.1.3'
+  esp32IP = 'https://192.168.1.3'
 }: VirtualControlsProps) => {
   const theme = useTheme();
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);

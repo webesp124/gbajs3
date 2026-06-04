@@ -87,7 +87,7 @@ const URLDisplay = styled.p`
 `;
 
 const normalizeEsp32IP = (value: string) =>
-  /^https?:\/\//i.test(value) ? value : `http://${value}`;
+  /^https?:\/\//i.test(value) ? value : `https://${value}`;
 
 interface ProgressBarProps {
   progress: number;
