@@ -62,7 +62,7 @@ const timeout = (delay: number) => {
 }
 
 // Function to fetch and display game information
-const fetchGameInfo = async (esp32IP: string[]): Promise<[any, any, string, boolean]> => {
+const fetchGameInfo = async (esp32IP: string): Promise<[any, any, string, boolean]> => {
   let gameData, additionalData;
   additionalData = null;
   let responseCartridgeReaderOk = false;

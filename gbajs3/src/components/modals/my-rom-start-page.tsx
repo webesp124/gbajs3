@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem, Alert, Typography, Box } from '@mui/material';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
 import { styled, useTheme } from 'styled-components';
@@ -85,6 +85,9 @@ const URLDisplay = styled.p`
   word-wrap: break-word;
   max-width: 100%;
 `;
+
+const normalizeEsp32IP = (value: string) =>
+  /^https?:\/\//i.test(value) ? value : `http://${value}`;
 
 interface ProgressBarProps {
   progress: number;
@@ -182,6 +185,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
   const [cartridgeSaveName, setCartridgeSaveName] = useState(`none.sav`);
   const [currentEsp32IP, setCurrentEsp32IP] = useState(esp32IP);
+  const currentEsp32IPRef = useRef(esp32IP);
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
@@ -194,6 +198,26 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     setLocalAdditionalData(updateAdditionalData);
     setAdditionalData(updateAdditionalData);
   };
+
+  const buildRomName2 = useCallback((gameData: any, additionalData: any, checksum1000String: string) => {
+    if (gameData["is_gba"]) {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
+      else
+        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
+    }
+    else {
+      if (additionalData && additionalData.fullName)
+        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
+      else
+        return gameData.romName + "_" + gameData.checksumStr;
+    }
+  }, []);
+
+  useEffect(() => {
+    setCurrentEsp32IP(esp32IP);
+    currentEsp32IPRef.current = esp32IP;
+  }, [esp32IP]);
 
   useEffect(() => {
     if (shouldUploadExternalRom) {
@@ -215,16 +239,17 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     runGame
   ]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
         setConnectionFailed(false);
         setIsExternalRomInfoLoading(true);
+        const esp32IPToFetch = normalizeEsp32IP(currentEsp32IPRef.current);
         const [
           nextGameData,
           nextAdditionalData,
           nextChecksum1000String,
           success
-        ] = await fetchGameInfo([currentEsp32IP]);
+        ] = await fetchGameInfo(esp32IPToFetch);
         setConnectionFailed(!success);
         setLocalGameData(nextGameData);
         setLocalAdditionalData(nextAdditionalData);
@@ -240,7 +265,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     } finally {
         setIsExternalRomInfoLoading(false);
     }
-  };
+  }, [buildRomName2, setAdditionalData, setGameData]);
   
   useEffect(() => {
      if(externalSaveFile != null)
@@ -251,10 +276,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   ]);
   
   useEffect(() => {
-    if(!isExternalRomInfoLoading){
-      fetchData();
-    }
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     if (connectionFailed && !isExternalRomInfoLoading) {
@@ -265,7 +288,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
       return () => clearInterval(reconnectInterval);
     }
-  }, [connectionFailed]);
+  }, [connectionFailed, fetchData, isExternalRomInfoLoading]);
 
   const startGameWithSave = async () => {
     setIsLoading(true);
@@ -314,16 +337,17 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
        }
     }
     else{
+       const esp32IPForRequest = normalizeEsp32IP(currentEsp32IPRef.current);
        if (gameData["is_gba"]){
         let romName = buildRomName() + ".gba";
         let cartSizeBytes = additionalData.cartSize;
-        let romURL = `${currentEsp32IP}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
+        let romURL = `${esp32IPForRequest}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
         await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
        }
        else {
         let romName = buildRomName() + ".gb";
-        let romURL = `${currentEsp32IP}/get_current_game.gb`;
+        let romURL = `${esp32IPForRequest}/get_current_game.gb`;
 
         await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: null });
        }
@@ -342,7 +366,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       }
       console.log(saveType);
       
-      var saveURL = `${currentEsp32IP}/get_current_save?saveType=${saveType}`;
+      var saveURL = `${normalizeEsp32IP(currentEsp32IPRef.current)}/get_current_save?saveType=${saveType}`;
       await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
 
     } catch (error) {
@@ -353,27 +377,12 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
 
   const fetchMySave_gb = async (fullName: string) => {
     try {
-      var saveURL = `${currentEsp32IP}/get_current_save`;
+      var saveURL = `${normalizeEsp32IP(currentEsp32IPRef.current)}/get_current_save`;
       await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
 
     } catch (error) {
       console.error('Error fetching save:', error);
     } finally {
-    }
-  };
-
-  const buildRomName2 = (gameData: any, additionalData: any, checksum1000String: string) => {
-    if (gameData["is_gba"]) {
-      if (additionalData && additionalData.fullName)
-        return additionalData.fullName + "_" + gameData.cartID + "_" + checksum1000String;
-      else
-        return gameData.romName + "_" + gameData.cartID + "_" + checksum1000String;
-    }
-    else {
-      if (additionalData && additionalData.fullName)
-        return additionalData.fullName + "_" + gameData.romName + "_" + gameData.checksumStr;
-      else
-        return gameData.romName + "_" + gameData.checksumStr;
     }
   };
 
@@ -621,8 +630,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '5px' }}
               value={currentEsp32IP}
               onChange={(event) => {
-                setCurrentEsp32IP(event.target.value);
-                setEsp32IP(event.target.value);
+                const nextEsp32IP = event.target.value;
+                currentEsp32IPRef.current = nextEsp32IP;
+                setCurrentEsp32IP(nextEsp32IP);
+                setEsp32IP(nextEsp32IP);
+                setConnectionFailed(false);
               }}
             />
             <Button

@@ -22,11 +22,21 @@ import { GbaDarkTheme } from './context/theme/theme.tsx';
 const queryClient = new QueryClient();
 
 const theme = createTheme(GbaDarkTheme);
+const defaultEsp32IP = 'http://192.168.1.3';
+
+const normalizeEsp32IP = (value: string | null) => {
+  if (!value) return defaultEsp32IP;
+
+  return /^https?:\/\//i.test(value) ? value : `http://${value}`;
+};
 
 export const App = () => {
   const [additionalData, setAdditionalData] = useState<any>(null);
   const [gameData, setGameData] = useState(null);
-  const [esp32IP, setEsp32IP] = useState('https://192.168.1.3');
+  const [esp32IP, setEsp32IP] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return normalizeEsp32IP(params.get('esp32_ip'));
+  });
 
   return (
     <ThemeProvider theme={theme}>

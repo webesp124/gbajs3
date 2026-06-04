@@ -183,7 +183,7 @@ export const NavigationMenu = ({
   setAdditionalData = () => {},
   gameData = null,
   setGameData = () => {},
-  esp32IP = 'https://192.168.1.3',
+  esp32IP = 'http://192.168.1.3',
   setEsp32IP = () => {}
 }: NavigationMenuProps) => {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -270,12 +270,6 @@ export const NavigationMenu = ({
       error: (err) => String(err)
     });
   };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ip = params.get('esp32_ip');
-    if (ip) setEsp32IP(`https://${ip}`);
-  }, [setEsp32IP]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
