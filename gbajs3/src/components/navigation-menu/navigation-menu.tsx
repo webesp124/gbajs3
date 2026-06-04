@@ -336,7 +336,7 @@ export const NavigationMenu = ({
             )}
           </HamburgerButton>
         </Draggable>
-        <StyledMenuHeader id={menuHeaderId}>WifiBOY</StyledMenuHeader>
+        <StyledMenuHeader id={menuHeaderId}>netBOY</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
           <NavLeaf
             title="My Cartridge"

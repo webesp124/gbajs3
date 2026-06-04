@@ -15,7 +15,7 @@ export const LegalModal = () => {
       <ModalHeader title="Legal" />
       <ModalBody>
         <p>
-          This legal disclaimer ("Disclaimer") governs your use of Gbajs3 ("the
+          This legal disclaimer ("Disclaimer") governs your use of netBOY ("the
           Emulator"), a browser-based emulator for the Game Boy Advance console.
           By accessing or using the Emulator, you acknowledge and agree to be
           bound by this Disclaimer. If you do not agree with any part of this

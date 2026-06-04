@@ -54,8 +54,8 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['./img/favicon.ico'],
         manifest: {
-          name: 'Gbajs3',
-          short_name: 'GJ3',
+          name: 'netBOY',
+          short_name: 'netBOY',
           description: 'GBA emulator online in the Browser',
           theme_color: '#121821',
           background_color: '#121821',
@@ -111,14 +111,14 @@ export default defineConfig(({ mode }) => {
               sizes: '2054x1324',
               type: 'image/png',
               form_factor: 'wide',
-              label: 'Desktop Gbajs3'
+              label: 'Desktop netBOY'
             },
             {
               src: 'img/mobile.png',
               sizes: '1170x2532',
               type: 'image/png',
               form_factor: 'narrow',
-              label: 'Mobile Gbajs3'
+              label: 'Mobile netBOY'
             }
           ]
         },

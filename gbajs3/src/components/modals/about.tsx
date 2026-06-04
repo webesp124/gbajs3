@@ -23,7 +23,7 @@ export const AboutModal = () => {
       <ModalHeader title="About" />
       <ModalBody>
         <p>
-          Gbajs3 is a full featured Game Boy Advance emulator meant to operate
+          netBOY is a full featured Game Boy Advance emulator meant to operate
           online and offline in the browser.
         </p>
         <p>
