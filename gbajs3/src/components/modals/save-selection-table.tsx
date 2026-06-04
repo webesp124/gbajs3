@@ -92,19 +92,6 @@ export const SaveSelectionTable: React.FC<SaveSelectionTableProps> = ({ gameData
             save.includes(gameData.cartID + "_" + checksum1000String)
         ) || [];
 
-    useEffect(() => {
-        if(!window.hasRun){
-            console.log("start1");
-            for (const entry of localSaves) {
-                if (saveName === entry) {
-                    setSelectedSave(entry);
-                    break;
-                }
-            }
-            window.hasRun = true;
-        }
-    }, []);
-
     return (
         <>
             <TableContainer>
