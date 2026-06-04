@@ -143,9 +143,9 @@ const RomLoadingIndicator = ({
 };
 
 export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
-  additionalData,
+  additionalData: initialAdditionalData,
   setAdditionalData,
-  gameData,
+  gameData: initialGameData,
   setGameData,
   esp32IP,
   setEsp32IP,
@@ -171,6 +171,8 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [isExternalRomInfoLoading, setIsExternalRomInfoLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [connectionFailed, setConnectionFailed] = useState(false);
+  const [additionalData, setLocalAdditionalData] = useState(initialAdditionalData);
+  const [gameData, setLocalGameData] = useState(initialGameData);
 
   const shouldUploadExternalRom =
     !isExternalRomLoading && !!externalRomFile;
@@ -184,10 +186,13 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
-    setAdditionalData((prevData: any) => ({
+    const updateAdditionalData = (prevData: any) => ({
       ...prevData,
       [name]: value,
-    }));
+    });
+
+    setLocalAdditionalData(updateAdditionalData);
+    setAdditionalData(updateAdditionalData);
   };
 
   useEffect(() => {
@@ -216,16 +221,26 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     try {
         setConnectionFailed(false);
         setIsExternalRomInfoLoading(true);
-        const [gameData, additionalData, checksum1000String, success] = await fetchGameInfo([currentEsp32IP]);
+        const [
+          nextGameData,
+          nextAdditionalData,
+          nextChecksum1000String,
+          success
+        ] = await fetchGameInfo([currentEsp32IP]);
         setConnectionFailed(!success);
-        setGameData(gameData), setAdditionalData(additionalData), setChecksum1000String(checksum1000String);
-        if(gameData){
-          let saveName = "Main_" + buildRomName2(gameData, additionalData, checksum1000String) + ".sav";
+        setLocalGameData(nextGameData);
+        setLocalAdditionalData(nextAdditionalData);
+        setGameData(nextGameData);
+        setAdditionalData(nextAdditionalData);
+        setChecksum1000String(nextChecksum1000String);
+        if(nextGameData){
+          let saveName = "Main_" + buildRomName2(nextGameData, nextAdditionalData, nextChecksum1000String) + ".sav";
           setCartridgeSaveName(saveName);
         }
-        setIsExternalRomInfoLoading(false);
     } catch (error) {
         console.error('Error fetching game info:', error);
+    } finally {
+        setIsExternalRomInfoLoading(false);
     }
   };
   
