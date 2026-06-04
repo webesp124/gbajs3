@@ -58,6 +58,10 @@ if (typeof window === 'undefined') {
       return;
     }
 
+    if (new URL(r.url).origin !== self.location.origin) {
+      return;
+    }
+
     const request =
       coepCredentialless && r.mode === 'no-cors'
         ? new Request(r, {

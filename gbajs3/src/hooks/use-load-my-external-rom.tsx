@@ -110,6 +110,10 @@ export const useLoadExternalRom = () => {
         console.error('Request failed'); // Debugging log
         reject(new Error('Network error occurred'));
       };
+      ajax.onabort = () => {
+        console.error('Request aborted');
+        reject(new Error('ROM download request was aborted'));
+      };
 
       ajax.send(null);
     });
