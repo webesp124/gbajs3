@@ -44,6 +44,7 @@ import {
   useDragContext,
   useLayoutContext
 } from '../../hooks/context.tsx';
+import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
 import { useLogout } from '../../hooks/use-logout.tsx';
 import { useShowLoadPublicRoms } from '../../hooks/use-show-load-public-roms.tsx';
@@ -206,6 +207,7 @@ export const NavigationMenu = ({
   const screenshotToastId = useId();
   const fullScreenToastId = useId();
   const { quickReload, isQuickReloadAvailable } = useQuickReload();
+  const { syncActionIfEnabled } = useAddCallbacks();
 
   const isExpanded =
     isExpandedByUser ?? (isLargerThanPhone && !isMobileLandscape);
@@ -350,8 +352,9 @@ export const NavigationMenu = ({
               title="Save to Cartridge"
               $disabled={!isRunning}
               icon={<MdOutlineUploadFile />}
-              onClick={() => {
-                void uploadSaveToCartridge(additionalData, emulator, esp32IP);
+              onClick={async () => {
+                await syncActionIfEnabled({ withToast: false });
+                await uploadSaveToCartridge(additionalData, emulator, esp32IP);
               }}
             />
             <NavLeaf
