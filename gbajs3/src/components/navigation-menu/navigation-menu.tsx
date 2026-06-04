@@ -351,7 +351,7 @@ export const NavigationMenu = ({
               $disabled={!isRunning}
               icon={<MdOutlineUploadFile />}
               onClick={() => {
-                uploadSaveToCartridge(additionalData, emulator, esp32IP);
+                void uploadSaveToCartridge(additionalData, emulator, esp32IP);
               }}
             />
             <NavLeaf

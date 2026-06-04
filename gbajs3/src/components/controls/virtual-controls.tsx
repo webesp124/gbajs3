@@ -424,7 +424,7 @@ export const VirtualControls = ({
     {
       children: <BiSolidCloudUpload />,
       onPointerDown: () => {
-        uploadSaveToCartridge(additionalData, emulator, esp32IP);
+        void uploadSaveToCartridge(additionalData, emulator, esp32IP);
       },
       width: 40,
       initialPosition: initialPositionForKey('uploadsave-button'),

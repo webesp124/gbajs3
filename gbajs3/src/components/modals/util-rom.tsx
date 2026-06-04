@@ -45,6 +45,16 @@ const getSaveTypeCodeFromString = (saveTypeString: string) => {
     }
 }
 
+const getSaveSizeFromTypeCode = (saveType: number) => {
+  if (saveType == 1) return 512;
+  if (saveType == 2) return 8192;
+  if (saveType == 3) return 32768;
+  if (saveType == 4) return 65536;
+  if (saveType == 5 || saveType == 21 || saveType == 55) return 131072;
+  if (saveType == 6) return 65536;
+  return undefined;
+};
+
 const getChecksum1000 = (gameData: { checksum_1MB: string; checksum_2MB: string; checksum_4MB: string; checksum_8MB: string; checksum_16MB: string; }, additionalData: { cartSize: number; saveType: string }) => {
   let cartSizeMB = Number(additionalData.cartSize /1024/1024);
   
@@ -181,12 +191,12 @@ const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveT
     return;
   }
 
-  const save = emulator.getCurrentSave();
+  const rawSave = emulator.getCurrentSave();
   const saveName = emulator.getCurrentSaveName();
   const currentGameData = window.gameData;
   const isGba = currentGameData?.is_gba !== false;
 
-  if (save && saveName) {
+  if (rawSave && saveName) {
     if(!additionalData){
         toast.error('No save type information');
         return;
@@ -203,6 +213,18 @@ const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveT
         return;
     }
 
+    const saveSize = isGba && saveType !== undefined
+      ? getSaveSizeFromTypeCode(saveType)
+      : undefined;
+    const save = isGba && saveSize && typeof emulator.getCurrentSaveTruncated === 'function'
+      ? emulator.getCurrentSaveTruncated(saveSize)
+      : rawSave;
+
+    if (!save) {
+      toast.error('Current save could not be prepared for cartridge upload');
+      return;
+    }
+
     const confirmed = window.confirm(
       [
         'Write the current emulator save to the inserted cartridge?',
@@ -216,10 +238,14 @@ const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveT
       return;
     }
 
+    toast.loading('Preparing cartridge save upload...', {
+      id: 'cartridge-save-upload'
+    });
+
     const uploadPromise = (async () => {
       try {
         const backupData = await downloadReaderSave(esp32IP, saveType, {
-          timeoutMs: 90000,
+          timeoutMs: 20000,
           retries: 0
         });
         createCartridgeSaveBackup(
@@ -254,6 +280,7 @@ const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveT
       success: (msg) => `${msg}`,
       error: (err) => explainReaderError(err),
     }, {
+      id: 'cartridge-save-upload',
       success: {
         duration: 5000,
       },
