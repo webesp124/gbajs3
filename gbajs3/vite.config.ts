@@ -141,8 +141,9 @@ export default defineConfig(({ mode }) => {
       viteStaticCopy({
         targets: [
           {
-            src: 'node_modules/@thenick775/mgba-wasm/dist/*.wasm.map',
-            dest: 'assets'
+            src: 'node_modules/@thenick775/mgba-wasm/dist/mgba.wasm.map',
+            dest: 'assets',
+            rename: { stripBase: true }
           }
         ]
       }),
