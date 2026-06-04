@@ -185,7 +185,30 @@ const getCoverImage = (gameData: { is_gba: boolean; }, additionalData: { coverIm
   return "";
 };
 
-const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveType: string; fullName?: string }, emulator: any, esp32IP: string) => {
+type UploadSaveToCartridgeOptions = {
+  confirm?: boolean;
+  backup?: boolean;
+  toastId?: string;
+  loadingMessage?: string;
+  successMessage?: string;
+};
+
+const uploadSaveToCartridge = async (
+  additionalData: { coverImage: string; saveType: string; fullName?: string },
+  emulator: any,
+  esp32IP: string,
+  options: UploadSaveToCartridgeOptions = {}
+) => {
+  const {
+    confirm = true,
+    backup = true,
+    toastId = 'cartridge-save-upload',
+    loadingMessage = backup ? 'Backing up cartridge save...' : 'Uploading save to cartridge...',
+    successMessage = backup
+      ? 'Backed up, uploaded, and verified save on cartridge'
+      : 'Uploaded and verified save on cartridge'
+  } = options;
+
   if (typeof emulator?.getCurrentSave !== 'function' || typeof emulator?.getCurrentSaveName !== 'function') {
     toast.error('Current emulator does not expose save data yet');
     return;
@@ -225,62 +248,69 @@ const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveT
       return;
     }
 
-    const confirmed = window.confirm(
-      [
-        'Write the current emulator save to the inserted cartridge?',
-        '',
-        'netBOY will first back up the current cartridge save, then upload and verify the new save.',
-        'Keep the reader powered and do not remove the cartridge during this operation.'
-      ].join('\n')
-    );
+    if (confirm) {
+      const confirmed = window.confirm(
+        [
+          'Write the current emulator save to the inserted cartridge?',
+          '',
+          backup
+            ? 'netBOY will first back up the current cartridge save, then upload and verify the new save.'
+            : 'netBOY will upload and verify the new save.',
+          'Keep the reader powered and do not remove the cartridge during this operation.'
+        ].join('\n')
+      );
 
-    if (!confirmed) {
-      return;
+      if (!confirmed) {
+        return;
+      }
     }
 
     toast.loading('Preparing cartridge save upload...', {
-      id: 'cartridge-save-upload'
+      id: toastId
     });
 
     const uploadPromise = (async () => {
-      try {
-        const backupData = await downloadReaderSave(esp32IP, saveType, {
-          timeoutMs: 20000,
-          retries: 0
-        });
-        createCartridgeSaveBackup(
-          {
-            name: `Backup_${saveName}`,
-            readerURL: esp32IP,
-            gameName: additionalData.fullName ?? emulator.getCurrentGameName?.() ?? saveName,
-            cartridgeType: isGba ? 'gba' : 'gb',
-            saveType: isGba ? additionalData.saveType : undefined
-          },
-          backupData
-        );
-      } catch (error) {
-        const keepGoing = window.confirm(
-          [
-            'Could not back up the current cartridge save.',
-            explainReaderError(error),
-            '',
-            'Continue writing anyway? This can overwrite the cartridge save without a local backup.'
-          ].join('\n')
-        );
-        if (!keepGoing) throw error;
+      if (backup) {
+        try {
+          const backupData = await downloadReaderSave(esp32IP, saveType, {
+            timeoutMs: 20000,
+            retries: 0
+          });
+          createCartridgeSaveBackup(
+            {
+              name: `Backup_${saveName}`,
+              readerURL: esp32IP,
+              gameName: additionalData.fullName ?? emulator.getCurrentGameName?.() ?? saveName,
+              cartridgeType: isGba ? 'gba' : 'gb',
+              saveType: isGba ? additionalData.saveType : undefined
+            },
+            backupData
+          );
+        } catch (error) {
+          if (!confirm) throw error;
+          const keepGoing = window.confirm(
+            [
+              'Could not back up the current cartridge save.',
+              explainReaderError(error),
+              '',
+              'Continue writing anyway? This can overwrite the cartridge save without a local backup.'
+            ].join('\n')
+          );
+          if (!keepGoing) throw error;
+        }
       }
 
       await uploadReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
       await verifyReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
-      return 'Backed up, uploaded, and verified save on cartridge';
+      return successMessage;
     })();
 
     toast.promise(uploadPromise, {
-      loading: 'Backing up cartridge save...',
+      loading: loadingMessage,
       success: (msg) => `${msg}`,
       error: (err) => explainReaderError(err),
     }, {
-      id: 'cartridge-save-upload',
+      id: toastId,
       success: {
         duration: 5000,
       },

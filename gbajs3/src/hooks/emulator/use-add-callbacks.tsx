@@ -3,6 +3,7 @@ import { useCallback, useId } from 'react';
 import toast from 'react-hot-toast';
 
 import { emulatorSettingsLocalStorageKey } from '../../context/emulator/consts.ts';
+import { uploadSaveToCartridge } from '../../components/modals/util-rom.tsx';
 import { useEmulatorContext } from '../context.tsx';
 import { useFileStat } from './use-file-stat.tsx';
 
@@ -10,6 +11,7 @@ import type { EmulatorSettings } from '../../components/modals/emulator-settings
 
 export type CoreCallbackOptions = {
   saveFileSystemOnInGameSave: boolean;
+  autoUploadSaveToCartridge?: boolean;
   autoSaveStateLoadNotificationEnabled: boolean;
   autoSaveStateCaptureNotificationEnabled: boolean;
   fileSystemNotificationsEnabled: boolean;
@@ -62,6 +64,24 @@ export const useAddCallbacks = () => {
               toast.success('Saved File System', {
                 id: savedFileSystemToastId
               });
+            if (
+              options.autoUploadSaveToCartridge !== false &&
+              window.additionalData &&
+              window.esp32IP
+            ) {
+              await uploadSaveToCartridge(
+                window.additionalData,
+                emulator,
+                window.esp32IP,
+                {
+                  confirm: false,
+                  backup: false,
+                  toastId: 'cartridge-save-auto-upload',
+                  loadingMessage: 'Uploading in-game save to cartridge...',
+                  successMessage: 'Uploaded in-game save to cartridge'
+                }
+              );
+            }
           }
         ),
         autoSaveStateLoadedCallback: optionalFunc(

@@ -40,6 +40,7 @@ export type EmulatorSettings = {
   rewindBufferCapacity?: number;
   rewindBufferInterval?: number;
   saveFileName?: string;
+  autoUploadSaveToCartridge: boolean;
   saveFileSystemOnCreateUpdateDelete: boolean;
   saveFileSystemOnInGameSave: boolean;
   audioSampleRate?: number;
@@ -134,6 +135,8 @@ export const EmulatorSettingsModal = () => {
         (isRunning ? emulator?.getCurrentSaveName() : ''),
       saveFileSystemOnInGameSave:
         emulatorSettings?.saveFileSystemOnInGameSave ?? true,
+      autoUploadSaveToCartridge:
+        emulatorSettings?.autoUploadSaveToCartridge ?? true,
       saveFileSystemOnCreateUpdateDelete:
         emulatorSettings?.saveFileSystemOnCreateUpdateDelete ?? true,
       fileSystemNotificationsEnabled:
@@ -186,6 +189,7 @@ export const EmulatorSettingsModal = () => {
 
     addCallbacks({
       saveFileSystemOnInGameSave: rest.saveFileSystemOnInGameSave,
+      autoUploadSaveToCartridge: rest.autoUploadSaveToCartridge,
       fileSystemNotificationsEnabled: rest.fileSystemNotificationsEnabled,
       autoSaveStateLoadNotificationEnabled:
         rest.autoSaveStateLoadNotificationEnabled,
@@ -219,6 +223,7 @@ export const EmulatorSettingsModal = () => {
 
     addCallbacks({
       saveFileSystemOnInGameSave: true,
+      autoUploadSaveToCartridge: true,
       fileSystemNotificationsEnabled: true,
       autoSaveStateLoadNotificationEnabled: true,
       autoSaveStateCaptureNotificationEnabled: true
@@ -475,6 +480,11 @@ export const EmulatorSettingsModal = () => {
                 label="Save file system on in-game save"
                 watcher={watch('saveFileSystemOnInGameSave')}
                 {...register('saveFileSystemOnInGameSave')}
+              />
+              <ManagedCheckbox
+                label="Upload save to cartridge on in-game save"
+                watcher={watch('autoUploadSaveToCartridge')}
+                {...register('autoUploadSaveToCartridge')}
               />
             </TabPanel>
             <TabPanel value={tabValue} index={4}>

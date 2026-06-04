@@ -36,6 +36,7 @@ export const useRunGame = () => {
     emulatorSettingsLocalStorageKey,
     {
       saveFileSystemOnInGameSave: true,
+      autoUploadSaveToCartridge: true,
       saveFileSystemOnCreateUpdateDelete: true,
       fileSystemNotificationsEnabled: true,
       allowOpposingDirections: true,
@@ -82,6 +83,8 @@ export const useRunGame = () => {
         addCallbacks({
           saveFileSystemOnInGameSave:
             emulatorSettings.saveFileSystemOnInGameSave,
+          autoUploadSaveToCartridge:
+            emulatorSettings.autoUploadSaveToCartridge ?? true,
           fileSystemNotificationsEnabled:
             emulatorSettings.fileSystemNotificationsEnabled,
           autoSaveStateLoadNotificationEnabled:
