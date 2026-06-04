@@ -94,7 +94,8 @@ interface ProgressBarProps {
 }
 
 const ProgressBar = styled.div<ProgressBarProps>`
-  background-color: #e0e0e0;
+  background-color: ${({ theme }) => theme.modalSurfaceElevated};
+  border: 1px solid ${({ theme }) => theme.modalListBorder};
   border-radius: 4px;
   position: relative;
   height: 24px;
@@ -112,6 +113,18 @@ const ProgressBar = styled.div<ProgressBarProps>`
     top: 0;
     transition: width 0.2s ease-in-out;
   }
+`;
+
+const ProgressLabel = styled.span`
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  color: ${({ theme }) => theme.modalTextPrimary};
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  text-shadow: 0 1px 2px ${({ theme }) => theme.pureBlack};
 `;
 
 const RomLoadingIndicator = ({
@@ -135,9 +148,7 @@ const RomLoadingIndicator = ({
       )}
       {indicator}
       <ProgressBar progress={progress}>
-          <span style={{ position: 'relative', width: '100%', textAlign: 'center', zIndex: 600 }}>
-            {Math.round(progress)}%
-          </span>
+          <ProgressLabel>{Math.round(progress)}%</ProgressLabel>
         </ProgressBar>
     </RomLoadingContainer>
   ) : (
