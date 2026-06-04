@@ -1,3 +1,47 @@
+# netBOY
+
+Wireless GBA/GB cartridge reader web interface and browser emulator.
+
+## Reader Requirements
+
+- ESP32-S3 cartridge reader firmware that exposes the HTTP API documented in `/home/a/Documents/gba_reader_s3/README.md`.
+- HTTPS is recommended for the reader URL. Browsers may require trusting the reader certificate before local-network requests succeed.
+- GB/GBC save upload and verify are supported by the firmware without a `saveType` URL parameter. GBA save upload and verify require the detected save type.
+
+## Production Builds
+
+Self-hosted production builds should serve the app with real cross-origin isolation headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Resource-Policy: cross-origin
+```
+
+Build that version with:
+
+```
+npm run build:release
+```
+
+GitHub Pages cannot set those headers, so use the service-worker fallback build:
+
+```
+npm run build:github-pages
+```
+
+When embedding the GitHub Pages build inside the ESP32 page, the frame must allow local-network access:
+
+```
+<iframe src="https://webesp124.github.io/netboy?esp32_ip=https://READER_IP" allow="local-network-access"></iframe>
+```
+
+## Reader Setup UX
+
+The cartridge start page stores the last reader URL, keeps recent readers, can use the current frame host when hosted by the ESP32, and includes a connection test against `/get_wifi_settings`.
+
+Save writes and ROM reflashing perform a best-effort save backup before writing. Backups can be exported/imported from the cartridge start page.
+
 # Getting started
 
 ## Optional env variables

@@ -1,10 +1,14 @@
 /* eslint-disable -- vendored external */
 
 /**
- * Used for non-production deploys only.
+ * COOP/COEP fallback for static hosts.
  *
- * This service worker is meant to operate in places like github pages that
- * do not have the ability to add headers to make the page cross origin isolated.
+ * Production self-hosted deployments should prefer real HTTP response headers:
+ * Cross-Origin-Opener-Policy: same-origin
+ * Cross-Origin-Embedder-Policy: require-corp
+ *
+ * GitHub Pages cannot set those headers, so the release build can include this
+ * service worker to make mGBA's SharedArrayBuffer/WASM worker path usable.
  *
  * To include this in a build, build with the mode `with-coi-serviceworker`.
  */

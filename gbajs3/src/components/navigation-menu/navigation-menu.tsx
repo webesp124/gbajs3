@@ -47,6 +47,7 @@ import {
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
 import { useLogout } from '../../hooks/use-logout.tsx';
 import { useShowLoadPublicRoms } from '../../hooks/use-show-load-public-roms.tsx';
+import { explainReaderError, verifyReaderSave } from '../../utils/reader-client.ts';
 import {
   getSaveTypeCodeFromString,
   uploadSaveToCartridge
@@ -231,43 +232,38 @@ export const NavigationMenu = ({
   };
 
   const verifyCartridgeSave = () => {
-    let save = emulator?.getCurrentSave();
-    const saveName = emulator?.getCurrentSaveName();
+    let save = emulator?.getCurrentSave?.();
+    const saveName = emulator?.getCurrentSaveName?.();
 
     if (!save || !saveName) {
       toast.error('Load a game before verifying cartridge save');
       return;
     }
 
-    if (!additionalData) {
+    const isGba = gameData?.is_gba !== false;
+    if (isGba && !additionalData) {
       toast.error('No save type information');
       return;
     }
 
     if (save.length > 131072) save = save.slice(0, 131072);
 
-    const saveType = getSaveTypeCodeFromString(additionalData.saveType);
-    if (saveType === -1) {
+    const saveType = isGba ? getSaveTypeCodeFromString(additionalData.saveType) : undefined;
+    if (isGba && saveType === -1) {
       toast.error('Invalid save type');
       return;
     }
 
-    const uploadPromise = new Promise<string>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`);
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300)
-          resolve('Verified save on cartridge');
-        else reject('Save on cartridge is not the same');
-      };
-      xhr.onerror = () => reject('Failed to verify save');
-      xhr.send(save as XMLHttpRequestBodyInit);
-    });
+    const uploadPromise = verifyReaderSave(
+      esp32IP,
+      save as XMLHttpRequestBodyInit,
+      saveType
+    ).then(() => 'Verified save on cartridge');
 
     toast.promise(uploadPromise, {
       loading: 'Verifying save on cartridge...',
       success: (msg) => msg,
-      error: (err) => String(err)
+      error: (err) => explainReaderError(err)
     });
   };
 

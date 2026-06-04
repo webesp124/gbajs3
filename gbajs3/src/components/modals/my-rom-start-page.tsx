@@ -18,6 +18,20 @@ import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes, getCoverI
 import { SaveSelectionTable } from './save-selection-table.tsx';
 import { GameSelectionTable } from './game-selection-table.tsx';
 import { useMediaQuery } from '@mui/material';
+import {
+  getIframeHostReaderURL,
+  getRecentReaderURLs,
+  type ReaderConnectionTest,
+  type ReaderStatus,
+  testReaderConnection
+} from '../../utils/reader-client.ts';
+import {
+  exportCartridgeSaveBackups,
+  getCartridgeSaveBackups,
+  importCartridgeSaveBackups,
+  restoreBackupFile,
+  type CartridgeSaveBackup
+} from '../../utils/save-backups.ts';
 
 type RomLoadingIndicatorProps = {
   isLoading: boolean;
@@ -204,6 +218,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [currentEsp32IP, setCurrentEsp32IP] = useState(esp32IP);
   const currentEsp32IPRef = useRef(esp32IP);
   const isEditingEsp32IPRef = useRef(false);
+  const [recentReaderURLs, setRecentReaderURLs] = useState<string[]>(() => getRecentReaderURLs());
+  const [readerConnectionTest, setReaderConnectionTest] = useState<ReaderConnectionTest | null>(null);
+  const [isTestingReader, setIsTestingReader] = useState(false);
+  const [readerStatus, setReaderStatus] = useState<ReaderStatus | null>(null);
+  const [saveBackups, setSaveBackups] = useState<CartridgeSaveBackup[]>(() => getCartridgeSaveBackups());
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
@@ -244,8 +263,33 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     currentEsp32IPRef.current = nextEsp32IP;
     setCurrentEsp32IP(nextEsp32IP);
     setEsp32IP(nextEsp32IP);
+    setRecentReaderURLs(getRecentReaderURLs());
     return nextEsp32IP;
   }, [setEsp32IP]);
+
+  const testCurrentReaderConnection = useCallback(async () => {
+    const nextEsp32IP = commitEsp32IP();
+    setIsTestingReader(true);
+    const result = await testReaderConnection(nextEsp32IP);
+    setReaderConnectionTest(result);
+    setReaderStatus(result.status ?? null);
+    setRecentReaderURLs(getRecentReaderURLs());
+    setIsTestingReader(false);
+  }, [commitEsp32IP]);
+
+  const useIframeHostReader = () => {
+    const iframeHostURL = getIframeHostReaderURL();
+    if (!iframeHostURL) return;
+    currentEsp32IPRef.current = iframeHostURL;
+    setCurrentEsp32IP(iframeHostURL);
+    commitEsp32IP(iframeHostURL);
+  };
+
+  const importSaveBackupFile = async (file: File | undefined) => {
+    if (!file) return;
+    const importedBackups = await importCartridgeSaveBackups(file);
+    setSaveBackups(importedBackups);
+  };
 
   useEffect(() => {
     if (shouldUploadExternalRom) {
@@ -283,6 +327,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         setLocalAdditionalData(nextAdditionalData);
         setGameData(nextGameData);
         setAdditionalData(nextAdditionalData);
+        if (nextGameData) setReaderStatus(nextGameData);
         setChecksum1000String(nextChecksum1000String);
         if(nextGameData){
           let saveName = "Main_" + buildRomName2(nextGameData, nextAdditionalData, nextChecksum1000String) + ".sav";
@@ -676,6 +721,119 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                 setConnectionFailed(false);
               }}
             />
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', px: 1 }}>
+              <Button
+                type="button"
+                variant="outlined"
+                size="small"
+                onClick={testCurrentReaderConnection}
+                disabled={isTestingReader}
+              >
+                {isTestingReader ? 'Testing...' : 'Test Connection'}
+              </Button>
+              {getIframeHostReaderURL() && (
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="small"
+                  onClick={useIframeHostReader}
+                >
+                  Use Frame Host
+                </Button>
+              )}
+              {recentReaderURLs.map((readerURL) => (
+                <Button
+                  key={readerURL}
+                  type="button"
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    currentEsp32IPRef.current = readerURL;
+                    setCurrentEsp32IP(readerURL);
+                    commitEsp32IP(readerURL);
+                  }}
+                >
+                  {readerURL.replace(/^https?:\/\//, '')}
+                </Button>
+              ))}
+            </Box>
+            {readerConnectionTest && (
+              <Alert
+                severity={readerConnectionTest.ok ? 'success' : 'error'}
+                variant="outlined"
+                sx={{ mx: 1 }}
+              >
+                {readerConnectionTest.message}
+              </Alert>
+            )}
+            {readerStatus && (
+              <Box sx={{ mx: 1 }}>
+                <Typography variant="subtitle2">Reader Status</Typography>
+                <Typography variant="body2">
+                  Firmware: {String(readerStatus.firmware_version ?? 'unknown')}
+                </Typography>
+                <Typography variant="body2">
+                  IP: {String(readerStatus.wifi_ip_address ?? readerStatus.web_url ?? 'unknown')}
+                </Typography>
+                <Typography variant="body2">
+                  SSL: {String(readerStatus.ssl_mode ?? readerStatus.ssl_enabled ?? 'unknown')}
+                </Typography>
+                {readerStatus.battery && (
+                  <Typography variant="body2">
+                    Battery: {readerStatus.battery.percent ?? '?'}% · {readerStatus.battery.millivolts ?? '?'} mV
+                  </Typography>
+                )}
+              </Box>
+            )}
+            <Box sx={{ mx: 1 }}>
+              <Typography variant="subtitle2">Save Backups</Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 1 }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setSaveBackups(getCartridgeSaveBackups());
+                    exportCartridgeSaveBackups();
+                  }}
+                  disabled={saveBackups.length === 0}
+                >
+                  Export
+                </Button>
+                <Button component="label" variant="outlined" size="small">
+                  Import
+                  <input
+                    hidden
+                    type="file"
+                    accept="application/json"
+                    onChange={(event) => {
+                      importSaveBackupFile(event.target.files?.[0]);
+                      event.target.value = '';
+                    }}
+                  />
+                </Button>
+              </Box>
+              {saveBackups.slice(0, 3).map((backup) => (
+                <Box
+                  key={backup.id}
+                  sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Typography variant="caption">
+                    {backup.gameName} · {new Date(backup.createdAt).toLocaleString()} · {(backup.size / 1024).toFixed(1)} KB
+                  </Typography>
+                  <Button
+                    type="button"
+                    size="small"
+                    onClick={() => {
+                      emulator?.uploadSaveOrSaveState(restoreBackupFile(backup));
+                    }}
+                    disabled={!emulator}
+                  >
+                    Load
+                  </Button>
+                </Box>
+              ))}
+            </Box>
             <Button
               type="button"
               variant="outlined"

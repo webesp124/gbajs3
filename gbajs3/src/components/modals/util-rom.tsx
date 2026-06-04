@@ -1,4 +1,12 @@
 import toast from 'react-hot-toast';
+import {
+  downloadReaderSave,
+  explainReaderError,
+  getReaderGameInfo,
+  uploadReaderSave,
+  verifyReaderSave
+} from '../../utils/reader-client.ts';
+import { createCartridgeSaveBackup } from '../../utils/save-backups.ts';
 
 export const linkCartridgeInformation = "https://raw.githubusercontent.com/webesp124/gb_data/refs/heads/main";
 
@@ -69,9 +77,11 @@ const fetchGameInfo = async (esp32IP: string): Promise<[any, any, string, boolea
   let checksum1000 = "";
   try {
     // Fetch the basic game info
-    const response = await fetch(`${esp32IP}/get_game_info`);
-
-    gameData = await response.json();
+    gameData = await getReaderGameInfo(esp32IP, {
+      timeoutMs: 12000,
+      retries: 1,
+      phase: 'connecting'
+    }) as any;
 
     if(gameData.romName == ""){
       throw new Error(`Error Reading Cartridge, ROM name empty`);
@@ -128,7 +138,7 @@ const fetchGameInfo = async (esp32IP: string): Promise<[any, any, string, boolea
     }
     return [gameData, additionalData, checksum1000, responseCartridgeReaderOk];
   } catch (error) {
-    console.error('Error fetching game information:', error);
+    console.error('Error fetching game information:', explainReaderError(error));
   } finally {
     if(gameData && !additionalData){
       additionalData = {"saveType": "REPRO_FLASH1M", "cartSize": 16*1024*1024};
@@ -165,77 +175,98 @@ const getCoverImage = (gameData: { is_gba: boolean; }, additionalData: { coverIm
   return "";
 };
 
-const uploadSaveToCartridge = (additionalData: { coverImage: string; saveType: string }, emulator: any, esp32IP: string) => {
-  const save = emulator?.getCurrentSave();
-  const saveName = emulator?.getCurrentSaveName();
+const uploadSaveToCartridge = async (additionalData: { coverImage: string; saveType: string; fullName?: string }, emulator: any, esp32IP: string) => {
+  if (typeof emulator?.getCurrentSave !== 'function' || typeof emulator?.getCurrentSaveName !== 'function') {
+    toast.error('Current emulator does not expose save data yet');
+    return;
+  }
+
+  const save = emulator.getCurrentSave();
+  const saveName = emulator.getCurrentSaveName();
+  const currentGameData = window.gameData;
+  const isGba = currentGameData?.is_gba !== false;
 
   if (save && saveName) {
-    const xhr = new XMLHttpRequest();
-    
     if(!additionalData){
-        console.log("No save type information.");
+        toast.error('No save type information');
         return;
     }
     
-    if (!additionalData.saveType) {
-      console.log("Save Type not set");
+    if (isGba && !additionalData.saveType) {
+      toast.error('GBA save type is not set');
       return;
     }
 
-    if (!window.gameData?.is_gba) {
-      console.log("Is not GBA. Not implemented.");
-      return;
-    }
-
-    var saveType = getSaveTypeCodeFromString(additionalData.saveType);
-    if (saveType == -1) {
-        console.log("Invalid Save Type");
+    const saveType = isGba ? getSaveTypeCodeFromString(additionalData.saveType) : undefined;
+    if (isGba && saveType == -1) {
+        toast.error('Invalid save type');
         return;
     }
-    console.log(saveType);
-    
-    const uploadPromise = new Promise((resolve, reject) => {
-        xhr.open('POST', `${esp32IP}/upload_save_file?saveType=${saveType}`, true);
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const xhrVerify = new XMLHttpRequest();
-            xhrVerify.open('POST', `${esp32IP}/verify_save_file?saveType=${saveType}`, true);
+    const confirmed = window.confirm(
+      [
+        'Write the current emulator save to the inserted cartridge?',
+        '',
+        'netBOY will first back up the current cartridge save, then upload and verify the new save.',
+        'Keep the reader powered and do not remove the cartridge during this operation.'
+      ].join('\n')
+    );
 
-            xhrVerify.onload = () => {
-              if (xhrVerify.status >= 200 && xhrVerify.status < 300) {
-                resolve('Uploaded  and verified save on cartridge'); // Resolves the promise when successful
-              } else {
-                reject('Save on cartridge has errors'); // Rejects the promise on failure
-              }
-            };
+    if (!confirmed) {
+      return;
+    }
 
-            xhrVerify.onerror = () => reject('Failed to upload save for verification'); // Handles network errors
+    const uploadPromise = (async () => {
+      try {
+        const backupData = await downloadReaderSave(esp32IP, saveType, {
+          timeoutMs: 90000,
+          retries: 0
+        });
+        createCartridgeSaveBackup(
+          {
+            name: `Backup_${saveName}`,
+            readerURL: esp32IP,
+            gameName: additionalData.fullName ?? emulator.getCurrentGameName?.() ?? saveName,
+            cartridgeType: isGba ? 'gba' : 'gb',
+            saveType: isGba ? additionalData.saveType : undefined
+          },
+          backupData
+        );
+      } catch (error) {
+        const keepGoing = window.confirm(
+          [
+            'Could not back up the current cartridge save.',
+            explainReaderError(error),
+            '',
+            'Continue writing anyway? This can overwrite the cartridge save without a local backup.'
+          ].join('\n')
+        );
+        if (!keepGoing) throw error;
+      }
 
-            xhrVerify.send(save as XMLHttpRequestBodyInit);
-          } else {
-            reject('Failed to upload save to cartridge'); // Rejects the promise on failure
-          }
-        };
+      await uploadReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
+      await verifyReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
+      return 'Backed up, uploaded, and verified save on cartridge';
+    })();
 
-        xhr.onerror = () => reject('Failed to upload save to cartridge'); // Handles network errors
+    toast.promise(uploadPromise, {
+      loading: 'Backing up cartridge save...',
+      success: (msg) => `${msg}`,
+      error: (err) => explainReaderError(err),
+    }, {
+      success: {
+        duration: 5000,
+      },
+      error: {
+        duration: 8000,
+      },
+    });
 
-        xhr.send(save as XMLHttpRequestBodyInit);
-      });
-
-      // Display the toast with the promise
-      toast.promise(uploadPromise, {
-        loading: 'Uploading save to cartridge...',
-        success: (msg) => `${msg}`,
-        error: (err) => `${err}`,
-      }, {
-        success: {
-          duration: 5000,
-        },
-        error: {
-          duration: 5000,
-        },
-      });
+    try {
+      await uploadPromise;
+    } catch {
+      // toast.promise already renders the user-facing failure.
+    }
   } else {
     toast.error('Current save not available');
   }

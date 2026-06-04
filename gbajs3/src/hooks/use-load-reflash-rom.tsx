@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react';
 
 import { useAsyncData } from './use-async-data.tsx';
+import {
+  type ReaderProgress,
+  uploadReaderRom,
+  verifyReaderRom
+} from '../utils/reader-client.ts';
 
 type LoadReflashRomProps = {
   romFile: File;
@@ -9,6 +14,7 @@ type LoadReflashRomProps = {
 
 export const useLoadReflashRom = () => {
   const [progress, setProgress] = useState(0);
+  const [readerProgress, setReaderProgress] = useState<ReaderProgress | null>(null);
   const executeLoadReflashRom = useCallback(
   (fetchProps?: LoadReflashRomProps): Promise<boolean> => {
     if (!fetchProps) {
@@ -17,66 +23,27 @@ export const useLoadReflashRom = () => {
     }
 
     return new Promise((resolve, reject) => {
-      console.log("Reflashing Cartridge...");
+      const isGba = fetchProps.romFile.name.toLowerCase().endsWith('.gba');
+      const cartSize = isGba ? fetchProps.romFile.size : undefined;
 
-      let cartSize = fetchProps.romFile.size;      
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-          if(e.target && e.target.result) {
-              const result = e.target.result;
-              const romFile =
-                  typeof result === 'string'
-                      ? new TextEncoder().encode(result)
-                      : new Uint8Array(result);
-
-              const xhr = new XMLHttpRequest();
-              xhr.open('POST', `${fetchProps.esp32IP}/upload_rom_file?cartSize=${cartSize}`, true);
-
-              // Update the progress bar during the upload (client to server)
-              xhr.upload.onprogress = function(event) {
-                if (event.lengthComputable) {
-                  const percentComplete = (event.loaded / event.total) * 67;
-                  setProgress(percentComplete);
-                }
-              };
-
-              xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {                  
-                  const xhrVerify = new XMLHttpRequest();
-                  xhrVerify.open('POST', `${fetchProps.esp32IP}/verify_rom_file?cartSize=${cartSize}`, true);
-
-                  // Update the progress bar during the upload (client to server)
-                  xhrVerify.upload.onprogress = function(event) {
-                    if (event.lengthComputable) {
-                      const percentComplete = 67 + ((event.loaded / event.total) * 33);
-                      setProgress(percentComplete);
-                    }
-                  };
-
-                  xhrVerify.onload = () => {
-                    if (xhrVerify.status >= 200 && xhrVerify.status < 300) {
-                      resolve(true);
-                    } else {
-                      reject('Rom on cartridge has errors');
-                    }
-                  };
-
-                  xhrVerify.onerror = () => reject('Failed to upload rom for verification'); // Handles network errors
-
-                  xhrVerify.send(romFile as XMLHttpRequestBodyInit);
-                  
-                } else {
-                  reject('Failed to upload rom to cartridge');
-                }
-              };
-
-              xhr.onerror = () => reject('Failed to upload rom to cartridge'); // Handles network errors
-
-              xhr.send(romFile as XMLHttpRequestBodyInit);
-          }
-      };
-      reader.readAsArrayBuffer(fetchProps.romFile);
+      fetchProps.romFile.arrayBuffer()
+        .then(async (romFile) => {
+          await uploadReaderRom(fetchProps.esp32IP, romFile, cartSize, {
+            onProgress: (nextProgress) => {
+              setReaderProgress(nextProgress);
+              setProgress(nextProgress.percent * 0.67);
+            }
+          });
+          await verifyReaderRom(fetchProps.esp32IP, romFile, cartSize, {
+            onProgress: (nextProgress) => {
+              setReaderProgress(nextProgress);
+              setProgress(67 + nextProgress.percent * 0.33);
+            }
+          });
+          setProgress(100);
+          resolve(true);
+        })
+        .catch(reject);
     });
   },
   []
@@ -87,5 +54,5 @@ export const useLoadReflashRom = () => {
     clearDataOnLoad: true
   });
 
-  return { data, isLoading, error, execute, progress };
+  return { data, isLoading, error, execute, progress, readerProgress };
 };

@@ -18,25 +18,19 @@ import { InitialBoundsProvider } from './context/initial-bounds/initial-bounds-p
 import { LayoutProvider } from './context/layout/layout-provider.tsx';
 import { ModalProvider } from './context/modal/modal-provider.tsx';
 import { GbaDarkTheme } from './context/theme/theme.tsx';
+import { getInitialReaderURL, saveReaderURL } from './utils/reader-client.ts';
 
 const queryClient = new QueryClient();
 
 const theme = createTheme(GbaDarkTheme);
-const defaultEsp32IP = 'https://192.168.1.3';
-
-const normalizeEsp32IP = (value: string | null) => {
-  if (!value) return defaultEsp32IP;
-
-  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
-};
 
 export const App = () => {
   const [additionalData, setAdditionalData] = useState<any>(null);
   const [gameData, setGameData] = useState(null);
-  const [esp32IP, setEsp32IP] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return normalizeEsp32IP(params.get('esp32_ip'));
-  });
+  const [esp32IP, setEsp32IPState] = useState(getInitialReaderURL);
+  const setEsp32IP = (value: string) => {
+    setEsp32IPState(saveReaderURL(value));
+  };
 
   return (
     <ThemeProvider theme={theme}>

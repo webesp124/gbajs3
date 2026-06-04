@@ -1,12 +1,14 @@
 {
-  "name": "gbajs3",
+  "name": "netboy",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:with-coi-serviceworker": "vite build --mode with-coi-serviceworker",
+    "build:release": "tsc && vite build",
+    "build:github-pages": "tsc && vite build --mode with-coi-serviceworker",
+    "build:with-coi-serviceworker": "tsc && vite build --mode with-coi-serviceworker",
     "lint": "eslint src test --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src test --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",

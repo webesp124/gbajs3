@@ -3,11 +3,12 @@ import { useCallback, useState } from 'react';
 import { useAsyncData } from './use-async-data.tsx';
 import * as bps from 'bps';
 import { linkCartridgeInformation, applyCustomPatch } from '../components/modals/util-rom.tsx';
+import { readerRequest } from '../utils/reader-client.ts';
 
 type LoadExternalRomProps = {
   url: URL;
-  fullName: string;
-  patchFile: string | null;
+  fullName?: string;
+  patchFile?: string | null;
 };
 
 export const useLoadExternalRom = () => {
@@ -20,34 +21,20 @@ export const useLoadExternalRom = () => {
     }
 
     return new Promise((resolve, reject) => {
-      const ajax = new XMLHttpRequest();
-      ajax.open("GET", fetchProps.url, true);
-      ajax.responseType = "arraybuffer";
-      ajax.overrideMimeType("text/plain; charset=x-user-defined");
-      
-      // Update the progress bar during download
-      ajax.onprogress = function(event) {
-        if (event.lengthComputable) {
-          const percentComplete = (event.loaded / event.total) * 100;
-          setProgress(percentComplete);
+      const fallbackFileName = decodeURIComponent(
+        fetchProps.url.pathname.split('/').pop() ?? 'unknown_external.gba'
+      );
+      readerRequest('GET', fetchProps.url.toString(), 'arraybuffer', undefined, {
+        timeoutMs: 180000,
+        retries: 0,
+        phase: 'downloading',
+        onProgress: (progress) => {
+          setProgress(progress.percent);
         }
-      };
-
-      ajax.onload = async () => {
-        if (ajax.status >= 200 && ajax.status < 300) {
-          const contentDisposition = ajax.getResponseHeader('Content-Disposition');
-          const fileName = contentDisposition
-            ?.split(';')
-            .pop()
-            ?.split('=')
-            .pop()
-            ?.replace(/"/g, '');
-
-          const fallbackFileName = decodeURIComponent(
-            fetchProps.url.pathname.split('/').pop() ?? 'unknown_external.gba'
-          );
-
-          const file = new File([ajax.response], fetchProps.fullName ?? fileName ?? fallbackFileName);
+      })
+        .then(async (response) => {
+          const responseBuffer = response as ArrayBuffer;
+          const file = new File([responseBuffer], fetchProps.fullName ?? fallbackFileName);
           
           if (fetchProps.patchFile != null && fetchProps.patchFile != ""){
             
@@ -59,11 +46,11 @@ export const useLoadExternalRom = () => {
             if(fetchProps.patchFile.endsWith(".txt")){
               console.log("applying custom patch file");
               const fetchPropsCustomPatchFile = {
-                fullName: fetchProps.fullName ?? fileName ?? fallbackFileName,
+                fullName: fetchProps.fullName ?? fallbackFileName,
                 patchFile: fetchProps.patchFile
               };
 
-              const sourceFile = new Uint8Array(ajax.response);
+              const sourceFile = new Uint8Array(responseBuffer);
               const patchedFile = await applyCustomPatch(fetchPropsCustomPatchFile, sourceFile);
               resolve(patchedFile);
             } else {
@@ -83,10 +70,10 @@ export const useLoadExternalRom = () => {
 
                 console.log(checksum);
                 
-                const sourceFile = new Uint8Array(ajax.response);
+                const sourceFile = new Uint8Array(responseBuffer);
                 const target = bps.apply(instructions, sourceFile);
                 
-                const patchedFile = new File([target as BlobPart], fetchProps.fullName ?? fileName ?? fallbackFileName);
+                const patchedFile = new File([target as BlobPart], fetchProps.fullName ?? fallbackFileName);
                 resolve(patchedFile);
               }
               ajaxPatch.onerror = () => {
@@ -101,21 +88,8 @@ export const useLoadExternalRom = () => {
             console.log("resolved file");
             resolve(file);
           }
-        } else {
-          console.error('Request failed2');
-          reject(new Error(`Received unexpected status code: ${ajax.status}`));
-        }
-      };
-      ajax.onerror = () => {
-        console.error('Request failed'); // Debugging log
-        reject(new Error('Network error occurred'));
-      };
-      ajax.onabort = () => {
-        console.error('Request aborted');
-        reject(new Error('ROM download request was aborted'));
-      };
-
-      ajax.send(null);
+        })
+        .catch(reject);
     });
   },
   []

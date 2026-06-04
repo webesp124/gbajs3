@@ -1,4 +1,4 @@
-import { Button } from '@mui/material';
+import { Alert, Button, Typography } from '@mui/material';
 import { useCallback, useId, type ReactNode } from 'react';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { PacmanLoader } from 'react-spinners';
@@ -12,6 +12,9 @@ import { DragAndDropInput } from '../shared/drag-and-drop-input.tsx';
 import { useModalContext } from '../../hooks/context.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { BiError } from 'react-icons/bi';
+import { createCartridgeSaveBackup } from '../../utils/save-backups.ts';
+import { downloadReaderSave, explainReaderError } from '../../utils/reader-client.ts';
+import { getSaveTypeCodeFromString } from './util-rom.tsx';
 
 type InputProps = {
   romFile: File;
@@ -22,6 +25,9 @@ type RomLoadingIndicatorProps = {
   children: ReactNode;
   indicator: ReactNode;
   progress: number;
+  message?: string;
+  etaSeconds?: number;
+  bytesPerSecond?: number;
 };
 
 const RomLoadingContainer = styled.div`
@@ -38,7 +44,7 @@ const URLDisplay = styled.p`
   max-width: 100%;
 `;
 
-const validFileExtensions = ['.gba', '.gbc', '.gb', '.zip', '.7z'];
+const validFileExtensions = ['.gba', '.gbc', '.gb'];
 
 interface ProgressBarProps {
   progress: number;
@@ -69,13 +75,22 @@ const RomLoadingIndicator = ({
   isLoading,
   children,
   indicator,
-  progress
+  progress,
+  message,
+  etaSeconds,
+  bytesPerSecond
 }: RomLoadingIndicatorProps) => {
   return isLoading ? (
     <RomLoadingContainer>
       <URLDisplay>
-        {progress < 4 ? "Erasing Sectors..." : progress > 67 ? "Verifying ROM..." : "Flashing new ROM to cartridge..."}
+        {message ?? (progress < 4 ? "Erasing Sectors..." : progress > 67 ? "Verifying ROM..." : "Flashing new ROM to cartridge...")}
       </URLDisplay>
+      {(bytesPerSecond || etaSeconds) && (
+        <Typography variant="caption">
+          {bytesPerSecond ? `${(bytesPerSecond / 1024).toFixed(1)} KB/s` : ''}
+          {etaSeconds ? ` · ${Math.ceil(etaSeconds)}s remaining` : ''}
+        </Typography>
+      )}
       {indicator}
       <ProgressBar progress={progress}>
           <span style={{ position: 'relative', width: '100%', textAlign: 'center', zIndex: 600 }}>
@@ -104,11 +119,11 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
     control
   } = useForm<InputProps>();
   const {
-    data: romWriteData,
     isLoading: isRomFlashing,
     error: reflashCartridgeError,
     execute: executeReflashCartridge,
-    progress: reflashCartridgeProgress
+    progress: reflashCartridgeProgress,
+    readerProgress
   } = useLoadReflashRom();
   const uploadRomFormId = useId();
 
@@ -121,8 +136,57 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
   );
 
   const onSubmit: SubmitHandler<InputProps> = async ({ romFile }) => {
-    console.log(romWriteData);
     if (romFile) {
+      const confirmed = window.confirm(
+        [
+          `Flash ${romFile.name} to the inserted cartridge?`,
+          '',
+          'This can overwrite the cartridge ROM. netBOY will try to back up the current save first.',
+          'Keep the reader powered and do not remove the cartridge until verification finishes.',
+          '',
+          'If flashing fails, leave the cartridge inserted and retry with the same ROM before power-cycling the reader.'
+        ].join('\n')
+      );
+      if (!confirmed) return;
+
+      const gameData = window.gameData;
+      const additionalData = window.additionalData;
+      const isGba = gameData?.is_gba !== false;
+      const saveType = isGba && additionalData?.saveType
+        ? getSaveTypeCodeFromString(additionalData.saveType)
+        : undefined;
+
+      try {
+        const backupData = await downloadReaderSave(
+          esp32IP,
+          saveType === -1 ? undefined : saveType,
+          {
+            timeoutMs: 90000,
+            retries: 0
+          }
+        );
+        createCartridgeSaveBackup(
+          {
+            name: `BeforeFlash_${additionalData?.fullName ?? gameData?.romName ?? 'cartridge'}.sav`,
+            readerURL: esp32IP,
+            gameName: additionalData?.fullName ?? gameData?.romName ?? 'Unknown cartridge',
+            cartridgeType: isGba ? 'gba' : 'gb',
+            saveType: isGba ? additionalData?.saveType : undefined
+          },
+          backupData
+        );
+      } catch (error) {
+        const keepGoing = window.confirm(
+          [
+            'Could not back up the current cartridge save before flashing.',
+            explainReaderError(error),
+            '',
+            'Continue flashing anyway?'
+          ].join('\n')
+        );
+        if (!keepGoing) return;
+      }
+
       await executeReflashCartridge({ romFile: romFile, esp32IP: esp32IP });
       return;
     }
@@ -141,13 +205,22 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
               />
             }
             progress={reflashCartridgeProgress}
+            message={readerProgress?.message}
+            etaSeconds={readerProgress?.etaSeconds}
+            bytesPerSecond={readerProgress?.bytesPerSecond}
           >
           {!!reflashCartridgeError && (
             <ErrorWithIcon
               icon={<BiError style={{ color: theme.errorRed }} />}
-              text="Writing rom has failed"
+              text={`Writing ROM has failed. ${explainReaderError(reflashCartridgeError)}`}
             />
           )}
+          <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2">Reflash carefully</Typography>
+            <Typography variant="body2">
+              Back up saves first, keep the reader powered, and leave the cartridge inserted until verification finishes.
+            </Typography>
+          </Alert>
 
           <form
             id={uploadRomFormId}
@@ -172,7 +245,7 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
                   hideErrors={!!error}
                 >
                   <p>
-                    Drag and drop a rom or zipped rom file here, or click to
+                    Drag and drop a .gba, .gb, or .gbc ROM file here, or click to
                     upload a file
                   </p>
                 </DragAndDropInput>
