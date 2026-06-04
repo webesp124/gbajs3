@@ -86,8 +86,14 @@ const URLDisplay = styled.p`
   max-width: 100%;
 `;
 
-const normalizeEsp32IP = (value: string) =>
-  /^https?:\/\//i.test(value) ? value : `https://${value}`;
+const defaultEsp32IP = 'https://192.168.1.3';
+
+const normalizeEsp32IP = (value: string) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return defaultEsp32IP;
+
+  return /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
+};
 
 interface ProgressBarProps {
   progress: number;
@@ -197,6 +203,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [cartridgeSaveName, setCartridgeSaveName] = useState(`none.sav`);
   const [currentEsp32IP, setCurrentEsp32IP] = useState(esp32IP);
   const currentEsp32IPRef = useRef(esp32IP);
+  const isEditingEsp32IPRef = useRef(false);
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
@@ -226,9 +233,19 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   }, []);
 
   useEffect(() => {
+    if (isEditingEsp32IPRef.current) return;
+
     setCurrentEsp32IP(esp32IP);
     currentEsp32IPRef.current = esp32IP;
   }, [esp32IP]);
+
+  const commitEsp32IP = useCallback((value = currentEsp32IPRef.current) => {
+    const nextEsp32IP = normalizeEsp32IP(value);
+    currentEsp32IPRef.current = nextEsp32IP;
+    setCurrentEsp32IP(nextEsp32IP);
+    setEsp32IP(nextEsp32IP);
+    return nextEsp32IP;
+  }, [setEsp32IP]);
 
   useEffect(() => {
     if (shouldUploadExternalRom) {
@@ -254,7 +271,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     try {
         setConnectionFailed(false);
         setIsExternalRomInfoLoading(true);
-        const esp32IPToFetch = normalizeEsp32IP(currentEsp32IPRef.current);
+        const esp32IPToFetch = commitEsp32IP();
         const [
           nextGameData,
           nextAdditionalData,
@@ -276,7 +293,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     } finally {
         setIsExternalRomInfoLoading(false);
     }
-  }, [buildRomName2, setAdditionalData, setGameData]);
+  }, [buildRomName2, commitEsp32IP, setAdditionalData, setGameData]);
   
   useEffect(() => {
      if(externalSaveFile != null)
@@ -293,7 +310,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   useEffect(() => {
     if (connectionFailed && !isExternalRomInfoLoading) {
       const reconnectInterval = setInterval(() => {
-        if (connectionFailed && !isExternalRomInfoLoading)
+        if (connectionFailed && !isExternalRomInfoLoading && !isEditingEsp32IPRef.current)
           fetchData();
       }, 5000);
 
@@ -633,6 +650,11 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
         
         <StyledForm
             aria-label="Login Form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              isEditingEsp32IPRef.current = false;
+              fetchData();
+            }}
           >
             <TextField
               label="ESP32 IP Address"
@@ -640,18 +662,28 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               variant="filled"
               style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '5px' }}
               value={currentEsp32IP}
+              onFocus={() => {
+                isEditingEsp32IPRef.current = true;
+              }}
+              onBlur={() => {
+                isEditingEsp32IPRef.current = false;
+                commitEsp32IP();
+              }}
               onChange={(event) => {
                 const nextEsp32IP = event.target.value;
                 currentEsp32IPRef.current = nextEsp32IP;
                 setCurrentEsp32IP(nextEsp32IP);
-                setEsp32IP(nextEsp32IP);
                 setConnectionFailed(false);
               }}
             />
             <Button
+              type="button"
               variant="outlined"
               style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '8px' }}
-              onClick={() => {fetchData()}}
+              onClick={() => {
+                isEditingEsp32IPRef.current = false;
+                fetchData();
+              }}
             >
               <HiRefresh style={{ fontSize: '18px' }} /> {}
               Refresh
