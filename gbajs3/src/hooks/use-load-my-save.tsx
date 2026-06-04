@@ -6,6 +6,24 @@ import { readerRequest } from '../utils/reader-client.ts';
 type LoadExternalSaveProps = {
   url: URL;
   fullName: string;
+  expectedBytes?: number;
+};
+
+const gbaSaveSizeByType: Record<string, number> = {
+  '1': 512,
+  '2': 8192,
+  '3': 32768,
+  '4': 65536,
+  '5': 131072,
+  '6': 65536,
+  '21': 131072,
+  '55': 131072
+};
+
+const getExpectedSaveBytes = (fetchProps: LoadExternalSaveProps) => {
+  if (fetchProps.expectedBytes) return fetchProps.expectedBytes;
+  const saveType = fetchProps.url.searchParams.get('saveType');
+  return saveType ? gbaSaveSizeByType[saveType] : undefined;
 };
 
 export const useLoadExternalSave = () => {
@@ -21,16 +39,20 @@ export const useLoadExternalSave = () => {
       const fallbackFileName = decodeURIComponent(
         fetchProps.url.pathname.split('/').pop() ?? 'unknown_external.sav'
       );
+      const expectedTotalBytes = getExpectedSaveBytes(fetchProps);
 
+      setProgress(0);
       readerRequest('GET', fetchProps.url.toString(), 'arraybuffer', undefined, {
         timeoutMs: 90000,
         retries: 0,
         phase: 'downloading',
+        expectedTotalBytes,
         onProgress: (progress) => {
           setProgress(progress.percent);
         }
       })
         .then((response) => {
+          setProgress(100);
           const file = new File(
             [response as ArrayBuffer],
             fetchProps.fullName ?? fallbackFileName

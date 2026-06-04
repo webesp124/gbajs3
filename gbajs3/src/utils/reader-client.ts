@@ -21,6 +21,7 @@ export type ReaderRequestOptions = {
   timeoutMs?: number;
   retries?: number;
   retryDelayMs?: number;
+  expectedTotalBytes?: number;
   signal?: AbortSignal;
   phase?: ReaderProgressPhase;
   onProgress?: (progress: ReaderProgress) => void;
@@ -231,22 +232,28 @@ const requestXHR = <T extends 'json' | 'arraybuffer' | 'text'>(
     }
 
     xhr.onprogress = (event) => {
+      const total = event.lengthComputable
+        ? event.total
+        : options.expectedTotalBytes ?? 0;
       options.onProgress?.(
         buildProgress(
           phase,
           event.loaded,
-          event.lengthComputable ? event.total : 0,
+          total,
           startedAt
         )
       );
     };
 
     xhr.upload.onprogress = (event) => {
+      const total = event.lengthComputable
+        ? event.total
+        : options.expectedTotalBytes ?? 0;
       options.onProgress?.(
         buildProgress(
           phase,
           event.loaded,
-          event.lengthComputable ? event.total : 0,
+          total,
           startedAt
         )
       );
@@ -464,4 +471,3 @@ export const testReaderConnection = async (baseURL: string): Promise<ReaderConne
     };
   }
 };
-

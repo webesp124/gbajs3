@@ -199,7 +199,9 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   } = useLoadExternalRom();
   const {
     data: externalSaveFile,
+    isLoading: isExternalSaveLoading,
     execute: executeLoadExternalSave,
+    progress: externalSaveLoadingProgress
   } = useLoadExternalSave();
   const runGame = useRunGame();
   const [isExternalRomInfoLoading, setIsExternalRomInfoLoading] = useState(false);
@@ -224,6 +226,9 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [readerStatus, setReaderStatus] = useState<ReaderStatus | null>(null);
   const [saveBackups, setSaveBackups] = useState<CartridgeSaveBackup[]>(() => getCartridgeSaveBackups());
   const isLargerThanPhone = useMediaQuery(theme.isLargerThanPhone);
+  const cartridgeTransferProgress = isExternalSaveLoading
+    ? externalSaveLoadingProgress
+    : externalRomLoadingProgress;
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
@@ -451,7 +456,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const fetchMySave_gb = async (fullName: string) => {
     try {
       var saveURL = `${normalizeEsp32IP(currentEsp32IPRef.current)}/get_current_save`;
-      await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName });
+      await executeLoadExternalSave({ url: new URL(saveURL), fullName: fullName, expectedBytes: gameData?.sramSize });
 
     } catch (error) {
       console.error('Error fetching save:', error);
@@ -515,14 +520,14 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
       <ModalBody>
         <RomLoadingIndicator
           isLoading={isLoading}
-          isExternalRomLoading={isExternalRomLoading}
+          isExternalRomLoading={!isExternalSaveLoading && isExternalRomLoading}
           indicator={
             <PacmanLoader
               color={theme.gbaThemeBlue}
               cssOverride={{ margin: '0 auto' }}
             />
           }
-          progress={externalRomLoadingProgress}
+          progress={cartridgeTransferProgress}
         >
 
             {!!externalRomLoadError && (

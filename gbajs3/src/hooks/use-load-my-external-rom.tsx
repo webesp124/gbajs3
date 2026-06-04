@@ -24,6 +24,7 @@ export const useLoadExternalRom = () => {
       const fallbackFileName = decodeURIComponent(
         fetchProps.url.pathname.split('/').pop() ?? 'unknown_external.gba'
       );
+      setProgress(0);
       readerRequest('GET', fetchProps.url.toString(), 'arraybuffer', undefined, {
         timeoutMs: 180000,
         retries: 0,
@@ -33,6 +34,7 @@ export const useLoadExternalRom = () => {
         }
       })
         .then(async (response) => {
+          setProgress(100);
           const responseBuffer = response as ArrayBuffer;
           const file = new File([responseBuffer], fetchProps.fullName ?? fallbackFileName);
           
