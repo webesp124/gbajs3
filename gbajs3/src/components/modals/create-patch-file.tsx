@@ -1,4 +1,4 @@
-import { Button, TextField, Select, MenuItem, InputLabel, Divider } from '@mui/material';
+import { Button, TextField, Select, MenuItem, InputLabel, Divider, Typography } from '@mui/material';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import { useId, useState, useEffect } from 'react';
@@ -13,6 +13,8 @@ import { saveTypes } from './util-rom.tsx';
 import * as bps from 'bps';
 import { GameSelectionTable } from './game-selection-table.tsx';
 import * as CRC32 from "crc-32";
+
+type PatchMode = 'existingPatch' | 'generateBps';
 
 export const CreatePatchFileModal = () => {
   const { closeModal } = useModalContext();
@@ -29,6 +31,7 @@ export const CreatePatchFileModal = () => {
     { label: 'Checksum 1000', value: 'checksum1000', setter: 'setChecksum1000' },
     { label: 'Cart ID', value: 'cartId', setter: 'setCartId' },
     { label: 'Patch File', value: 'patchFile', setter: 'setPatchFile' },
+    { label: 'QoL Patch Files', value: 'compatibleImprovementPatchFiles', setter: 'setCompatibleImprovementPatchFiles' },
     { label: 'Console', value: 'console', setter: 'setConsole' },
   ];
 
@@ -43,11 +46,13 @@ export const CreatePatchFileModal = () => {
     checksum1000: '',
     cartId: '',
     patchFile: '',
+    compatibleImprovementPatchFiles: '',
     console: '.gba'
   });
 
   const [baseRomFileName, setBaseRomFileName] = useState("");
-  const [patchedRomFileName, setPatchedRomFileName] = useState("");
+  const [patchMode, setPatchMode] = useState<PatchMode>('existingPatch');
+  const [patchSourceFileName, setPatchSourceFileName] = useState("");
   const [patchedRomFileData, setPatchedRomFileData] = useState(new Uint8Array);
 
   useEffect(() => {
@@ -58,22 +63,22 @@ export const CreatePatchFileModal = () => {
     baseRomFileName
   ]);
 
-  // Handler for file selection
-  const handleFileChange = (event: { target: { name: any; value: any; files: any; }; }) => {
+  const setPatchFileNameFromUpload = (fileName: string, extension: string) => {
+    const fullName = removeExtension(fileName).fileName;
+    setPatchSourceFileName(fileName);
+
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      fullName,
+      patchFile: `${fullName}${extension}`
+    }));
+  };
+
+  // Handler for patched ROM selection. This generates a new BPS patch.
+  const handlePatchedRomChange = (event: { target: { name: any; value: any; files: any; }; }) => {
     const file = event.target.files[0];
     if (file) {
-        setPatchedRomFileName(file.name);
-
-        let fullName = removeExtension(file.name).fileName;
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            fullName: fullName
-        }));
-
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            patchFile: fullName + ".bps"
-        }));
+        setPatchFileNameFromUpload(file.name, ".bps");
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -90,6 +95,25 @@ export const CreatePatchFileModal = () => {
     }
   };
 
+  // Handler for existing patch selection. This only writes JSON metadata.
+  const handleExistingPatchChange = (event: { target: { name: any; value: any; files: any; }; }) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const extensionMatch = file.name.match(/\.(ips|bps|txt)$/i);
+    setPatchSourceFileName(file.name);
+
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      patchFile: file.name,
+      fullName: prevValues.fullName || removeExtension(file.name).fileName
+    }));
+
+    if (!extensionMatch) {
+      console.warn('Unsupported patch extension selected:', file.name);
+    }
+  };
+
   const handleChange = (event: { target: { name: any; value: any; }; }, key: string) => {
     setFormValues((prevValues) => ({
       ...prevValues,
@@ -100,11 +124,11 @@ export const CreatePatchFileModal = () => {
   const baseId = useId();
 
   function removeExtension(fileName: string) {
-    const match = fileName.match(/\.(gb|gbc|gba)$/i);
+    const match = fileName.match(/\.(gb|gbc|gba|ips|bps|txt)$/i);
     
     if (match) {
       return {
-        fileName: fileName.replace(/\.(gb|gbc|gba)$/i, ''),
+        fileName: fileName.replace(/\.(gb|gbc|gba|ips|bps|txt)$/i, ''),
         removedExtension: match[0]
       };
     } else {
@@ -142,6 +166,11 @@ export const CreatePatchFileModal = () => {
   };
 
   const downloadJson = () => {
+    const compatibleImprovementPatchFiles = formValues["compatibleImprovementPatchFiles"]
+      .split(/\r?\n|,/)
+      .map((patchFile) => patchFile.trim())
+      .filter((patchFile) => patchFile.length > 0);
+
     const jsonData = {
         fullName: formValues["fullName"],
         coverImage: formValues["coverImage"],
@@ -152,6 +181,9 @@ export const CreatePatchFileModal = () => {
         saveType: formValues["saveType"],
         checksum1000: formValues["checksum1000"],
         patchFile: "./patches/" + formValues["patchFile"],
+        ...(compatibleImprovementPatchFiles.length > 0
+          ? { compatibleImprovementPatchFiles }
+          : {}),
         console: formValues["console"],
     };
 
@@ -224,6 +256,11 @@ export const CreatePatchFileModal = () => {
   };
 
   const createPatchFile = () => {
+    if (patchMode === 'existingPatch') {
+      downloadJson();
+      return;
+    }
+
     const originalFile = emulator?.getFile("/data/games/" + baseRomFileName);
     const newFile = patchedRomFileData;
 
@@ -257,13 +294,51 @@ export const CreatePatchFileModal = () => {
 
   return (
     <>
-      <ModalHeader title="File System" />
+      <ModalHeader title="Patch/JSON Builder" />
       <ModalBody>
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Base Rom</Divider>
         <GameSelectionTable gameData={null} checksum1000String={null} selectedGame={baseRomFileName} setSelectedGame={setBaseRomFileName} romName={".gba"} />
-        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Patched Rom</Divider>
-        <input type="file" onChange={handleFileChange} accept=".gba" />
-        {patchedRomFileName && <p>Selected File: {patchedRomFileName}</p>}
+
+        <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Patch Source</Divider>
+        <Box sx={{ minWidth: 120 }}>
+          <FormControl fullWidth style={{ padding: '3px 8px 3px 8px', marginLeft: '5px', width: "98%", marginTop: '5px' }}>
+            <InputLabel id="patch-source-mode-label">Patch Source</InputLabel>
+            <Select
+              labelId="patch-source-mode-label"
+              value={patchMode}
+              onChange={(event) => {
+                setPatchMode(event.target.value as PatchMode);
+                setPatchSourceFileName("");
+                setPatchedRomFileData(new Uint8Array());
+                setFormValues((prevValues) => ({
+                  ...prevValues,
+                  patchFile: ''
+                }));
+              }}
+              label="Patch Source"
+              style={{ fontSize: '14px'}}
+            >
+              <MenuItem value="existingPatch">Use existing patch file (.ips, .bps, .txt)</MenuItem>
+              <MenuItem value="generateBps">Generate BPS from patched ROM</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+        {patchMode === 'existingPatch' ? (
+          <>
+            <Typography variant="body2" sx={{ padding: '8px 8px 0 13px' }}>
+              Select the patch file that will be referenced by the generated JSON.
+            </Typography>
+            <input type="file" onChange={handleExistingPatchChange} accept=".ips,.bps,.txt" />
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" sx={{ padding: '8px 8px 0 13px' }}>
+              Select the already-patched ROM. netBOY will compare it with the base ROM and download a new BPS patch.
+            </Typography>
+            <input type="file" onChange={handlePatchedRomChange} accept=".gba,.gb,.gbc" />
+          </>
+        )}
+        {patchSourceFileName && <p>Selected File: {patchSourceFileName}</p>}
 
         <Divider sx={{ padding: '10px 0', color: 'darkgrey' }}>Information</Divider>
         {fields.map((field) => (
@@ -275,6 +350,11 @@ export const CreatePatchFileModal = () => {
                 style={{ padding: '3px 8px 3px 8px', fontSize: '14px', marginLeft: '5px', width: "98%" }}
                 value={formValues[field.value as keyof typeof formValues]}
                 onChange={(event) => handleChange(event, field.value)}
+                helperText={field.value === 'compatibleImprovementPatchFiles'
+                  ? 'Optional. Enter one QoL patch path per line or separate multiple paths with commas.'
+                  : undefined}
+                multiline={field.value === 'compatibleImprovementPatchFiles'}
+                minRows={field.value === 'compatibleImprovementPatchFiles' ? 2 : undefined}
                 />
             ) : null
         ))}
@@ -300,7 +380,7 @@ export const CreatePatchFileModal = () => {
       </ModalBody>
       <ModalFooter>
         <CircleCheckButton
-          copy="Create Patch File"
+          copy={patchMode === 'existingPatch' ? 'Create JSON' : 'Create BPS + JSON'}
           id={`${baseId}--create-patch-button-button`}
           onClick={() => createPatchFile()}
         />

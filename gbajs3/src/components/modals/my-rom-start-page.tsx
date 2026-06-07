@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem, Alert, Typography, Box } from '@mui/material';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
 import { styled, useTheme } from 'styled-components';
@@ -101,6 +101,14 @@ const URLDisplay = styled.p`
 `;
 
 const defaultEsp32IP = 'https://192.168.1.3';
+
+const hasPatchFile = (additionalData: any) =>
+  typeof additionalData?.patchFile === 'string' && additionalData.patchFile.length > 0;
+
+const getCompatibleImprovementPatchFiles = (additionalData: any): string[] =>
+  Array.isArray(additionalData?.compatibleImprovementPatchFiles)
+    ? additionalData.compatibleImprovementPatchFiles.filter((patchFile: unknown): patchFile is string => typeof patchFile === 'string' && patchFile.length > 0)
+    : [];
 
 const normalizeEsp32IP = (value: string) => {
   const trimmedValue = value.trim();
@@ -216,6 +224,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const [checksum1000String, setChecksum1000String] = useState<string | null>(null);
   const [selectedSave, setSelectedSave] = useState("Cartridge Save");
   const [selectedGame, setSelectedGame] = useState("Cartridge Rom");
+  const [selectedImprovementPatchFile, setSelectedImprovementPatchFile] = useState("");
   const [cartridgeSaveName, setCartridgeSaveName] = useState(`none.sav`);
   const [currentEsp32IP, setCurrentEsp32IP] = useState(esp32IP);
   const currentEsp32IPRef = useRef(esp32IP);
@@ -229,6 +238,15 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
   const cartridgeTransferProgress = isExternalSaveLoading
     ? externalSaveLoadingProgress
     : externalRomLoadingProgress;
+  const compatibleImprovementPatchFiles = useMemo(
+    () => getCompatibleImprovementPatchFiles(additionalData),
+    [additionalData]
+  );
+  const canSelectImprovementPatch = compatibleImprovementPatchFiles.length > 0 && !hasPatchFile(additionalData);
+  const selectedImprovementPatchDescription =
+    additionalData?.compatibleImprovementPatchDescriptions?.[selectedImprovementPatchFile];
+  const selectedImprovementPatchSourceUrl =
+    additionalData?.compatibleImprovementPatchSourceUrls?.[selectedImprovementPatchFile];
   
   const handleAdditionalDataChange = (e: { target: { name: any; value: any; }; }) => {
     const { name, value } = e.target;
@@ -240,6 +258,17 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     setLocalAdditionalData(updateAdditionalData);
     setAdditionalData(updateAdditionalData);
   };
+
+  useEffect(() => {
+    if (hasPatchFile(additionalData)) {
+      setSelectedImprovementPatchFile("");
+      return;
+    }
+
+    if (selectedImprovementPatchFile && !compatibleImprovementPatchFiles.includes(selectedImprovementPatchFile)) {
+      setSelectedImprovementPatchFile("");
+    }
+  }, [additionalData, compatibleImprovementPatchFiles, selectedImprovementPatchFile]);
 
   const buildRomName2 = useCallback((gameData: any, additionalData: any, checksum1000String: string) => {
     if (gameData["is_gba"]) {
@@ -416,18 +445,22 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
     }
     else{
        const esp32IPForRequest = normalizeEsp32IP(currentEsp32IPRef.current);
+       const patchFile = hasPatchFile(additionalData)
+         ? additionalData.patchFile
+         : selectedImprovementPatchFile || null;
+
        if (gameData["is_gba"]){
         let romName = buildRomName() + ".gba";
         let cartSizeBytes = additionalData.cartSize;
         let romURL = `${esp32IPForRequest}/get_current_game.gba?cartSize=${cartSizeBytes}&saveType=4`;
 
-        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: additionalData.patchFile });
+        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile });
        }
        else {
         let romName = buildRomName() + ".gb";
         let romURL = `${esp32IPForRequest}/get_current_game.gb`;
 
-        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile: null });
+        await executeLoadExternalRom({ url: new URL(romURL), fullName: romName, patchFile });
        }
     }
     setIsLoading(false);
@@ -631,6 +664,57 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
             )}
             {additionalData && additionalData.patchFile != null && additionalData.patchFile.length > 0 && (
               <TableRow><TableCell>Patch File:</TableCell><TableCell>{additionalData.patchFile}</TableCell></TableRow>
+            )}
+            {canSelectImprovementPatch && (
+              <TableRow>
+                <TableCell>QoL Patch:</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Select
+                      value={selectedImprovementPatchFile}
+                      onChange={(event) => {
+                        setSelectedImprovementPatchFile(event.target.value);
+                      }}
+                      displayEmpty
+                      size="small"
+                    >
+                      <MenuItem value="">None</MenuItem>
+                      {compatibleImprovementPatchFiles.map((patchFile) => (
+                        <MenuItem key={patchFile} value={patchFile}>
+                          {patchFile.split('/').pop() ?? patchFile}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {!!selectedImprovementPatchDescription && (
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedImprovementPatchDescription}
+                      </Typography>
+                    )}
+                    {!!selectedImprovementPatchSourceUrl && (
+                      <Button
+                        href={selectedImprovementPatchSourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        size="small"
+                        variant="outlined"
+                        sx={{ alignSelf: 'flex-start' }}
+                      >
+                        Patch source
+                      </Button>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            )}
+            {hasPatchFile(additionalData) && compatibleImprovementPatchFiles.length > 0 && (
+              <TableRow>
+                <TableCell>QoL Patch:</TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    Improvement patches are unavailable because this ROM already uses its own patch file.
+                  </Typography>
+                </TableCell>
+              </TableRow>
             )}
 
             {gameData && gameData.is_gba && (

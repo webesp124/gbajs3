@@ -1,6 +1,7 @@
 import { createContext } from 'react';
 
 import type { MyRomStartPageProps } from '../../components/modals/my-rom-start-page.tsx';
+import type { UploadRomReflashPageProps } from '../../components/modals/upload-rom-reflash.tsx';
 import type { UploadPublicExternalRomsModalProps } from '../../components/modals/upload-public-external-roms.tsx';
 
 type ModalPayloadMap = {
@@ -20,6 +21,8 @@ type ModalPayloadMap = {
   loadRom: undefined;
   uploadSaveToServer: undefined;
   uploadRomToServer: undefined;
+  createPatchFile: undefined;
+  uploadRomReflash: UploadRomReflashPageProps;
   uploadPublicExternalRoms: UploadPublicExternalRomsModalProps;
   myRomStartPage: MyRomStartPageProps;
 };

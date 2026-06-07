@@ -9,23 +9,18 @@ import { renderWithContext } from '../../../test/render-with-context.tsx';
 import { GbaDarkTheme } from '../../context/theme/theme.tsx';
 import * as contextHooks from '../../hooks/context.tsx';
 import * as quickReloadHooks from '../../hooks/emulator/use-quick-reload.tsx';
-import * as logoutHooks from '../../hooks/use-logout.tsx';
 
 import type { GBAEmulator } from '../../emulator/mgba/mgba-emulator.tsx';
-import type {
-  UseMutateFunction,
-  UseMutationResult
-} from '@tanstack/react-query';
 
 describe('<NavigationMenu />', () => {
   it('renders menu button and closed menu by default on mobile', () => {
     renderWithContext(<NavigationMenu />);
 
-    expect(screen.getByRole('list', { name: 'Menu' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.queryByLabelText('Menu Dismiss')).not.toBeVisible();
     // renders default mounted menu items
-    expect(screen.getAllByRole('listitem')).toHaveLength(13);
+    expect(screen.getAllByRole('listitem')).toHaveLength(16);
     expect(screen.getByTestId('menu-wrapper')).toHaveStyle({
       left: '-255px'
     });
@@ -55,11 +50,11 @@ describe('<NavigationMenu />', () => {
 
     renderWithContext(<NavigationMenu />);
 
-    expect(screen.getByRole('list', { name: 'Menu' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.queryByLabelText('Menu Dismiss')).not.toBeVisible();
     // renders default mounted menu items
-    expect(screen.getAllByRole('listitem')).toHaveLength(13);
+    expect(screen.getAllByRole('listitem')).toHaveLength(16);
     expect(screen.getByTestId('menu-wrapper')).toHaveStyle({
       left: 0
     });
@@ -70,11 +65,11 @@ describe('<NavigationMenu />', () => {
 
     await userEvent.click(screen.getByLabelText('Menu Toggle'));
 
-    expect(screen.getByRole('list', { name: 'Menu' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Dismiss')).toBeVisible();
     // renders default mounted menu items
-    expect(screen.getAllByRole('listitem')).toHaveLength(13);
+    expect(screen.getAllByRole('listitem')).toHaveLength(16);
   });
 
   it('toggles menu with button', async () => {
@@ -120,8 +115,7 @@ describe('<NavigationMenu />', () => {
       ['About', { type: 'about' }],
       ['Controls', { type: 'controls' }],
       ['Emulator Settings', { type: 'emulatorSettings' }],
-      ['Legal', { type: 'legal' }],
-      ['Login', { type: 'login' }]
+      ['Patch/JSON Builder', { type: 'createPatchFile' }]
     ])('%s opens modal on click', async (title, expected) => {
       const openModalSpy = vi.fn();
       const { useModalContext: original } = await vi.importActual<
@@ -142,6 +136,29 @@ describe('<NavigationMenu />', () => {
       await userEvent.click(menuNode);
 
       expect(openModalSpy).toHaveBeenCalledWith(expected);
+    });
+
+    it('Reflash Cartridge Rom opens modal with the current reader URL', async () => {
+      const openModalSpy = vi.fn();
+      const { useModalContext: original } = await vi.importActual<
+        typeof contextHooks
+      >('../../hooks/context.tsx');
+
+      vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
+        ...original(),
+        openModal: openModalSpy
+      }));
+
+      renderWithContext(
+        <NavigationMenu esp32IP="https://192.168.0.178" />
+      );
+
+      await userEvent.click(screen.getByText('Reflash Cartridge Rom'));
+
+      expect(openModalSpy).toHaveBeenCalledWith({
+        type: 'uploadRomReflash',
+        props: { esp32IP: 'https://192.168.0.178' }
+      });
     });
 
     it.each([
@@ -482,143 +499,6 @@ describe('<NavigationMenu />', () => {
       );
     });
 
-    it('Logout fires logout request with authentication', async () => {
-      const executeLogoutSpy = vi.fn();
-      const { useAuthContext: originalAuth } = await vi.importActual<
-        typeof contextHooks
-      >('../../hooks/context.tsx');
-
-      vi.spyOn(contextHooks, 'useAuthContext').mockImplementation(() => ({
-        ...originalAuth(),
-        isAuthenticated: () => true
-      }));
-
-      vi.spyOn(logoutHooks, 'useLogout').mockReturnValue({
-        isPending: false,
-        error: null,
-        mutate: executeLogoutSpy as UseMutateFunction<void>
-      } as UseMutationResult<void, Error, void>);
-
-      renderWithContext(<NavigationMenu />);
-
-      const menuNode = screen.getByText('Logout');
-
-      expect(menuNode).toBeInTheDocument();
-
-      await userEvent.click(menuNode);
-
-      expect(executeLogoutSpy).toHaveBeenCalledOnce();
-    });
-
-    it.each([
-      ['Load Save (Server)', { type: 'loadSave' }],
-      ['Load Rom (Server)', { type: 'loadRom' }]
-    ])(
-      '%s opens modal on click with authentication',
-      async (title, expected) => {
-        const openModalSpy = vi.fn();
-        const {
-          useModalContext: originalModal,
-          useAuthContext: originalAuth,
-          useEmulatorContext: originalEmulator
-        } = await vi.importActual<typeof contextHooks>(
-          '../../hooks/context.tsx'
-        );
-
-        vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-          ...originalModal(),
-          openModal: openModalSpy
-        }));
-
-        vi.spyOn(contextHooks, 'useAuthContext').mockImplementation(() => ({
-          ...originalAuth(),
-          isAuthenticated: () => true
-        }));
-
-        vi.spyOn(contextHooks, 'useEmulatorContext').mockImplementation(() => ({
-          ...originalEmulator(),
-          emulator: {
-            getCurrentAutoSaveStatePath: () => null,
-            getCurrentGameName: () => undefined,
-            listRoms: () => ['some_rom.gba']
-          } as GBAEmulator
-        }));
-
-        renderWithContext(<NavigationMenu />);
-
-        await userEvent.click(screen.getByRole('button', { name: 'Profile' }));
-
-        const menuNode = screen.getByText(title);
-
-        expect(menuNode).toBeInTheDocument();
-
-        await userEvent.click(menuNode);
-
-        expect(openModalSpy).toHaveBeenCalledWith(expected);
-      }
-    );
-
-    it.each(['Load Save (Server)', 'Load Rom (Server)'])(
-      '%s renders as disabled while emulator is loading',
-      async (title) => {
-        const { useAuthContext: originalAuth } = await vi.importActual<
-          typeof contextHooks
-        >('../../hooks/context.tsx');
-
-        vi.spyOn(contextHooks, 'useAuthContext').mockImplementation(() => ({
-          ...originalAuth(),
-          isAuthenticated: () => true
-        }));
-
-        renderWithContext(<NavigationMenu />);
-
-        await userEvent.click(screen.getByRole('button', { name: 'Profile' }));
-
-        expect(screen.getByRole('button', { name: title })).toBeDisabled();
-      }
-    );
-
-    it.each([
-      ['Send Save to Server', { type: 'uploadSaveToServer' }],
-      ['Send Rom to Server', { type: 'uploadRomToServer' }]
-    ])(
-      '%s opens modal on click with authentication and running emulator',
-      async (title, expected) => {
-        const openModalSpy = vi.fn();
-        const {
-          useModalContext: originalModal,
-          useAuthContext: originalAuth,
-          useRunningContext: originalRunning
-        } = await vi.importActual<typeof contextHooks>(
-          '../../hooks/context.tsx'
-        );
-
-        vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
-          ...originalModal(),
-          openModal: openModalSpy
-        }));
-
-        vi.spyOn(contextHooks, 'useAuthContext').mockImplementation(() => ({
-          ...originalAuth(),
-          isAuthenticated: () => true
-        }));
-
-        vi.spyOn(contextHooks, 'useRunningContext').mockImplementation(() => ({
-          ...originalRunning(),
-          isRunning: true
-        }));
-
-        renderWithContext(<NavigationMenu />);
-
-        const menuNode = screen.getByText(title);
-
-        expect(menuNode).toBeInTheDocument();
-
-        await userEvent.click(menuNode);
-
-        expect(openModalSpy).toHaveBeenCalledWith(expected);
-      }
-    );
   });
 
   describe('menu button', () => {

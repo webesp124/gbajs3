@@ -1,7 +1,7 @@
+import * as bps from 'bps';
 import { useCallback, useState } from 'react';
 
 import { useAsyncData } from './use-async-data.tsx';
-import * as bps from 'bps';
 import { linkCartridgeInformation, applyCustomPatch } from '../components/modals/util-rom.tsx';
 import { readerRequest } from '../utils/reader-client.ts';
 
@@ -9,6 +9,67 @@ type LoadExternalRomProps = {
   url: URL;
   fullName?: string;
   patchFile?: string | null;
+};
+
+const ipsHeader = 'PATCH';
+const ipsFooter = 'EOF';
+
+const readAscii = (data: Uint8Array, offset: number, length: number) =>
+  String.fromCharCode(...data.slice(offset, offset + length));
+
+const readUint16 = (data: Uint8Array, offset: number) =>
+  (data[offset] << 8) | data[offset + 1];
+
+const readUint24 = (data: Uint8Array, offset: number) =>
+  (data[offset] << 16) | (data[offset + 1] << 8) | data[offset + 2];
+
+const applyIpsPatch = (patch: Uint8Array, source: Uint8Array) => {
+  if (readAscii(patch, 0, ipsHeader.length) !== ipsHeader) {
+    throw new Error('Invalid IPS patch header');
+  }
+
+  let offset = ipsHeader.length;
+  let target = new Uint8Array(source);
+
+  const ensureTargetLength = (length: number) => {
+    if (target.length >= length) return;
+
+    const nextTarget = new Uint8Array(length);
+    nextTarget.set(target);
+    target = nextTarget;
+  };
+
+  while (offset < patch.length) {
+    if (readAscii(patch, offset, ipsFooter.length) === ipsFooter) {
+      offset += ipsFooter.length;
+
+      if (offset + 3 <= patch.length) {
+        target = target.slice(0, readUint24(patch, offset));
+      }
+
+      return target;
+    }
+
+    const patchOffset = readUint24(patch, offset);
+    const patchSize = readUint16(patch, offset + 3);
+    offset += 5;
+
+    if (patchSize === 0) {
+      const runLength = readUint16(patch, offset);
+      const value = patch[offset + 2];
+      offset += 3;
+
+      ensureTargetLength(patchOffset + runLength);
+      target.fill(value, patchOffset, patchOffset + runLength);
+      continue;
+    }
+
+    ensureTargetLength(patchOffset + patchSize);
+    target.set(patch.slice(offset, offset + patchSize), patchOffset);
+    offset += patchSize;
+  }
+
+  throw new Error('Invalid IPS patch footer');
 };
 
 export const useLoadExternalRom = () => {
@@ -35,47 +96,46 @@ export const useLoadExternalRom = () => {
       })
         .then(async (response) => {
           setProgress(100);
-          const responseBuffer = response as ArrayBuffer;
+          const responseBuffer: ArrayBuffer = response;
           const file = new File([responseBuffer], fetchProps.fullName ?? fallbackFileName);
           
-          if (fetchProps.patchFile != null && fetchProps.patchFile != ""){
+          if (fetchProps.patchFile !== null && fetchProps.patchFile !== undefined && fetchProps.patchFile !== ""){
             
-            console.log("applying patch to file: " + fetchProps.patchFile);
-            if (fetchProps.patchFile.startsWith('.')) {
-              fetchProps.patchFile = linkCartridgeInformation + fetchProps.patchFile.substring(1);
-            }
+            const patchFile = fetchProps.patchFile.startsWith('.')
+              ? linkCartridgeInformation + fetchProps.patchFile.substring(1)
+              : fetchProps.patchFile;
 
-            if(fetchProps.patchFile.endsWith(".txt")){
+            console.log("applying patch to file: " + patchFile);
+
+            if(patchFile.endsWith(".txt")){
               console.log("applying custom patch file");
               const fetchPropsCustomPatchFile = {
                 fullName: fetchProps.fullName ?? fallbackFileName,
-                patchFile: fetchProps.patchFile
+                patchFile
               };
 
-              const sourceFile = new Uint8Array(responseBuffer);
+              const sourceFile: Uint8Array<ArrayBuffer> = new Uint8Array(responseBuffer);
               const patchedFile = await applyCustomPatch(fetchPropsCustomPatchFile, sourceFile);
               resolve(patchedFile);
             } else {
               const ajaxPatch = new XMLHttpRequest();
-              ajaxPatch.open("GET", fetchProps.patchFile, true);
+              ajaxPatch.open("GET", patchFile, true);
               ajaxPatch.responseType = "arraybuffer";
               ajaxPatch.overrideMimeType("text/plain; charset=x-user-defined");
 
               
               ajaxPatch.onload = () => {
-                const ppp = new Uint8Array(ajaxPatch.response);
+                const patchResponse = ajaxPatch.response as ArrayBuffer;
+                const ppp: Uint8Array<ArrayBuffer> = new Uint8Array(patchResponse);
+                const sourceFile: Uint8Array<ArrayBuffer> = new Uint8Array(responseBuffer);
 
-                const {
-                  instructions,
-                  checksum
-                } = bps.parse(ppp);
-
-                console.log(checksum);
+                const target: Uint8Array = patchFile.toLowerCase().endsWith('.ips')
+                  ? applyIpsPatch(ppp, sourceFile)
+                  : bps.apply(bps.parse(ppp).instructions, sourceFile);
+                const patchedBuffer = new ArrayBuffer(target.byteLength);
+                new Uint8Array(patchedBuffer).set(target);
                 
-                const sourceFile = new Uint8Array(responseBuffer);
-                const target = bps.apply(instructions, sourceFile);
-                
-                const patchedFile = new File([target as BlobPart], fetchProps.fullName ?? fallbackFileName);
+                const patchedFile = new File([patchedBuffer], fetchProps.fullName ?? fallbackFileName);
                 resolve(patchedFile);
               }
               ajaxPatch.onerror = () => {

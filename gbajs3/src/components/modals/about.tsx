@@ -23,30 +23,35 @@ export const AboutModal = () => {
       <ModalHeader title="About" />
       <ModalBody>
         <p>
-          netBOY is a full featured Game Boy Advance emulator meant to operate
-          online and offline in the browser.
+          netBOY is the browser interface for the netBOY wireless GBA cartridge
+          reader. The cartridge reader hardware is required to read cartridges,
+          download saves, upload saves, and reflash supported repro cartridges.
         </p>
         <p>
-          We currently support the mGBA core through the use of webassembly.
+          The app can also run compatible Game Boy Advance games in the browser
+          using the mGBA WebAssembly core after a ROM has been loaded from the
+          reader or from local storage.
         </p>
         <p>Getting Started:</p>
         <ul>
+          <li>Power on the netBOY wireless cartridge reader and insert a game</li>
           <li>
-            Using the <i>Pre Game Actions</i> menu, select the{' '}
-            <i>Upload Files</i> menu item
+            Enter the reader address on the start page, or open the app from the
+            reader page so the address is filled automatically
           </li>
-          <li>Add a save file if you have one available</li>
+          <li>Use <i>My Cartridge</i> to detect the inserted cartridge</li>
           <li>
-            Add a rom file, and click <i>Upload</i>
+            Download the cartridge ROM and save file before playing or writing
+            data back to the cartridge
           </li>
-          <li>Enjoy, your game will boot!</li>
         </ul>
         <p>
-          See the{' '}
+          See the project{' '}
           <a href="https://github.com/thenick775/gbajs3/wiki" target="_blank">
             WIKI
           </a>{' '}
-          and tour items for further information!
+          for firmware setup, browser requirements, and cartridge compatibility
+          notes.
         </p>
         {releaseVersion && (
           <FlexWrapper>

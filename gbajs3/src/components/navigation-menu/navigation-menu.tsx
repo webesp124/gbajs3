@@ -6,21 +6,14 @@ import toast from 'react-hot-toast';
 import {
   BiInfoCircle,
   BiFolderPlus,
-  BiCloudUpload,
   BiUpload,
   BiGame,
   BiScreenshot,
   BiFullscreen,
-  BiCloudDownload,
   BiRedo,
   BiBookmarks,
   BiEdit,
   BiJoystick,
-  BiUserCheck,
-  BiLogInCircle,
-  BiLogOutCircle,
-  BiCheckShield,
-  BiConversation,
   BiMenu,
   BiFileFind,
   BiBrain,
@@ -38,7 +31,6 @@ import { NavComponent } from './nav-component.tsx';
 import { NavLeaf } from './nav-leaf.tsx';
 import {
   useEmulatorContext,
-  useAuthContext,
   useModalContext,
   useRunningContext,
   useDragContext,
@@ -46,7 +38,6 @@ import {
 } from '../../hooks/context.tsx';
 import { useAddCallbacks } from '../../hooks/emulator/use-add-callbacks.tsx';
 import { useQuickReload } from '../../hooks/emulator/use-quick-reload.tsx';
-import { useLogout } from '../../hooks/use-logout.tsx';
 import { useShowLoadPublicRoms } from '../../hooks/use-show-load-public-roms.tsx';
 import { explainReaderError, verifyReaderSave } from '../../utils/reader-client.ts';
 import {
@@ -190,10 +181,8 @@ export const NavigationMenu = ({
 }: NavigationMenuProps) => {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const { openModal } = useModalContext();
-  const { isAuthenticated } = useAuthContext();
   const { canvas, emulator } = useEmulatorContext();
   const { isRunning } = useRunningContext();
-  const { mutate: executeLogout } = useLogout();
   const { areItemsDraggable } = useDragContext();
   const { getLayout, setLayout } = useLayoutContext();
   const menuButtonLayout = getLayout('menuButton');
@@ -212,8 +201,6 @@ export const NavigationMenu = ({
   const isExpanded =
     isExpandedByUser ?? (isLargerThanPhone && !isMobileLandscape);
   const isEmulatorReady = !!emulator;
-  const isMenuItemDisabledByAuth = !isAuthenticated();
-  const hasApiLocation = !!import.meta.env.VITE_GBA_SERVER_LOCATION;
   const hasNoLocalRoms = isEmulatorReady && !emulator.listRoms().length;
 
   const openMyCartridge = () => {
@@ -363,6 +350,13 @@ export const NavigationMenu = ({
               icon={<BiGitCompare />}
               onClick={verifyCartridgeSave}
             />
+            <NavLeaf
+              title="Reflash Cartridge Rom"
+              icon={<BiUpload />}
+              onClick={() => {
+                openModal({ type: 'uploadRomReflash', props: { esp32IP } });
+              }}
+            />
           </NavComponent>
 
           <NavLeaf
@@ -493,54 +487,12 @@ export const NavigationMenu = ({
             }}
           />
 
-          <NavComponent
-            title="Profile"
-            icon={<BiUserCheck />}
-            $disabled={!hasApiLocation}
-          >
+          <NavComponent title="Other" icon={<BiFolderPlus />}>
             <NavLeaf
-              title="Login"
-              icon={<BiLogInCircle />}
+              title="Patch/JSON Builder"
+              icon={<BiJoystick />}
               onClick={() => {
-                openModal({ type: 'login' });
-              }}
-            />
-            <NavLeaf
-              title="Logout"
-              $disabled={isMenuItemDisabledByAuth}
-              icon={<BiLogOutCircle />}
-              onClick={executeLogout}
-            />
-            <NavLeaf
-              title="Load Save (Server)"
-              $disabled={isMenuItemDisabledByAuth || !isEmulatorReady}
-              icon={<BiCloudDownload />}
-              onClick={() => {
-                openModal({ type: 'loadSave' });
-              }}
-            />
-            <NavLeaf
-              title="Load Rom (Server)"
-              $disabled={isMenuItemDisabledByAuth || !isEmulatorReady}
-              icon={<BiCloudDownload />}
-              onClick={() => {
-                openModal({ type: 'loadRom' });
-              }}
-            />
-            <NavLeaf
-              title="Send Save to Server"
-              $disabled={isMenuItemDisabledByAuth || !isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                openModal({ type: 'uploadSaveToServer' });
-              }}
-            />
-            <NavLeaf
-              title="Send Rom to Server"
-              $disabled={isMenuItemDisabledByAuth || !isRunning}
-              icon={<BiCloudUpload />}
-              onClick={() => {
-                openModal({ type: 'uploadRomToServer' });
+                openModal({ type: 'createPatchFile' });
               }}
             />
           </NavComponent>
@@ -552,22 +504,6 @@ export const NavigationMenu = ({
             onClick={() => {
               openModal({ type: 'importExport' });
             }}
-            $withPadding
-          />
-
-          <NavLeaf
-            title="Legal"
-            icon={<BiCheckShield />}
-            onClick={() => {
-              openModal({ type: 'legal' });
-            }}
-            $withPadding
-          />
-
-          <NavLeaf
-            title="Contact"
-            icon={<BiConversation />}
-            $link="https://github.com/thenick775/gbajs3"
             $withPadding
           />
         </MenuItemWrapper>

@@ -32,6 +32,10 @@ const modals = {
     () => import('../cheats.tsx'),
     (module) => module.CheatsModal
   ),
+  createPatchFile: lazyNamedModal(
+    () => import('../create-patch-file.tsx'),
+    (module) => module.CreatePatchFileModal
+  ),
   controls: lazyNamedModal(
     () => import('../controls.tsx'),
     (module) => module.ControlsModal
@@ -88,6 +92,10 @@ const modals = {
     () => import('../upload-public-external-roms.tsx'),
     (module) => module.UploadPublicExternalRomsModal
   ),
+  uploadRomReflash: lazyNamedModal(
+    () => import('../upload-rom-reflash.tsx'),
+    (module) => module.UploadRomReflashModal
+  ),
   uploadRomToServer: lazyNamedModal(
     () => import('../upload-rom-to-server.tsx'),
     (module) => module.UploadRomToServerModal
@@ -129,6 +137,8 @@ const renderModalBody = (modal: Exclude<ModalState, null>) => {
       return <modals.saveStates />;
     case 'cheats':
       return <modals.cheats />;
+    case 'createPatchFile':
+      return <modals.createPatchFile />;
     case 'loadLocalRom':
       return <modals.loadLocalRom />;
     case 'loadSave':
@@ -141,6 +151,8 @@ const renderModalBody = (modal: Exclude<ModalState, null>) => {
       return <modals.uploadRomToServer />;
     case 'uploadPublicExternalRoms':
       return <modals.uploadPublicExternalRoms {...modal.props} />;
+    case 'uploadRomReflash':
+      return <modals.uploadRomReflash {...modal.props} />;
     default:
       assertNever(modal);
   }

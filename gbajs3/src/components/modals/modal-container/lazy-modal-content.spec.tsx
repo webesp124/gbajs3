@@ -23,6 +23,7 @@ describe('<ModalRenderer />', () => {
     [{ type: 'downloadSave' }, 'Download Save'],
     [{ type: 'saveStates' }, 'Manage Save States'],
     [{ type: 'cheats' }, 'Manage Cheats'],
+    [{ type: 'createPatchFile' }, 'Patch/JSON Builder'],
     [{ type: 'loadLocalRom' }, 'Load Local Rom'],
     [{ type: 'loadSave' }, 'Load Save'],
     [{ type: 'loadRom' }, 'Load Rom'],
@@ -58,6 +59,23 @@ describe('<ModalRenderer />', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText('https://example.com/test.gba')
+    ).toBeInTheDocument();
+  });
+
+  it('renders the reflash modal with its reader URL prop', async () => {
+    renderWithContext(
+      <LazyModalContent
+        modal={{
+          type: 'uploadRomReflash',
+          props: {
+            esp32IP: 'https://192.168.0.178'
+          }
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Reflash Cartridge ROM' })
     ).toBeInTheDocument();
   });
 

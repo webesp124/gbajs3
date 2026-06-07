@@ -1,8 +1,9 @@
 import { Alert, Button, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useCallback, useId, type ReactNode } from 'react';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { PacmanLoader } from 'react-spinners';
-import { styled, useTheme } from 'styled-components';
+import { styled } from 'styled-components';
 
 import { ModalBody } from './modal-body.tsx';
 import { ModalFooter } from './modal-footer.tsx';
@@ -103,7 +104,7 @@ const RomLoadingIndicator = ({
   );
 };
 
-type UploadRomReflashPageProps = {
+export type UploadRomReflashPageProps = {
   esp32IP: string;
 };
 
@@ -194,7 +195,7 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
 
   return (
     <>
-      <ModalHeader title="Upload Rom" />
+      <ModalHeader title="Reflash Cartridge ROM" />
       <ModalBody>
           <RomLoadingIndicator
             isLoading={isRomFlashing}

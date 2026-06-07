@@ -9,6 +9,7 @@
     "build:release": "tsc && vite build",
     "build:github-pages": "tsc && vite build --mode with-coi-serviceworker",
     "build:with-coi-serviceworker": "tsc && vite build --mode with-coi-serviceworker",
+    "release:github-pages": "../scripts/release-github-pages.sh",
     "lint": "eslint src test --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src test --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
