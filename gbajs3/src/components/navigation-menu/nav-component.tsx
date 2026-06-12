@@ -17,7 +17,7 @@ type ComponentWrapperProps = {
 };
 
 const NavComponentWrapper = styled('li')<ComponentWrapperProps>`
-  color: ${({ theme }) => theme.gbaThemeBlue};
+  color: ${({ theme }) => theme.pureWhite};
   padding: 0 2px;
 
   ${({ $disabled, theme }) =>
@@ -37,6 +37,8 @@ const HoverWrapper = styled(ButtonBase)`
   padding: 0.5rem 1rem;
   text-align: inherit;
   width: 100%;
+  display: flex;
+  align-items: center;
 
   &:hover {
     color: ${({ theme }) => theme.menuHover};
@@ -46,6 +48,18 @@ const HoverWrapper = styled(ButtonBase)`
 
 const NavTitle = styled('span')`
   margin-left: 0.5rem;
+`;
+
+const ExpandArrow = styled('span')<{ $isOpen: boolean }>`
+  border-color: currentColor;
+  border-style: solid;
+  border-width: 0 1.5px 1.5px 0;
+  display: inline-block;
+  height: 0.36rem;
+  margin-left: auto;
+  transform: rotate(${({ $isOpen }) => ($isOpen ? '45deg' : '-45deg')});
+  transition: transform 180ms ease;
+  width: 0.36rem;
 `;
 
 const ChildrenWrapper = styled('ul')`
@@ -59,22 +73,25 @@ export const NavComponent = ({
   $isExpanded = false,
   $disabled = false
 }: NavComponentProps) => {
-  const [height, setHeight] = useState<Height>($isExpanded ? 'auto' : 0);
+  const [isOpen, setIsOpen] = useState($isExpanded);
+  const height: Height = isOpen ? 'auto' : 0;
 
   useEffect(() => {
-    setHeight($isExpanded ? 'auto' : 0);
+    setIsOpen($isExpanded);
   }, [$isExpanded]);
 
   return (
     <NavComponentWrapper $disabled={$disabled}>
       <HoverWrapper
         disabled={$disabled}
+        aria-expanded={isOpen}
         onClick={() => {
-          setHeight(height === 0 ? 'auto' : 0);
+          setIsOpen((current) => !current);
         }}
       >
         {icon}
         <NavTitle>{title}</NavTitle>
+        <ExpandArrow $isOpen={isOpen} aria-hidden="true" />
       </HoverWrapper>
 
       <AnimateHeight duration={350} easing="ease-in-out" height={height}>

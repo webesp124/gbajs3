@@ -333,7 +333,7 @@ export const CreatePatchFileModal = () => {
         ) : (
           <>
             <Typography variant="body2" sx={{ padding: '8px 8px 0 13px' }}>
-              Select the already-patched ROM. netBOY will compare it with the base ROM and download a new BPS patch.
+              Select the already-patched ROM. NetBoy will compare it with the base ROM and download a new BPS patch.
             </Typography>
             <input type="file" onChange={handlePatchedRomChange} accept=".gba,.gb,.gbc" />
           </>

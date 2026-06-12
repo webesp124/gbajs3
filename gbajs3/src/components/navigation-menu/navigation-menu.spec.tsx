@@ -16,7 +16,7 @@ describe('<NavigationMenu />', () => {
   it('renders menu button and closed menu by default on mobile', () => {
     renderWithContext(<NavigationMenu />);
 
-    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'NetBoy' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.queryByLabelText('Menu Dismiss')).not.toBeVisible();
     // renders default mounted menu items
@@ -50,7 +50,7 @@ describe('<NavigationMenu />', () => {
 
     renderWithContext(<NavigationMenu />);
 
-    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'NetBoy' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.queryByLabelText('Menu Dismiss')).not.toBeVisible();
     // renders default mounted menu items
@@ -65,7 +65,7 @@ describe('<NavigationMenu />', () => {
 
     await userEvent.click(screen.getByLabelText('Menu Toggle'));
 
-    expect(screen.getByRole('list', { name: 'netBOY' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'NetBoy' })).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Toggle')).toBeInTheDocument();
     expect(screen.getByLabelText('Menu Dismiss')).toBeVisible();
     // renders default mounted menu items

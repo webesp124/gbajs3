@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableContainer, TableRow, Button, Divider, TextField, Select, MenuItem, Alert, Typography, Box } from '@mui/material';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { BiError } from 'react-icons/bi';
 import { PacmanLoader } from 'react-spinners';
 import { styled, useTheme } from 'styled-components';
@@ -14,13 +14,14 @@ import { useRunGame } from '../../hooks/emulator/use-run-game.tsx';
 import { useLoadExternalRom } from '../../hooks/use-load-my-external-rom.tsx';
 import { ErrorWithIcon } from '../shared/error-with-icon.tsx';
 import { useLoadExternalSave } from '../../hooks/use-load-my-save.tsx';
-import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes, getCoverImage } from './util-rom.tsx';
+import { getSaveTypeCodeFromString, timeout, fetchGameInfo, saveTypes, getCoverImage, missingCoverImage } from './util-rom.tsx';
 import { SaveSelectionTable } from './save-selection-table.tsx';
 import { GameSelectionTable } from './game-selection-table.tsx';
 import { useMediaQuery } from '@mui/material';
 import {
   getIframeHostReaderURL,
   getRecentReaderURLs,
+  normalizeReaderURL,
   type ReaderConnectionTest,
   type ReaderStatus,
   testReaderConnection
@@ -100,7 +101,11 @@ const URLDisplay = styled.p`
   max-width: 100%;
 `;
 
-const defaultEsp32IP = 'https://192.168.1.3';
+const showMissingCoverImage = (event: SyntheticEvent<HTMLImageElement>) => {
+  const image = event.currentTarget;
+  if (image.getAttribute('src') === missingCoverImage) return;
+  image.src = missingCoverImage;
+};
 
 const hasPatchFile = (additionalData: any) =>
   typeof additionalData?.patchFile === 'string' && additionalData.patchFile.length > 0;
@@ -110,12 +115,7 @@ const getCompatibleImprovementPatchFiles = (additionalData: any): string[] =>
     ? additionalData.compatibleImprovementPatchFiles.filter((patchFile: unknown): patchFile is string => typeof patchFile === 'string' && patchFile.length > 0)
     : [];
 
-const normalizeEsp32IP = (value: string) => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) return defaultEsp32IP;
-
-  return /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
-};
+const normalizeEsp32IP = normalizeReaderURL;
 
 interface ProgressBarProps {
   progress: number;
@@ -579,6 +579,7 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
                   id="cover-image"
                   src={getCoverImage(gameData, additionalData)}
                   alt={`${additionalData.fullName} Cover`}
+                  onError={showMissingCoverImage}
                 />
                 {gameData && gameData.is_gba && checksum1000String != additionalData.checksum1000 && (
                   <Box sx={{ mt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -601,8 +602,9 @@ export const MyRomStartPage: React.FC<MyRomStartPageProps> = ({
               <RomCoverHeaderContainer>
                 <GameInfoImage
                   id="cover-image"
-                  src={"./img/cover_img_missing.jpeg"}
+                  src={missingCoverImage}
                   alt={"Cover missing Image"}
+                  onError={showMissingCoverImage}
                 />
                 <Box sx={{ mt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Alert severity="error" variant="outlined" sx={{ width: '100%', maxWidth: 400, paddingTop: 0, paddingBottom: 0, fontSize: 28, "& .MuiAlert-icon": {

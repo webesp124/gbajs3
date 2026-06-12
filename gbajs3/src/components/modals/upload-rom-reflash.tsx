@@ -52,7 +52,7 @@ interface ProgressBarProps {
 }
 
 const ProgressBar = styled.div<ProgressBarProps>`
-  background-color: #e0e0e0;
+  background-color: ${props => props.theme.modalBorder};
   border-radius: 4px;
   position: relative;
   height: 24px;
@@ -142,7 +142,7 @@ export const UploadRomReflashModal: React.FC<UploadRomReflashPageProps> = ({
         [
           `Flash ${romFile.name} to the inserted cartridge?`,
           '',
-          'This can overwrite the cartridge ROM. netBOY will try to back up the current save first.',
+          'This can overwrite the cartridge ROM. NetBoy will try to back up the current save first.',
           'Keep the reader powered and do not remove the cartridge until verification finishes.',
           '',
           'If flashing fails, leave the cartridge inserted and retry with the same ROM before power-cycling the reader.'

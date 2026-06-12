@@ -101,8 +101,8 @@ const CircularButton = styled(VirtualButtonBase, {
     inset: 6px;
     border-radius: inherit;
     border: 1px solid ${({ theme }) => theme.virtualControlInnerBorder};
-    background: rgba(4, 7, 12, 0.22);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015);
+    background: rgba(15, 23, 42, 0.32);
+    box-shadow: inset 0 1px 0 rgba(226, 232, 240, 0.03);
     pointer-events: none;
   }
 
@@ -116,18 +116,18 @@ const CircularButton = styled(VirtualButtonBase, {
         ? theme.virtualControlSurfaceStrong
         : theme.virtualControlButtonSurface};
     box-shadow:
-      inset 0 3px 8px rgba(0, 0, 0, 0.42),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.03),
-      0 1px 0 rgba(255, 255, 255, 0.02);
+      inset 0 3px 8px rgba(2, 6, 23, 0.42),
+      inset 0 -1px 0 rgba(226, 232, 240, 0.05),
+      0 1px 0 rgba(226, 232, 240, 0.03);
     pointer-events: none;
   }
 
   &:not(:disabled):active {
     &::after {
       box-shadow:
-        inset 0 4px 10px rgba(0, 0, 0, 0.48),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.02),
-        0 1px 0 rgba(255, 255, 255, 0.015);
+        inset 0 4px 10px rgba(2, 6, 23, 0.48),
+        inset 0 -1px 0 rgba(226, 232, 240, 0.04),
+        0 1px 0 rgba(226, 232, 240, 0.025);
     }
   }
 
@@ -157,8 +157,8 @@ const RectangularButton = styled(VirtualButtonBase, {
     inset: 4px 6px;
     border-radius: 999px;
     border: 1px solid ${({ theme }) => theme.virtualControlInnerBorder};
-    background: rgba(4, 7, 12, 0.18);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015);
+    background: rgba(15, 23, 42, 0.28);
+    box-shadow: inset 0 1px 0 rgba(226, 232, 240, 0.03);
     pointer-events: none;
   }
 
@@ -172,18 +172,18 @@ const RectangularButton = styled(VirtualButtonBase, {
         ? theme.virtualControlSurfaceStrong
         : theme.virtualControlButtonSurfacePill};
     box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.3),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.03),
-      0 1px 0 rgba(255, 255, 255, 0.015);
+      inset 0 2px 6px rgba(2, 6, 23, 0.32),
+      inset 0 -1px 0 rgba(226, 232, 240, 0.05),
+      0 1px 0 rgba(226, 232, 240, 0.025);
     pointer-events: none;
   }
 
   &:not(:disabled):active {
     &::after {
       box-shadow:
-        inset 0 3px 7px rgba(0, 0, 0, 0.34),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.02),
-        0 1px 0 rgba(255, 255, 255, 0.01);
+        inset 0 3px 7px rgba(2, 6, 23, 0.38),
+        inset 0 -1px 0 rgba(226, 232, 240, 0.04),
+        0 1px 0 rgba(226, 232, 240, 0.02);
     }
   }
 

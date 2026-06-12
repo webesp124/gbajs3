@@ -20,6 +20,9 @@ import {
   BiRefresh,
   BiDownload,
   BiGitCompare,
+  BiWifi,
+  BiCheckShield,
+  BiConversation,
   BiX
 } from 'react-icons/bi';
 import { IoHardwareChipOutline } from 'react-icons/io5';
@@ -57,6 +60,7 @@ const NavigationMenuWrapper = styled('div')<ExpandableComponentProps>`
   height: 100dvh;
   position: fixed;
   background-color: ${({ theme }) => theme.mediumBlack};
+  border-right: 1px solid rgb(15, 23, 42);
   transition: left 0.4s ease-in-out;
   z-index: 150;
   text-align: left;
@@ -77,7 +81,8 @@ const StyledMenuHeader = styled('h2')`
   font-weight: 500;
   line-height: 1.2;
   margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgb(15, 23, 42);
 
   &:hover {
     background-color: ${({ theme }) => theme.menuHighlight};
@@ -88,13 +93,34 @@ const MenuItemWrapper = styled('ul')`
   margin-bottom: 0;
   margin-top: 0;
   list-style: none;
-  padding: 0;
+  padding: 0 0 48px;
   overflow-y: auto;
   overscroll-behavior: none;
   touch-action: pan-y;
 
   &::-webkit-scrollbar {
     display: none;
+  }
+`;
+
+const MenuLogoStrip = styled('div')`
+  align-items: center;
+  background-color: ${({ theme }) => theme.mediumBlack};
+  bottom: 0;
+  border-top: 1px solid rgb(15, 23, 42);
+  color: ${({ theme }) => theme.pureWhite};
+  display: flex;
+  gap: 18px;
+  height: 42px;
+  justify-content: flex-end;
+  padding: 0 15px;
+  position: absolute;
+  right: 0;
+  left: 0;
+  pointer-events: none;
+
+  svg {
+    font-size: 24px;
   }
 `;
 
@@ -321,7 +347,7 @@ export const NavigationMenu = ({
             )}
           </HamburgerButton>
         </Draggable>
-        <StyledMenuHeader id={menuHeaderId}>netBOY</StyledMenuHeader>
+        <StyledMenuHeader id={menuHeaderId}>NetBoy</StyledMenuHeader>
         <MenuItemWrapper aria-labelledby={menuHeaderId}>
           <NavLeaf
             title="My Cartridge"
@@ -329,6 +355,26 @@ export const NavigationMenu = ({
             $withPadding
             onClick={openMyCartridge}
           />
+
+          <NavComponent
+            title="NetBoy Setup"
+            icon={<IoHardwareChipOutline />}
+          >
+            <NavLeaf
+              title="Network Setup"
+              icon={<IoHardwareChipOutline />}
+              onClick={() => {
+                openModal({ type: 'readerSetup' });
+              }}
+            />
+            <NavLeaf
+              title="Update"
+              icon={<BiRefresh />}
+              onClick={() => {
+                openModal({ type: 'readerFirmwareUpdate' });
+              }}
+            />
+          </NavComponent>
 
           <NavComponent
             title="Cartridge Actions"
@@ -358,15 +404,6 @@ export const NavigationMenu = ({
               }}
             />
           </NavComponent>
-
-          <NavLeaf
-            title="About"
-            icon={<BiInfoCircle />}
-            $withPadding
-            onClick={() => {
-              openModal({ type: 'about' });
-            }}
-          />
 
           <NavComponent
             title="Pre Game Actions"
@@ -506,7 +543,22 @@ export const NavigationMenu = ({
             }}
             $withPadding
           />
+
+          <NavLeaf
+            title="About"
+            icon={<BiInfoCircle />}
+            $withPadding
+            onClick={() => {
+              openModal({ type: 'about' });
+            }}
+          />
         </MenuItemWrapper>
+        <MenuLogoStrip aria-hidden="true">
+          <BiWifi />
+          <BiJoystick />
+          <BiCheckShield />
+          <BiConversation />
+        </MenuLogoStrip>
       </NavigationMenuWrapper>
       <NavigationMenuClearDismiss
         $visible={isExpanded && (!isLargerThanPhone || isMobileLandscape)}

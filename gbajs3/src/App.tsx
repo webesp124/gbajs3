@@ -9,6 +9,7 @@ import { VirtualControls } from './components/controls/virtual-controls.tsx';
 import { ModalContainer } from './components/modals/modal-container.tsx';
 import { NavigationMenu } from './components/navigation-menu/navigation-menu.tsx';
 import { PwaPrompt } from './components/pwa-prompt/pwa-prompt.tsx';
+import { ReaderSetupPage } from './components/reader-setup/reader-setup.tsx';
 import { Screen } from './components/screen/screen.tsx';
 import { AppErrorBoundary } from './components/shared/error-boundary.tsx';
 import { ToasterWithDefaults } from './components/toast/toaster.tsx';
@@ -24,6 +25,9 @@ const queryClient = new QueryClient();
 
 const theme = createTheme(GbaDarkTheme);
 
+const isReaderSetupPath = () =>
+  /\/reader-setup(?:\.html)?$/.test(window.location.pathname);
+
 export const App = () => {
   const [additionalData, setAdditionalData] = useState<any>(null);
   const [gameData, setGameData] = useState(null);
@@ -36,37 +40,43 @@ export const App = () => {
     <ThemeProvider theme={theme}>
       <StyledThemeProvider theme={theme}>
         <AppErrorBoundary>
-          <ToasterWithDefaults />
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <EmulatorContextProvider>
-                <InitialBoundsProvider>
-                  <LayoutProvider>
-                    <ModalProvider>
-                      <main>
-                        <PwaPrompt />
-                        <NavigationMenu
-                          additionalData={additionalData}
-                          setAdditionalData={setAdditionalData}
-                          gameData={gameData}
-                          setGameData={setGameData}
-                          esp32IP={esp32IP}
-                          setEsp32IP={setEsp32IP}
-                        />
-                        <Screen />
-                        <ControlPanel />
-                        <VirtualControls
-                          additionalData={additionalData}
-                          esp32IP={esp32IP}
-                        />
-                        <ModalContainer />
-                      </main>
-                    </ModalProvider>
-                  </LayoutProvider>
-                </InitialBoundsProvider>
-              </EmulatorContextProvider>
-            </AuthProvider>
-          </QueryClientProvider>
+          {isReaderSetupPath() ? (
+            <ReaderSetupPage />
+          ) : (
+            <>
+              <ToasterWithDefaults />
+              <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                  <EmulatorContextProvider>
+                    <InitialBoundsProvider>
+                      <LayoutProvider>
+                        <ModalProvider>
+                          <main>
+                            <PwaPrompt />
+                            <NavigationMenu
+                              additionalData={additionalData}
+                              setAdditionalData={setAdditionalData}
+                              gameData={gameData}
+                              setGameData={setGameData}
+                              esp32IP={esp32IP}
+                              setEsp32IP={setEsp32IP}
+                            />
+                            <Screen />
+                            <ControlPanel />
+                            <VirtualControls
+                              additionalData={additionalData}
+                              esp32IP={esp32IP}
+                            />
+                            <ModalContainer />
+                          </main>
+                        </ModalProvider>
+                      </LayoutProvider>
+                    </InitialBoundsProvider>
+                  </EmulatorContextProvider>
+                </AuthProvider>
+              </QueryClientProvider>
+            </>
+          )}
         </AppErrorBoundary>
       </StyledThemeProvider>
     </ThemeProvider>

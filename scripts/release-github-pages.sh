@@ -52,6 +52,7 @@ echo "Building netBOY for GitHub Pages..."
   cd "${APP_DIR}"
   npx -y "node@${NODE_VERSION}" ./node_modules/typescript/bin/tsc
   npx -y "node@${NODE_VERSION}" ./node_modules/vite/bin/vite.js build --mode with-coi-serviceworker
+  cp dist/index.html dist/reader-setup.html
 )
 
 echo "Refreshing hosting repo..."

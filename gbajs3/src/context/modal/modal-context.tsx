@@ -19,6 +19,8 @@ type ModalPayloadMap = {
   loadLocalRom: undefined;
   loadSave: undefined;
   loadRom: undefined;
+  readerSetup: undefined;
+  readerFirmwareUpdate: undefined;
   uploadSaveToServer: undefined;
   uploadRomToServer: undefined;
   createPatchFile: undefined;

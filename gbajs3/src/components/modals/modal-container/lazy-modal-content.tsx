@@ -80,6 +80,14 @@ const modals = {
     () => import('../my-rom-start-page.tsx'),
     (module) => module.MyRomStartPage
   ),
+  readerSetup: lazyNamedModal(
+    () => import('../reader-setup.tsx'),
+    (module) => module.ReaderSetupModal
+  ),
+  readerFirmwareUpdate: lazyNamedModal(
+    () => import('../reader-firmware-update.tsx'),
+    (module) => module.ReaderFirmwareUpdateModal
+  ),
   saveStates: lazyNamedModal(
     () => import('../save-states.tsx'),
     (module) => module.SaveStatesModal
@@ -131,6 +139,10 @@ const renderModalBody = (modal: Exclude<ModalState, null>) => {
       return <modals.login />;
     case 'myRomStartPage':
       return <modals.myRomStartPage {...modal.props} />;
+    case 'readerSetup':
+      return <modals.readerSetup />;
+    case 'readerFirmwareUpdate':
+      return <modals.readerFirmwareUpdate />;
     case 'downloadSave':
       return <modals.downloadSave />;
     case 'saveStates':

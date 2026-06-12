@@ -7,17 +7,18 @@ import { useEmulatorContext, useModalContext } from '../../hooks/context.tsx';
 
 const modalStyles = {
   overlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(2, 6, 23, 0.72)',
     zIndex: 400
   },
   content: {
     width: 'calc(100dvw - 20px)',
     height: 'fit-content',
     margin: '25px auto auto auto',
-    backgroundColor: '#121821',
-    border: '1px solid #1f2a3a',
+    backgroundColor: '#0c1121',
+    border: '1px solid #1e293b',
     borderRadius: '12px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4)',
+    boxShadow:
+      '0 10px 30px rgba(2, 6, 23, 0.64), 0 2px 8px rgba(2, 6, 23, 0.48)',
     inset: '10px',
     maxWidth: '500px',
     padding: '0',
@@ -43,13 +44,27 @@ export const ModalContainer = () => {
   const { emulator } = useEmulatorContext();
   const theme = useTheme();
   const isMobileLandscape = useMediaQuery(theme.isMobileLandscape);
+  const activeModalStyles =
+    modal?.type === 'readerSetup' || modal?.type === 'readerFirmwareUpdate'
+      ? {
+          ...(isMobileLandscape ? landscapeModalStyles : modalStyles),
+          content: {
+            ...(isMobileLandscape
+              ? landscapeModalStyles.content
+              : modalStyles.content),
+            maxWidth: '920px'
+          }
+        }
+      : isMobileLandscape
+        ? landscapeModalStyles
+        : modalStyles;
 
   return (
     <Modal
       appElement={document.getElementById('root') ?? undefined}
       closeTimeoutMS={400}
       isOpen={isModalOpen}
-      style={isMobileLandscape ? landscapeModalStyles : modalStyles}
+      style={activeModalStyles}
       onRequestClose={closeModal}
       onAfterOpen={emulator?.disableKeyboardInput}
       onAfterClose={() => {

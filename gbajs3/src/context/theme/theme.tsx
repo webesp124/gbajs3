@@ -10,79 +10,77 @@ export const GbaDarkTheme: ThemeOptions = {
 
   // css colors
   checkMarkGreen: '#7ac142',
-  darkCharcoal: '#333',
-  disabledGray: '#6c757d',
-  errorRed: '#d32f2f',
-  gbaThemeBlue: '#1c76fd',
-  mediumBlack: '#100901',
-  menuHighlight: '#ffffff26',
-  menuHover: '#356fca',
-  pattensBlue: '#dee2e6',
-  pureBlack: '#000',
+  darkCharcoal: '#0f172a',
+  disabledGray: '#64748b',
+  errorRed: '#ef4444',
+  gbaThemeBlue: '#3b82f6',
+  mediumBlack: '#020617',
+  menuHighlight: 'rgba(51, 65, 85, 0.55)',
+  menuHover: '#cbd5e1',
+  pattensBlue: '#e2e8f0',
+  pureBlack: '#020617',
   pureWhite: '#fff',
-  panelControlGray: '#2a3442',
-  panelBlueGray: '#1a2230',
-  panelControlText: '#c7d1dc',
-  panelSliderAccent: 'rgba(24, 84, 176, 1)',
+  panelControlGray: '#1e293b',
+  panelBlueGray: '#0f172a',
+  panelControlText: '#e2e8f0',
+  panelSliderAccent: '#3b82f6',
 
   // new canonical css colors
-  modalSurface: '#0a0d12',
-  modalSurfaceElevated: '#0c1017',
-  modalBorder: '#1b2330',
-  modalBorderStrong: '#6f7480',
-  modalTextPrimary: '#f1f3f6',
-  modalTextSecondary: '#a7adb8',
-  surfaceTextPrimary: '#e6edf3',
-  modalIconMuted: '#a9b4c2',
-  modalHoverSurface: '#111722',
-  modalDropzoneSurface: '#090d14',
-  modalSectionSurface: '#161e2a',
-  modalSectionBorder: '#1f2a3a',
-  modalListBorder: '#283243',
-  modalListItemHoverSurface: '#141b27',
-  modalCloseButtonHoverSurface: '#1a2230',
-  modalCloseButtonHoverBorder: '#2a3a52',
-  modalContainerSurface: '#121821',
-  focusRingPrimary: 'rgba(47, 111, 235, 0.25)',
-  focusRingPrimarySoft: 'rgba(53, 111, 202, 0.2)',
-  menuBackdrop: 'rgba(0, 0, 0, 0.6)',
-  menuToggleFocusRing: 'rgba(13, 110, 253, 0.25)',
-  modalTabBorder: 'rgba(0, 0, 0, 0.12)',
-  errorOverlay: 'rgba(0, 0, 0, 0.5)',
-  virtualControlSurface: 'rgba(8, 12, 18, 0.86)',
-  virtualControlSurfaceStrong: 'rgba(15, 20, 30, 0.94)',
-  virtualControlBorderSubtle: 'rgba(255, 255, 255, 0.14)',
-  virtualControlInnerBorder: 'rgba(255, 255, 255, 0.04)',
-  virtualControlButtonSurface:
-    'radial-gradient(circle at 50% 48%, rgba(5, 8, 13, 0.98) 0%, rgba(8, 12, 18, 0.98) 58%, rgba(16, 22, 32, 0.94) 100%)',
-  virtualControlButtonSurfacePill:
-    'linear-gradient(180deg, rgba(16, 22, 32, 0.94), rgba(8, 12, 18, 0.98) 42%, rgba(7, 10, 16, 0.99) 100%)',
+  modalSurface: '#0f172a',
+  modalSurfaceElevated: '#1e293b',
+  modalBorder: '#1e293b',
+  modalBorderStrong: '#475569',
+  modalTextPrimary: '#f1f5f9',
+  modalTextSecondary: '#94a3b8',
+  surfaceTextPrimary: '#f1f5f9',
+  modalIconMuted: '#94a3b8',
+  modalHoverSurface: '#1e293b',
+  modalDropzoneSurface: '#0f172a',
+  modalSectionSurface: '#0f172a',
+  modalSectionBorder: '#1e293b',
+  modalListBorder: '#334155',
+  modalListItemHoverSurface: '#1e293b',
+  modalCloseButtonHoverSurface: '#1e293b',
+  modalCloseButtonHoverBorder: '#334155',
+  modalContainerSurface: '#0c1121',
+  focusRingPrimary: 'rgba(59, 130, 246, 0.28)',
+  focusRingPrimarySoft: 'rgba(59, 130, 246, 0.2)',
+  menuBackdrop: 'rgba(2, 6, 23, 0.72)',
+  menuToggleFocusRing: 'rgba(59, 130, 246, 0.28)',
+  modalTabBorder: '#1e293b',
+  errorOverlay: 'rgba(2, 6, 23, 0.64)',
+  virtualControlSurface: '#1e293b',
+  virtualControlSurfaceStrong: '#334155',
+  virtualControlBorderSubtle: 'rgba(148, 163, 184, 0.24)',
+  virtualControlInnerBorder: 'rgba(226, 232, 240, 0.08)',
+  virtualControlButtonSurface: '#1e293b',
+  virtualControlButtonSurfacePill: '#334155',
   virtualControlShadow:
-    '0 10px 28px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-  virtualControlPressedShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
-  virtualControlAccentBorder: 'rgba(28, 118, 253, 0.5)',
-  virtualControlAccentBorderStrong: 'rgba(28, 118, 253, 0.55)',
-  virtualControlAccentHalo: 'rgba(28, 118, 253, 0.12)',
-  virtualControlArrow: 'rgba(255, 255, 255, 0.78)',
+    '0 10px 28px rgba(2, 6, 23, 0.38), inset 0 1px 0 rgba(226, 232, 240, 0.08)',
+  virtualControlPressedShadow: '0 8px 18px rgba(2, 6, 23, 0.3)',
+  virtualControlAccentBorder: 'rgba(59, 130, 246, 0.5)',
+  virtualControlAccentBorderStrong: 'rgba(59, 130, 246, 0.6)',
+  virtualControlAccentHalo: 'rgba(59, 130, 246, 0.14)',
+  virtualControlArrow: 'rgba(241, 245, 249, 0.82)',
 
   palette: {
     mode: 'dark',
     primary: {
-      main: '#356fca',
-      light: '#447cda',
-      dark: '#2d61b4',
+      main: '#3b82f6',
+      light: '#60a5fa',
+      dark: '#2563eb',
       contrastText: '#ffffff'
     },
     background: {
-      default: '#05080d',
-      paper: '#0a0d12'
+      default: '#0c1121',
+      paper: '#0f172a'
     },
     text: {
-      primary: '#f1f3f6',
-      secondary: '#a7adb8'
+      primary: '#f1f5f9',
+      secondary: '#94a3b8'
     },
     error: {
-      main: '#d32f2f'
+      main: '#ef4444'
     }
   },
 
@@ -96,37 +94,37 @@ export const GbaDarkTheme: ThemeOptions = {
           boxShadow: 'none'
         },
         contained: {
-          backgroundColor: '#356fca',
+          backgroundColor: '#2563eb',
           color: '#ffffff',
           '&:hover': {
-            backgroundColor: '#447cda',
+            backgroundColor: '#3b82f6',
             boxShadow: 'none'
           },
           '&:active': {
-            backgroundColor: '#2d61b4'
+            backgroundColor: '#1d4ed8'
           },
           '&.Mui-disabled': {
-            backgroundColor: '#151b26',
-            color: '#697381'
+            backgroundColor: '#1e293b',
+            color: '#64748b'
           }
         },
         outlined: {
-          border: '1px solid #2e3642',
-          color: '#f1f3f6',
+          border: '1px solid #334155',
+          color: '#f1f5f9',
           backgroundColor: 'transparent',
           '&:hover': {
-            backgroundColor: '#111722',
-            borderColor: '#3e4653'
+            backgroundColor: '#1e293b',
+            borderColor: '#475569'
           },
           '&.Mui-disabled': {
-            borderColor: '#1b2330',
-            color: '#697381'
+            borderColor: '#1e293b',
+            color: '#64748b'
           }
         },
         text: {
-          color: '#a7adb8',
+          color: '#94a3b8',
           '&:hover': {
-            backgroundColor: '#111722'
+            backgroundColor: '#1e293b'
           }
         }
       }
@@ -135,10 +133,10 @@ export const GbaDarkTheme: ThemeOptions = {
     MuiTab: {
       styleOverrides: {
         root: {
-          color: '#8f97a3',
+          color: '#94a3b8',
           textTransform: 'none',
           '&.Mui-selected': {
-            color: '#f1f3f6'
+            color: '#f1f5f9'
           }
         }
       }
@@ -147,7 +145,7 @@ export const GbaDarkTheme: ThemeOptions = {
     MuiTabs: {
       styleOverrides: {
         indicator: {
-          backgroundColor: '#356fca',
+          backgroundColor: '#3b82f6',
           height: '2px'
         }
       }
@@ -156,9 +154,9 @@ export const GbaDarkTheme: ThemeOptions = {
     MuiIconButton: {
       styleOverrides: {
         root: {
-          color: '#a7adb8',
+          color: '#94a3b8',
           '&:hover': {
-            backgroundColor: '#111722'
+            backgroundColor: '#1e293b'
           }
         }
       }

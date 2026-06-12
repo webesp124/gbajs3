@@ -25,15 +25,32 @@ export type ReaderRequestOptions = {
   signal?: AbortSignal;
   phase?: ReaderProgressPhase;
   onProgress?: (progress: ReaderProgress) => void;
+  beforeSend?: (xhr: XMLHttpRequest) => void;
+};
+
+export type ReaderBasicAuth = {
+  username: string;
+  password: string;
 };
 
 export type ReaderStatus = {
   firmware_version?: string;
+  WifiBoyVersion?: string;
+  ssid?: string;
+  ap_ssid?: string;
+  ap_ip_address?: string;
+  is_creating_ap?: boolean;
+  mdns_host?: string;
+  mdns_enabled?: boolean;
   wifi_ip_address?: string;
   web_url?: string;
+  current_host_web_url?: string;
   ssl_enabled?: boolean;
   ssl_mode?: string;
+  use_default_ssl_cert?: boolean;
+  public_domain_update_url?: string;
   public_domain_update_status?: string;
+  public_domain_update_http_code?: number;
   battery?: {
     millivolts?: number;
     percent?: number;
@@ -41,6 +58,30 @@ export type ReaderStatus = {
     adcRaw?: number;
   };
   [key: string]: unknown;
+};
+
+export type ReaderWifiNetwork = {
+  s?: string;
+  ssid?: string;
+  r?: number;
+  rssi?: number;
+  encryption?: string;
+};
+
+export type ReaderWifiNetworksResponse = {
+  n?: ReaderWifiNetwork[];
+  networks?: ReaderWifiNetwork[];
+};
+
+export type ReaderWifiUpdate = {
+  ssid: string;
+  password: string;
+  create_ap?: boolean;
+  ap_ssid?: string;
+  ap_password?: string;
+  web_url?: string;
+  use_default_ssl_cert?: boolean;
+  public_domain_update_url?: string;
 };
 
 export type ReaderConnectionTest = {
@@ -51,10 +92,18 @@ export type ReaderConnectionTest = {
   error?: string;
 };
 
-const defaultReaderURL = 'https://192.168.1.3';
+const defaultReaderHost = '192.168.1.3';
 const readerURLStorageKey = 'netboy-reader-url';
 const recentReadersStorageKey = 'netboy-recent-readers';
 const maxRecentReaders = 8;
+
+const getCurrentPageProtocol = () => {
+  if (typeof window === 'undefined') return 'https:';
+  return window.location.protocol === 'https:' ? 'https:' : 'http:';
+};
+
+const getDefaultReaderURL = () =>
+  `${getCurrentPageProtocol()}//${defaultReaderHost}`;
 
 export class ReaderRequestError extends Error {
   constructor(
@@ -75,16 +124,16 @@ export class ReaderRequestError extends Error {
 
 export const normalizeReaderURL = (value: string | null | undefined) => {
   const trimmedValue = value?.trim();
-  if (!trimmedValue) return defaultReaderURL;
+  if (!trimmedValue) return getDefaultReaderURL();
 
   const withoutTrailingSlash = trimmedValue.replace(/\/+$/, '');
   return /^https?:\/\//i.test(withoutTrailingSlash)
     ? withoutTrailingSlash
-    : `https://${withoutTrailingSlash}`;
+    : `${getCurrentPageProtocol()}//${withoutTrailingSlash}`;
 };
 
 export const getStoredReaderURL = () => {
-  if (typeof window === 'undefined') return defaultReaderURL;
+  if (typeof window === 'undefined') return getDefaultReaderURL();
   return normalizeReaderURL(window.localStorage.getItem(readerURLStorageKey));
 };
 
@@ -97,10 +146,10 @@ export const saveReaderURL = (url: string) => {
 };
 
 export const getInitialReaderURL = () => {
-  if (typeof window === 'undefined') return defaultReaderURL;
+  if (typeof window === 'undefined') return getDefaultReaderURL();
 
   const params = new URLSearchParams(window.location.search);
-  const queryURL = params.get('esp32_ip');
+  const queryURL = params.get('netboy_ip');
   if (queryURL) return saveReaderURL(queryURL);
 
   return getStoredReaderURL();
@@ -230,6 +279,7 @@ const requestXHR = <T extends 'json' | 'arraybuffer' | 'text'>(
     if (responseType === 'arraybuffer') {
       xhr.overrideMimeType('text/plain; charset=x-user-defined');
     }
+    options.beforeSend?.(xhr);
 
     xhr.onprogress = (event) => {
       const total = event.lengthComputable
@@ -353,6 +403,62 @@ export const readerGetJSON = (baseURL: string, path: string, options?: ReaderReq
 
 export const getReaderWifiSettings = (baseURL: string, options?: ReaderRequestOptions) =>
   readerGetJSON(baseURL, '/get_wifi_settings', options) as Promise<ReaderStatus>;
+
+export const getReaderAvailableNetworks = (
+  baseURL: string,
+  options?: ReaderRequestOptions
+) =>
+  readerGetJSON(
+    baseURL,
+    '/get_available_networks',
+    options
+  ) as Promise<ReaderWifiNetworksResponse>;
+
+export const updateReaderWifiSettings = (
+  baseURL: string,
+  settings: ReaderWifiUpdate,
+  options?: ReaderRequestOptions
+) =>
+  readerRequest(
+    'POST',
+    readerURL(baseURL, '/update_wifi'),
+    'text',
+    JSON.stringify(settings),
+    {
+      ...options,
+      phase: 'uploading',
+      timeoutMs: options?.timeoutMs ?? 30000
+    }
+  );
+
+export const uploadReaderFirmwareUpdate = (
+  baseURL: string,
+  firmware: File,
+  auth: ReaderBasicAuth,
+  options?: ReaderRequestOptions
+) => {
+  const body = new FormData();
+  body.append('update', firmware, firmware.name || 'firmware.bin');
+
+  return readerRequest(
+    'POST',
+    readerURL(baseURL, '/update'),
+    'text',
+    body,
+    {
+      ...options,
+      phase: 'uploading',
+      timeoutMs: options?.timeoutMs ?? 120000,
+      beforeSend: (xhr) => {
+        xhr.withCredentials = true;
+        xhr.setRequestHeader(
+          'Authorization',
+          `Basic ${window.btoa(`${auth.username}:${auth.password}`)}`
+        );
+      }
+    }
+  );
+};
 
 export const getReaderGameInfo = (baseURL: string, options?: ReaderRequestOptions) =>
   readerGetJSON(baseURL, '/get_game_info', options);

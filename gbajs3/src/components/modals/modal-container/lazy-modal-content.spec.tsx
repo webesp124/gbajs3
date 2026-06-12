@@ -27,6 +27,8 @@ describe('<ModalRenderer />', () => {
     [{ type: 'loadLocalRom' }, 'Load Local Rom'],
     [{ type: 'loadSave' }, 'Load Save'],
     [{ type: 'loadRom' }, 'Load Rom'],
+    [{ type: 'readerSetup' }, 'NetBoy Network Setup'],
+    [{ type: 'readerFirmwareUpdate' }, 'NetBoy Firmware Update'],
     [{ type: 'uploadSaveToServer' }, 'Send Save to Server'],
     [{ type: 'uploadRomToServer' }, 'Send Rom to Server'],
     [{ type: 'uploadFiles' }, 'Upload Files'],

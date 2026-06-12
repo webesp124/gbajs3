@@ -23,7 +23,7 @@ export const AboutModal = () => {
       <ModalHeader title="About" />
       <ModalBody>
         <p>
-          netBOY is the browser interface for the netBOY wireless GBA cartridge
+          NetBoy is the browser interface for the NetBoy wireless GBA cartridge
           reader. The cartridge reader hardware is required to read cartridges,
           download saves, upload saves, and reflash supported repro cartridges.
         </p>
@@ -34,7 +34,7 @@ export const AboutModal = () => {
         </p>
         <p>Getting Started:</p>
         <ul>
-          <li>Power on the netBOY wireless cartridge reader and insert a game</li>
+          <li>Power on the NetBoy wireless cartridge reader and insert a game</li>
           <li>
             Enter the reader address on the start page, or open the app from the
             reader page so the address is filled automatically

@@ -3,12 +3,12 @@ import {
   downloadReaderSave,
   explainReaderError,
   getReaderGameInfo,
-  uploadReaderSave,
-  verifyReaderSave
+  uploadReaderSave
 } from '../../utils/reader-client.ts';
 import { createCartridgeSaveBackup } from '../../utils/save-backups.ts';
 
 export const linkCartridgeInformation = "https://raw.githubusercontent.com/webesp124/gb_data/refs/heads/main";
+export const missingCoverImage = "./img/cover_img_missing.jpeg";
 
 export const saveTypes = [
   "FLASH1M_V102",
@@ -53,6 +53,32 @@ const getSaveSizeFromTypeCode = (saveType: number) => {
   if (saveType == 5 || saveType == 21 || saveType == 55) return 131072;
   if (saveType == 6) return 65536;
   return undefined;
+};
+
+const toUint8Array = (data: Uint8Array | ArrayBuffer) =>
+  data instanceof Uint8Array ? data : new Uint8Array(data);
+
+const assertSaveReadbackMatches = (
+  expectedSave: Uint8Array,
+  readbackBuffer: ArrayBuffer,
+  compareSize: number
+) => {
+  const expected = expectedSave.slice(0, compareSize);
+  const actual = toUint8Array(readbackBuffer).slice(0, compareSize);
+
+  if (actual.length < compareSize) {
+    throw new Error(
+      `Read back ${actual.length} save bytes, expected ${compareSize}.`
+    );
+  }
+
+  for (let index = 0; index < compareSize; index++) {
+    if (actual[index] !== expected[index]) {
+      throw new Error(
+        `Save read-back mismatch at byte ${index}: expected 0x${expected[index].toString(16).padStart(2, '0')}, got 0x${actual[index].toString(16).padStart(2, '0')}.`
+      );
+    }
+  }
 };
 
 const getChecksum1000 = (gameData: { checksum_1MB: string; checksum_2MB: string; checksum_4MB: string; checksum_8MB: string; checksum_16MB: string; }, additionalData: { cartSize: number; saveType: string }) => {
@@ -181,8 +207,7 @@ const getCoverImage = (gameData: { is_gba: boolean; }, additionalData: { coverIm
       }
   }
 
-  // Return an empty string if no coverImage is provided
-  return "";
+  return missingCoverImage;
 };
 
 type UploadSaveToCartridgeOptions = {
@@ -254,8 +279,8 @@ const uploadSaveToCartridge = async (
           'Write the current emulator save to the inserted cartridge?',
           '',
           backup
-            ? 'netBOY will first back up the current cartridge save, then upload and verify the new save.'
-            : 'netBOY will upload and verify the new save.',
+            ? 'NetBoy will first back up the current cartridge save, then upload the new save and read it back for comparison.'
+            : 'NetBoy will upload the new save and read it back for comparison.',
           'Keep the reader powered and do not remove the cartridge during this operation.'
         ].join('\n')
       );
@@ -301,7 +326,11 @@ const uploadSaveToCartridge = async (
       }
 
       await uploadReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
-      await verifyReaderSave(esp32IP, save as XMLHttpRequestBodyInit, saveType);
+      const readback = await downloadReaderSave(esp32IP, saveType, {
+        timeoutMs: 90000,
+        retries: 0
+      });
+      assertSaveReadbackMatches(toUint8Array(save), readback, saveSize ?? save.byteLength);
       return successMessage;
     })();
 

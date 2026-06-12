@@ -1,4 +1,4 @@
-# netBOY
+# NetBoy
 
 Wireless GBA/GB cartridge reader web interface and browser emulator.
 
@@ -33,7 +33,7 @@ npm run build:github-pages
 When embedding the GitHub Pages build inside the ESP32 page, the frame must allow local-network access:
 
 ```
-<iframe src="https://webesp124.github.io/netboy?esp32_ip=https://READER_IP" allow="local-network-access"></iframe>
+<iframe src="https://webesp124.github.io/netboy?netboy_ip=https://READER_IP" allow="local-network-access"></iframe>
 ```
 
 ## Reader Setup UX
@@ -41,6 +41,8 @@ When embedding the GitHub Pages build inside the ESP32 page, the frame must allo
 The cartridge start page stores the last reader URL, keeps recent readers, can use the current frame host when hosted by the ESP32, and includes a connection test against `/get_wifi_settings`.
 
 Save writes and ROM reflashing perform a best-effort save backup before writing. Backups can be exported/imported from the cartridge start page.
+
+ESP32-S3 firmware updates are available from the menu under `NetBoy Setup` -> `Update`. The default updater manifest is expected at `https://raw.githubusercontent.com/webesp124/netboy-firmware-updates/main/manifest.json`; see `firmware-updates/` for the required GitHub repository structure.
 
 # Getting started
 

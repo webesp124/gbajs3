@@ -17,6 +17,7 @@ describe('<NavComponent />', () => {
 
     expect(screen.getByText('Test Title')).toBeVisible();
     expect(screen.getByText('Test Icon')).toBeVisible();
+    expect(screen.getByRole('button', { expanded: false })).toBeVisible();
     expect(screen.getByText('Test Children')).not.toBeVisible();
   });
 
@@ -25,6 +26,7 @@ describe('<NavComponent />', () => {
 
     expect(screen.getByText('Test Title')).toBeVisible();
     expect(screen.getByText('Test Icon')).toBeVisible();
+    expect(screen.getByRole('button', { expanded: true })).toBeVisible();
     expect(screen.getByText('Test Children')).toBeVisible();
   });
 
@@ -36,6 +38,7 @@ describe('<NavComponent />', () => {
     await userEvent.click(screen.getByText('Test Title'));
 
     // Check if the children are visible
+    expect(screen.getByRole('button', { expanded: true })).toBeVisible();
     expect(screen.getByText('Test Children')).toBeVisible();
 
     await userEvent.click(screen.getByText('Test Title'));
@@ -44,6 +47,7 @@ describe('<NavComponent />', () => {
     await waitFor(() =>
       expect(screen.getByText('Test Children')).not.toBeVisible()
     );
+    expect(screen.getByRole('button', { expanded: false })).toBeVisible();
   });
 
   it('applies styles correctly when disabled', async () => {

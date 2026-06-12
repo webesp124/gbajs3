@@ -14,7 +14,7 @@ window.addEventListener('vite:preloadError', (event) => {
       ?.getAttribute('src') ?? 'unknown-entry';
 
   if (sessionStorage.getItem(staleBuildReloadSessionKey) === currentEntryScript) {
-    console.error('Failed to load updated netBOY assets after reload.', event);
+    console.error('Failed to load updated NetBoy assets after reload.', event);
     return;
   }
 
